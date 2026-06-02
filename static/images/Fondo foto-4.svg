@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="999.726" height="1079.825" viewBox="0 0 999.726 1079.825">
+  <defs>
+    <linearGradient id="linear-gradient" y1="0.5" x2="1" y2="0.5" gradientUnits="objectBoundingBox">
+      <stop offset="0" stop-color="#7033cf"/>
+      <stop offset="1" stop-color="#24a68d"/>
+    </linearGradient>
+  </defs>
+  <path id="Fondo_foto" data-name="Fondo foto" d="M1067.561,896.652c7.879,42.281,49,162.684,57.152,184.173,270.407-.275,662.6-.452,928.308,0V1H1354c-81.1,50.943-137.639,94.293-154,111-11.585,11.83-23.368,31.076-37,40-1.342.879-5.273,3.34-7,8-2.764,7.457,1.955,15.584,4,19,14.394,24.041,50.688,75.284,64,105,10.24,22.857,11.165,42.567,12,60,3.43,71.614-55.489,121.7-111.287,216.221-41.288,69.942-48.875,57.251-63.858,149.251S1055.852,833.823,1067.561,896.652Z" transform="translate(-1053.295 -1)" opacity="0.417" fill="url(#linear-gradient)"/>
+</svg>

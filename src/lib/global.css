@@ -1,0 +1,457 @@
+:root{
+	font-family: 'nexa', sans-serif;
+	--violeta1: rgb(102,37,124);
+	--violeta2: var(--violeta1);
+    --violeta2-hover: var(--violeta1);
+	--magenta: #E72B65;
+	--text:  var(--violeta1);
+	--verde: #52FFB6;
+	--background: #F5F5F5;
+    --shadow: 0 0 1em rgb(184, 184, 184);
+    --border-radius: .6em;
+}
+*{
+	box-sizing: border-box;
+    transition: all ease 400ms;
+}
+html, body {
+	margin: 0;
+	padding: 0;
+	width: 100%;
+	height: 100%;
+}
+body {
+	background: var(--background);
+    scroll-behavior: smooth;
+	position: relative;
+}
+
+h1{
+    color:var(--magenta);
+    font-weight: 800;
+    font-size: 2rem;
+}
+
+h2{
+    text-transform: uppercase;
+    text-align: center;
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: var(--violeta1);
+    max-width: 100%;
+}
+h3 {
+    font-size: 1.6em;
+    color: var(--magenta);
+    text-transform: uppercase;
+    margin: 0;
+}
+
+p,a,li {
+    color: var(--text);
+    font-size: 1em;
+    font-weight: 300;
+}
+a{
+    font-weight: 500;
+    text-decoration: none;
+}
+a:hover,span:hover{
+    opacity: .7;
+}
+/* ============================================
+   SISTEMA DE BOTONES UNIFICADO
+   ============================================
+   
+   JERARQUÍA:
+   - Primary: Acción principal (CTA principal)
+   - Secondary: Acción secundaria (CTA secundario)
+   - Text: Solo texto, sin fondo/borde (navegación, links)
+   - WhatsApp: Estilo especial para WhatsApp
+   
+   TAMAÑOS:
+   - Small: Compacto (móvil, espacios reducidos)
+   - Medium: Estándar (uso general) - DEFAULT
+   - Large: Destacado (hero, modales importantes)
+   
+   USO SEMÁNTICO:
+   - <button> para acciones (onclick, submit, etc.)
+   - <a> para navegación (href, links externos)
+   ============================================ */
+
+/* Variables de botones */
+:root {
+    /* Tamaños de padding */
+    --btn-padding-sm: 0.625rem 1.25rem;    /* 10px 20px */
+    --btn-padding-md: 0.875rem 1.75rem;    /* 14px 28px */
+    --btn-padding-lg: 1.125rem 2.25rem;    /* 18px 36px */
+    
+    /* Tamaños de fuente */
+    --btn-font-sm: 0.875rem;               /* 14px */
+    --btn-font-md: 1rem;                   /* 16px */
+    --btn-font-lg: 1.125rem;               /* 18px */
+    
+    /* Border radius */
+    --btn-radius: 1000px;                  /* Fully rounded */
+    
+    /* Transiciones */
+    --btn-transition: all 0.2s ease;
+}
+
+/* Reset base para botones y enlaces */
+button, a {
+    font-family: inherit;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: var(--btn-transition);
+    border: none;
+    outline: none;
+    box-sizing: border-box;
+}
+
+/* ============================================
+   PRIMARY BUTTONS (CTA Principal)
+   ============================================
+   Uso: Acción principal en la página
+   Ejemplos: "Consultar cobertura", "Enviar formulario", "Me interesa"
+   ============================================ */
+
+.btn-primary,
+button.btn-primary,
+a.btn-primary {
+    background: linear-gradient(135deg, var(--violeta2), var(--violeta1));
+    color: white;
+    font-weight: 600;
+    font-size: var(--btn-font-md);
+    padding: var(--btn-padding-md);
+    border-radius: var(--btn-radius);
+    box-shadow: 0 2px 8px rgba(102, 37, 124, 0.2);
+}
+
+.btn-primary:hover:not(:disabled) {
+    opacity: 0.95;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 37, 124, 0.3);
+}
+
+.btn-primary:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Tamaños Primary */
+.btn-primary.btn-sm {
+    font-size: var(--btn-font-sm);
+    padding: var(--btn-padding-sm);
+}
+
+.btn-primary.btn-lg {
+    font-size: var(--btn-font-lg);
+    padding: var(--btn-padding-lg);
+}
+
+/* ============================================
+   SECONDARY BUTTONS (CTA Secundario)
+   ============================================
+   Uso: Acción secundaria, alternativa al primary
+   Ejemplos: "Ver más", "Consultar precios", botones de navegación
+   ============================================ */
+
+.btn-secondary,
+button.btn-secondary,
+a.btn-secondary {
+    background: transparent;
+    color: var(--violeta1);
+    font-weight: 600;
+    font-size: var(--btn-font-md);
+    padding: var(--btn-padding-md);
+    border-radius: var(--btn-radius);
+    border: 2px solid var(--violeta1);
+}
+
+.btn-secondary:hover:not(:disabled) {
+    background: var(--violeta1);
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(102, 37, 124, 0.2);
+}
+
+.btn-secondary:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.btn-secondary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Tamaños Secondary */
+.btn-secondary.btn-sm {
+    font-size: var(--btn-font-sm);
+    padding: var(--btn-padding-sm);
+    border-width: 1.5px;
+}
+
+.btn-secondary.btn-lg {
+    font-size: var(--btn-font-lg);
+    padding: var(--btn-padding-lg);
+    border-width: 2.5px;
+}
+
+/* ============================================
+   TEXT BUTTONS (Solo texto)
+   ============================================
+   Uso: Navegación, links, acciones sutiles
+   Ejemplos: "Más información", "Ver todos", links en cards
+   NOTA: Sin fondo, borde o sombras - solo texto
+   ============================================ */
+
+.btn-text,
+button.btn-text,
+a.btn-text {
+    background: none;
+    color: var(--text);
+    font-weight: 500;
+    font-size: var(--btn-font-md);
+    padding: 0.5rem 0;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    text-decoration: none;
+}
+
+.btn-text:hover:not(:disabled) {
+    color: var(--violeta1);
+    opacity: 0.8;
+}
+
+.btn-text:active:not(:disabled) {
+    opacity: 0.6;
+}
+
+/* Tamaños Text */
+.btn-text.btn-sm {
+    font-size: var(--btn-font-sm);
+}
+
+.btn-text.btn-lg {
+    font-size: var(--btn-font-lg);
+}
+
+/* ============================================
+   WHATSAPP BUTTONS (Estilo especial)
+   ============================================
+   Uso: Botones específicos para WhatsApp
+   Variantes: Verde (destacado) o Blanco con borde (alternativo)
+   ============================================ */
+
+/* WhatsApp Primary - Verde destacado */
+.btn-whatsapp,
+button.btn-whatsapp,
+a.btn-whatsapp {
+    background: var(--verde);
+    color: var(--violeta1);
+    font-weight: 700;
+    font-size: var(--btn-font-md);
+    padding: var(--btn-padding-md);
+    border-radius: var(--btn-radius);
+    text-transform: uppercase;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.btn-whatsapp:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.btn-whatsapp:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+/* WhatsApp Secondary - Blanco con borde violeta */
+.btn-whatsapp-secondary,
+button.btn-whatsapp-secondary,
+a.btn-whatsapp-secondary {
+    background: white;
+    color: var(--violeta1);
+    font-weight: 600;
+    font-size: var(--btn-font-md);
+    padding: var(--btn-padding-md);
+    border-radius: var(--btn-radius);
+    border: 2px solid var(--violeta1);
+}
+
+.btn-whatsapp-secondary:hover:not(:disabled) {
+    background: #f3f4f6;
+}
+
+/* Tamaños WhatsApp */
+.btn-whatsapp.btn-sm,
+.btn-whatsapp-secondary.btn-sm {
+    font-size: var(--btn-font-sm);
+    padding: var(--btn-padding-sm);
+}
+
+.btn-whatsapp.btn-lg,
+.btn-whatsapp-secondary.btn-lg {
+    font-size: var(--btn-font-lg);
+    padding: var(--btn-padding-lg);
+}
+
+/* Iconos dentro de botones WhatsApp */
+.btn-whatsapp svg,
+.btn-whatsapp-secondary svg {
+    width: 1.25rem;
+    height: 1.25rem;
+    flex-shrink: 0;
+}
+
+/* ============================================
+   COMPATIBILIDAD - Estilos legacy (deprecated)
+   ============================================
+   Mantener temporalmente para compatibilidad
+   ============================================ */
+
+.btn-1 {
+    background: linear-gradient(135deg, var(--violeta2), var(--violeta1));
+    color: white;
+    font-weight: 600;
+    font-size: var(--btn-font-md);
+    padding: var(--btn-padding-md);
+    border-radius: var(--btn-radius);
+    border: none;
+}
+
+.btn-2 {
+    background: transparent;
+    color: var(--violeta1);
+    font-weight: 600;
+    font-size: var(--btn-font-md);
+    padding: var(--btn-padding-md);
+    border-radius: var(--btn-radius);
+    border: 2px solid var(--violeta1);
+}
+
+/* ============================================
+   UTILIDADES
+   ============================================ */
+
+/* Ancho completo */
+.btn-full {
+    width: 100%;
+}
+
+/* Botón con icono a la derecha */
+.btn-icon-right {
+    flex-direction: row-reverse;
+}
+
+/* Botón deshabilitado global */
+button:disabled,
+a[aria-disabled="true"] {
+    opacity: 0.6;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+textarea{
+    resize:vertical;
+}
+input,textarea{
+    font-family: 'nexa',sans-serif;
+    font-size: 1em;
+    accent-color: var(--violeta1);
+}
+input:focus, select:focus{
+    outline: 2px solid rgba(128, 128, 128, 0.415)!important;
+}
+label{
+    color: #7028a2;
+}
+.iniciar-conversacion{
+    background: var(--verde);
+    color:var(--violeta1);
+    text-decoration: none;
+    border-radius: 100px;
+    padding: .5rem 2rem;
+    width: 80%;
+    text-align: center;
+}
+.wsp-icon {
+    background: url("/images/whatsapp-icon.svg")no-repeat;
+    background-size: cover;
+    width: 2em;
+    height: 2em;
+    margin-right: 1.5em;
+}
+
+@font-face {
+    font-family: 'nexa';
+    src: url('/assets/fonts/nexathin-webfont.woff2') format('woff2'),
+        url('/assets/fonts/nexathin-webfont.woff') format('woff');
+    font-weight: 100;
+}
+
+
+@font-face {
+    font-family: 'nexa';
+    src: url('/assets/fonts/nexa-light-webfont.woff2') format('woff2'),
+        url('/assets/fonts/nexa-light-webfont.woff') format('woff');
+    font-weight: 200;
+
+}
+
+@font-face {
+    font-family: 'nexa';
+    src: url('/assets/fonts/nexa-book-webfont.woff2') format('woff2'),
+        url('/assets/fonts/nexa-book-webfont.woff') format('woff');
+    font-weight: 300;
+}
+@font-face {
+    font-family: 'nexa';
+    src: url('/assets/fonts/nexaregular-webfont.woff2') format('woff2'),
+        url('/assets/fonts/nexaregular-webfont.woff') format('woff');
+    font-weight: 400;
+
+}
+@font-face {
+    font-family: 'nexa';
+    src: url('/assets/fonts/nexa-bold-webfont.woff2') format('woff2'),
+        url('/assets/fonts/nexa-bold-webfont.woff') format('woff');
+    font-weight: 500;
+}
+
+@font-face {
+    font-family: 'nexa';
+    src: url('/assets/fonts/nexa-xbold-webfont.woff2') format('woff2'),
+        url('/assets/fonts/nexa-xbold-webfont.woff') format('woff');
+    font-weight: 600;
+
+}
+
+@font-face {
+    font-family: 'nexa';
+    src: url('/assets/fonts/nexablack-webfont.woff2') format('woff2'),
+        url('/assets/fonts/nexablack-webfont.woff') format('woff');
+    font-weight: 800;
+
+}
+
+@font-face {
+    font-family: 'nexa';
+    src: url('/assets/fonts/nexaheavy-webfont.woff2') format('woff2'),
+        url('/assets/fonts/nexaheavy-webfont.woff') format('woff');
+    font-weight: 700;
+
+}
+
+
+
+

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Notificación - Sista</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      margin: 0;
+      padding: 1em;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: #ffffff;
+      border: 1px solid #ddd;
+    }
+    .header {
+      background: #66257c;
+      padding: 1em;
+      color: #ffffff;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 1.25em;
+      font-weight: bold;
+    }
+    .content {
+      padding: 1em;
+    }
+    .data-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .data-list li {
+      padding: 0.75em 0;
+      border-bottom: 1px solid #eee;
+    }
+    .data-list li:last-child {
+      border-bottom: none;
+    }
+    .label {
+      font-weight: bold;
+      color: #66257c;
+      display: block;
+      margin-bottom: 0.25em;
+      font-size: 0.9em;
+    }
+    .value {
+      color: #333;
+      word-wrap: break-word;
+      line-height: 1.5;
+    }
+    .footer {
+      background: #f9f9f9;
+      padding: 0.75em 1em;
+      text-align: center;
+      font-size: 0.85em;
+      color: #666;
+      border-top: 1px solid #eee;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>[title]</h1>
+    </div>
+    <div class="content">
+      <ul class="data-list">
+        [data]
+      </ul>
+    </div>
+    <div class="footer">
+      Sista - Notificación automática
+    </div>
+  </div>
+</body>
+</html>

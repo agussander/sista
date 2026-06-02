@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Página no encontrada - Sista</title>
+    <link rel="icon" href="/favicon.png" />
+    <style>
+        :root {
+            --violeta1: #7028a2;
+            --violeta2: #8b3db8;
+            --magenta: #7028a2;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        
+        .error-container {
+            text-align: center;
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            max-width: 500px;
+        }
+        
+        .error-emoji {
+            font-size: 4rem;
+            margin-bottom: 0.5rem;
+            color: gray;
+        }
+        
+        .error-code {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            color: var(--magenta);
+        }
+        
+        h1 {
+            color: var(--magenta);
+            margin: 1rem 0;
+            font-size: 1.5rem;
+        }
+        
+        p {
+            color: #666;
+            margin-bottom: 2rem;
+            font-size: 1.2rem;
+            max-width: 400px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .btn {
+            background-color: var(--violeta1);
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            text-decoration: none;
+            display: inline-block;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background-color 0.3s ease;
+        }
+        
+        .btn:hover {
+            background-color: var(--violeta2);
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <div class="error-emoji">:(</div>
+        <div class="error-code">404</div>
+        <h1>Página no encontrada</h1>
+        <p>Parece que la página que estás buscando no existe o está en mantenimiento</p>
+        <a href="/" class="btn">Volver al Inicio</a>
+    </div>
+</body>
+</html>
+
+
+

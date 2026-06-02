@@ -1,0 +1,10 @@
+# SvelteKit genera `404.html` en el build. Así Apache muestra esa página en errores 404.
+# (Requisito habitual: AllowOverride permite ErrorDocument.)
+ErrorDocument 404 /404.html
+
+# No servir archivos de entorno ni variantes (.env.local, etc.) por HTTP
+# (Solo Apache. Si el hosting usa Nginx, esta sección no tiene efecto: hay que
+#  bloquear en la config de Nginx o en el panel del proveedor.)
+<FilesMatch "^\.env">
+	Require all denied
+</FilesMatch>
