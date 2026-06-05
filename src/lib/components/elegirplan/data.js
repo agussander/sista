@@ -245,3 +245,36 @@ export function buildWhatsappUrl(w) {
 	const text = encodeURIComponent(lines.join('\n'));
 	return `https://api.whatsapp.com/send?phone=${WHATSAPP_PHONE}&text=${text}`;
 }
+
+// Requisito para "pasar" cada paso (estar más allá de él). promo/adicionales/
+// resumen no bloquean: la rama ya quedó codificada en tipo/promo.
+const STEP_REQUIREMENT = {
+	tipo: (w) => !!w.tipo,
+	internet: (w) => !!w.internetPlan,
+	tv: (w) => !!w.tvPlatform
+};
+
+// Devuelve el paso válido más lejano: nunca más allá de un requisito sin cumplir.
+// Si requestedStep no está en el flow vigente, cae al paso más lejano alcanzable.
+export function clampStep(w, requestedStep) {
+	const flow = getFlow(w);
+	let furthest = 0;
+	let furthestWithReq = 0;
+	for (let i = 0; i < flow.length; i++) {
+		const req = STEP_REQUIREMENT[flow[i]];
+		if (req) {
+			if (!req(w)) {
+				// Este paso tiene un requisito sin cumplir: se puede estar EN i, no pasar de i
+				furthest = i;
+				furthestWithReq = i;
+				break;
+			}
+			furthestWithReq = i;
+		}
+		furthest = i;
+	}
+	const reqIdx = flow.indexOf(requestedStep);
+	// Si el paso pedido está en el flow, clamp a furthest. Si no está, clamp a furthestWithReq.
+	const target = reqIdx < 0 ? furthestWithReq : Math.min(reqIdx, furthest);
+	return flow[target];
+}
