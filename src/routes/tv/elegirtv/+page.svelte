@@ -8,27 +8,17 @@
 	import TvServiceCard from '$lib/components/tv/TvServiceCard.svelte';
 	import TvServiceModal from '$lib/components/tv/TvServiceModal.svelte';
 	import GrillaViewer from '$lib/components/tv/GrillaViewer.svelte';
-	import InfoModal from '$lib/components/tv/InfoModal.svelte';
+	import TvCompatInfo from '$lib/components/tv/TvCompatInfo.svelte';
 	import AyudameElegirTv from '$lib/components/tv/AyudameElegirTv.svelte';
-
-	const TV_BOX_URL = 'https://tiendasista.mitiendanube.com/productos/bvs-android-tv-caja-adaptadora/';
 
 	let precios = $state({});
 	let loading = $state(true);
 
 	let openKey = $state(null); // servicio con modal abierto
 	let grillaKey = $state(null); // servicio con grilla abierta
-	let info = $state(null); // aviso abierto: 'nosmart' | 'compat' | null
 
 	let openService = $derived(openKey ? serviceByKey(openKey) : null);
 	let grillaService = $derived(grillaKey ? serviceByKey(grillaKey) : null);
-
-	function goToServices() {
-		info = null;
-		setTimeout(() => {
-			document.getElementById('cards')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-		}, 50);
-	}
 
 	// Arma el mensaje de WhatsApp con el servicio + adicionales elegidos (lo que
 	// antes vivía dentro de TvServiceModal). Se pasa como onConfirm del modal.
@@ -70,16 +60,7 @@
 		<p>Tenemos 3 servicios de TV. Tocá cada uno para ver cómo funciona, qué canales trae y sumarle adicionales.</p>
 	</header>
 
-	<div class="notice">
-		<p>
-			Estos servicios <strong>no son por cable ni incluyen deco</strong>. Son
-			<strong>aplicaciones</strong> que se descargan en tu Smart TV, TV Box, Chromecast, etc.
-		</p>
-		<div class="notice-actions">
-			<button class="btn-secondary btn-sm" onclick={() => (info = 'nosmart')}>Mi TV no es smart</button>
-			<button class="btn-secondary btn-sm" onclick={() => (info = 'compat')}>¿Es compatible mi TV?</button>
-		</div>
-	</div>
+	<TvCompatInfo cardsId="cards" />
 
 	{#if loading}
 		<div class="loading">
@@ -118,32 +99,6 @@
 	<GrillaViewer service={grillaService} onclose={() => (grillaKey = null)} />
 {/if}
 
-{#if info === 'nosmart'}
-	<InfoModal title="Mi TV no es smart" onclose={() => (info = null)}>
-		<p>
-			No hay problema. Podés usar un <strong>TV Box</strong>: un aparatito que se enchufa a tu TV por
-			HDMI y la convierte en smart, lista para descargar las apps.
-		</p>
-		<p>Es compatible con los 3 servicios. Lo conseguís en nuestra tienda online.</p>
-		<a class="btn-primary btn-full" href={TV_BOX_URL} target="_blank" rel="noopener noreferrer">
-			Ver TV Box en la tienda
-		</a>
-	</InfoModal>
-{:else if info === 'compat'}
-	<InfoModal title="¿Es compatible mi TV?" onclose={() => (info = null)}>
-		<p>Como cada servicio es una <strong>app</strong>, lo más seguro es probarlo en tu Smart TV:</p>
-		<p>
-			Buscá la app (<strong>DGO</strong>, <strong>Antina Play</strong> o
-			<strong>Gigared Play</strong>) en la tienda de aplicaciones de tu TV, instalala y abrila. Si
-			abre bien, es compatible.
-		</p>
-		<p>Si no aparece en la tienda de tu TV, podés usar un TV Box.</p>
-		<button class="btn-secondary btn-full" onclick={goToServices}>
-			Ver servicios
-		</button>
-	</InfoModal>
-{/if}
-
 <style>
 	main {
 		max-width: 64rem;
@@ -167,32 +122,6 @@
 		color: #6b6b6b;
 		font-size: 1rem;
 		line-height: 1.5;
-	}
-
-	.notice {
-		max-width: 38rem;
-		margin: 0 auto 2rem;
-		background: #f0e7f4;
-		border: 1px solid color-mix(in srgb, var(--violeta1) 18%, transparent);
-		border-radius: 1rem;
-		padding: 1.1rem 1.25rem;
-		text-align: center;
-	}
-	.notice p {
-		margin: 0 0 0.85rem;
-		font-size: 0.92rem;
-		line-height: 1.5;
-		color: var(--violeta1);
-		font-weight: 300;
-	}
-	.notice strong {
-		font-weight: 700;
-	}
-	.notice-actions {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.6rem;
-		justify-content: center;
 	}
 
 	.cards {
