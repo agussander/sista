@@ -33,6 +33,12 @@ export const ADDONS = [
 	{ key: 'telefono',    field: 'telefono',    label: 'Telefonía fija', subtitle: 'Portabilidad numérica',     tvAddon: false }
 ];
 
+// --- Claves válidas para los params de URL (orden canónico de serialización) ---
+export const STEP_KEYS = ['tipo', 'promo', 'internet', 'tv', 'adicionales', 'resumen'];
+export const PLAN_KEYS = INTERNET_PLANS.map((p) => p.key);
+export const TV_KEYS = ['gigared', 'antina', 'dgo'];
+export const ADDON_KEYS = ADDONS.map((a) => a.key); // pack_futbol, cine, telefono
+
 // --- Promo (Paso 2, solo Internet+TV) ---------------------------------------
 // Sin colección de promos en PB: se modela acá. Power + GigaredPlay gratis 6 meses.
 export const PROMO = { plan: 'power', tvGratis: 'gigared', mesesGratis: 6 };
@@ -277,4 +283,17 @@ export function clampStep(w, requestedStep) {
 	// Si el paso pedido está en el flow, clamp a furthest. Si no está, clamp a furthestWithReq.
 	const target = reqIdx < 0 ? furthestWithReq : Math.min(reqIdx, furthest);
 	return flow[target];
+}
+
+// Estado → URLSearchParams canónica. Params omitidos = no seleccionado.
+export function buildPlanParams(w) {
+	const sp = new URLSearchParams();
+	if (w.step) sp.set('paso', w.step);
+	if (w.tipo) sp.set('tipo', w.tipo);
+	if (w.internetPlan) sp.set('plan', w.internetPlan);
+	if (w.tvPlatform) sp.set('tv', w.tvPlatform);
+	if (w.promo) sp.set('promo', '1');
+	const adds = ADDON_KEYS.filter((k) => w.addons?.[k]);
+	if (adds.length) sp.set('add', adds.join(','));
+	return sp;
 }
