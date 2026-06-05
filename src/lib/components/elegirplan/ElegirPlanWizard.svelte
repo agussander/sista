@@ -18,7 +18,6 @@
 	import { STEP_TITLES, getFlow, computeTotal, formatPrice, tvByKey } from './data.js';
 	import {
 		wizard,
-		resetWizard,
 		prev,
 		confirmTv,
 		cancelTvCheck,

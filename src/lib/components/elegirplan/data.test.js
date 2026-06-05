@@ -38,9 +38,17 @@ describe('clampStep', () => {
 		expect(clampStep(w, 'resumen')).toBe('tv');
 	});
 
-	it('paso pedido fuera del flow cae al paso válido más lejano', () => {
+	it('paso pedido fuera del flow cae al paso alcanzable más lejano', () => {
+		// 'tv' no existe en el flow de internet; con plan elegido el alcanzable es 'resumen'
 		const w = { tipo: 'internet', internetPlan: 'home' };
-		expect(clampStep(w, 'tv')).toBe('internet');
+		expect(clampStep(w, 'tv')).toBe('resumen');
+	});
+
+	it('paso fuera del flow no descarta un combo ya completo', () => {
+		// combo promo completo + un paso ('internet') ausente del flow de promo:
+		// debe quedarse en 'resumen', no volver a 'tipo'
+		const w = { tipo: 'tv', promo: true, internetPlan: 'power', tvPlatform: 'gigared' };
+		expect(clampStep(w, 'internet')).toBe('resumen');
 	});
 });
 
