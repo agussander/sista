@@ -7,7 +7,7 @@
 // getFlow(wizard) para respetar el branching (Solo Internet / +TV / promo).
 // =============================================================================
 
-import { getFlow, PROMO } from './data.js';
+import { getFlow, PROMO, clampStep, buildPlanParams, parsePlanParams } from './data.js';
 
 export const wizard = $state({
 	// flujo
@@ -154,4 +154,40 @@ export function resetWizard() {
 	wizard.tvCheck = null;
 	wizard.pendingPromo = false;
 	// `precios` y `loading` se conservan (ya cargados desde PB)
+}
+
+// --- Sincronización con la URL --------------------------------------------
+
+// Query string canónica del estado actual (para el guard del loop y para goto).
+export function toSearchString() {
+	return buildPlanParams({
+		step: wizard.step,
+		tipo: wizard.tipo,
+		internetPlan: wizard.internetPlan,
+		tvPlatform: wizard.tvPlatform,
+		promo: wizard.promo,
+		addons: wizard.addons
+	}).toString();
+}
+
+// Hidrata el estado desde los params de la URL. Aplica las selecciones válidas
+// y clampea el paso al más lejano permitido. Resetea overlays transitorios
+// (reemplaza a resetWizard en el mount). `precios`/`loading` se conservan.
+export function hydrateFromParams(searchParams) {
+	const p = parsePlanParams(searchParams);
+	wizard.tipo = p.tipo;
+	wizard.internetPlan = p.internetPlan;
+	wizard.tvPlatform = p.tvPlatform;
+	wizard.promo = p.promo;
+	wizard.addons.pack_futbol = p.addons.pack_futbol;
+	wizard.addons.cine = p.addons.cine;
+	wizard.addons.telefono = p.addons.telefono;
+	// overlays efímeros (no viven en la URL)
+	wizard.showRecom = false;
+	wizard.tvCheck = null;
+	wizard.pendingPromo = false;
+	wizard.recom.usos = [];
+	wizard.recom.personas = null;
+	// el paso, clampeado contra el estado ya aplicado
+	wizard.step = clampStep(wizard, p.step);
 }
