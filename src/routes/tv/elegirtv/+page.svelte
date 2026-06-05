@@ -1,5 +1,8 @@
 <script>
 	import { onMount } from 'svelte';
+	import { browser } from '$app/environment';
+	import { page } from '$app/stores';
+	import { goto } from '$app/navigation';
 	import { MetaTags } from 'svelte-meta-tags';
 	import { pb } from '$lib/pocketbase';
 
@@ -14,11 +17,31 @@
 	let precios = $state({});
 	let loading = $state(true);
 
-	let openKey = $state(null); // servicio con modal abierto
-	let grillaKey = $state(null); // servicio con grilla abierta
+	let grillaKey = $state(null); // servicio con grilla abierta (efímero, no en URL)
+
+	// El modal abierto se sincroniza con ?tv= en la URL (sólo en el browser;
+	// durante el pre-render SSR el valor es null, lo cual es correcto).
+	let openKey = $state(null);
+	$effect(() => {
+		if (!browser) return;
+		const tv = $page.url.searchParams.get('tv');
+		openKey = serviceByKey(tv) ? tv : null;
+	});
 
 	let openService = $derived(openKey ? serviceByKey(openKey) : null);
 	let grillaService = $derived(grillaKey ? serviceByKey(grillaKey) : null);
+
+	// Abrir/cerrar el modal = navegar (push), así Back cierra el modal.
+	function openModal(key) {
+		const sp = new URLSearchParams($page.url.searchParams);
+		sp.set('tv', key);
+		goto('?' + sp.toString(), { noScroll: true, keepFocus: true });
+	}
+	function closeModal() {
+		const sp = new URLSearchParams($page.url.searchParams);
+		sp.delete('tv');
+		goto('?' + sp.toString(), { noScroll: true, keepFocus: true });
+	}
 
 	// Arma el mensaje de WhatsApp con el servicio + adicionales elegidos (lo que
 	// antes vivía dentro de TvServiceModal). Se pasa como onConfirm del modal.
@@ -73,14 +96,14 @@
 				<TvServiceCard
 					{service}
 					{precios}
-					onOpen={() => (openKey = service.key)}
+					onOpen={() => openModal(service.key)}
 					onGrilla={() => (grillaKey = service.key)}
 				/>
 			{/each}
 		</div>
 
 		<div class="ayuda">
-			<AyudameElegirTv {precios} onPick={(key) => (openKey = key)} />
+			<AyudameElegirTv {precios} onPick={(key) => openModal(key)} />
 		</div>
 	{/if}
 </main>
@@ -91,7 +114,7 @@
 		{precios}
 		onGrilla={() => (grillaKey = openService.key)}
 		onConfirm={(service, addons) => window.open(buildTvWhatsappUrl(service, addons), '_blank', 'noopener')}
-		onclose={() => (openKey = null)}
+		onclose={() => closeModal()}
 	/>
 {/if}
 
