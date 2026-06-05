@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatPrice, clampStep, buildPlanParams } from '$lib/components/elegirplan/data.js';
+import { formatPrice, clampStep, buildPlanParams, parsePlanParams } from '$lib/components/elegirplan/data.js';
 
 describe('vitest setup', () => {
 	it('resuelve el alias $lib e importa data.js', () => {
@@ -76,5 +76,44 @@ describe('buildPlanParams', () => {
 		expect(decodeURIComponent(buildPlanParams(w).toString())).toBe(
 			'paso=adicionales&tipo=internet&plan=home&add=pack_futbol,telefono'
 		);
+	});
+});
+
+describe('parsePlanParams', () => {
+	it('URL vacía devuelve defaults (paso "tipo", todo null/false)', () => {
+		const r = parsePlanParams(new URLSearchParams(''));
+		expect(r).toEqual({
+			step: 'tipo',
+			tipo: null,
+			internetPlan: null,
+			tvPlatform: null,
+			promo: false,
+			addons: { pack_futbol: false, cine: false, telefono: false }
+		});
+	});
+
+	it('parsea un combo completo', () => {
+		const r = parsePlanParams(
+			new URLSearchParams('paso=adicionales&tipo=tv&plan=power&tv=gigared&promo=1&add=cine,telefono')
+		);
+		expect(r).toEqual({
+			step: 'adicionales',
+			tipo: 'tv',
+			internetPlan: 'power',
+			tvPlatform: 'gigared',
+			promo: true,
+			addons: { pack_futbol: false, cine: true, telefono: true }
+		});
+	});
+
+	it('descarta valores inválidos', () => {
+		const r = parsePlanParams(
+			new URLSearchParams('paso=zzz&tipo=foo&plan=ultra&tv=netflix&add=hack')
+		);
+		expect(r.step).toBe('tipo');
+		expect(r.tipo).toBeNull();
+		expect(r.internetPlan).toBeNull();
+		expect(r.tvPlatform).toBeNull();
+		expect(r.addons).toEqual({ pack_futbol: false, cine: false, telefono: false });
 	});
 });

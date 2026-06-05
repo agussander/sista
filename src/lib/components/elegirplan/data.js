@@ -297,3 +297,22 @@ export function buildPlanParams(w) {
 	if (adds.length) sp.set('add', adds.join(','));
 	return sp;
 }
+
+// URLSearchParams → objeto plano validado (sin clamp del paso; eso lo hace
+// clampStep una vez que el estado tiene tipo/promo). Valores inválidos → null.
+export function parsePlanParams(sp) {
+	const oneOf = (val, allowed) => (allowed.includes(val) ? val : null);
+	const addRaw = (sp.get('add') || '').split(',').filter(Boolean);
+	return {
+		step: oneOf(sp.get('paso'), STEP_KEYS) || 'tipo',
+		tipo: oneOf(sp.get('tipo'), ['internet', 'tv']),
+		internetPlan: oneOf(sp.get('plan'), PLAN_KEYS),
+		tvPlatform: oneOf(sp.get('tv'), TV_KEYS),
+		promo: sp.get('promo') === '1',
+		addons: {
+			pack_futbol: addRaw.includes('pack_futbol'),
+			cine: addRaw.includes('cine'),
+			telefono: addRaw.includes('telefono')
+		}
+	};
+}
