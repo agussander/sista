@@ -3,7 +3,7 @@
 	// Tocar el cuerpo abre el modal explicativo; "Ver canales" abre la grilla.
 	import { formatPrice } from '$lib/components/elegirplan/data.js';
 
-	let { service, precios = {}, onOpen, onGrilla } = $props();
+	let { service, precios = {}, selected = false, onOpen, onGrilla } = $props();
 
 	let price = $derived(formatPrice(precios[service.priceField]));
 	let consultar = $derived(price === 'Consultar');
@@ -24,6 +24,7 @@
 
 <div
 	class="card"
+	class:selected
 	role="button"
 	tabindex="0"
 	onclick={() => onOpen?.()}
@@ -89,6 +90,10 @@
 		transform: translateY(-2px);
 		box-shadow: 0 10px 30px rgba(102, 37, 124, 0.16);
 		outline: none;
+	}
+	.card.selected {
+		border-color: var(--violeta1);
+		box-shadow: 0 10px 30px rgba(102, 37, 124, 0.16);
 	}
 	@media (hover: hover) {
 		.card:hover {
