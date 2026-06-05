@@ -22,7 +22,7 @@ export const ADDON_PACK_FUTBOL = {
 };
 export const ADDON_CINE = {
 	key: 'cine',
-	field: 'cine',
+	field: 'antina_cine',
 	label: 'Cine',
 	detail: 'Canales HBO y Universal'
 };

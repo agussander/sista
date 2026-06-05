@@ -29,7 +29,7 @@ export const INTERNET_PLANS = [
 // el paso de adicionales. Telefonía (tvAddon:false) sí vive en ese paso.
 export const ADDONS = [
 	{ key: 'pack_futbol', field: 'pack_futbol', label: 'Pack Fútbol',    subtitle: 'ESPN Premium · TNT Sports', tvAddon: true },
-	{ key: 'cine',        field: 'cine',        label: 'Cine',           subtitle: 'Canales HBO y Universal',   tvAddon: true },
+	{ key: 'cine',        field: 'antina_cine', label: 'Cine',           subtitle: 'Canales HBO y Universal',   tvAddon: true },
 	{ key: 'telefono',    field: 'telefono',    label: 'Telefonía fija', subtitle: 'Portabilidad numérica',     tvAddon: false }
 ];
 
