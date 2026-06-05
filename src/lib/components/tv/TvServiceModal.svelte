@@ -2,20 +2,29 @@
 	// Modal explicativo de un servicio de TV. Permite tildar adicionales y arma
 	// el mensaje de WhatsApp con el servicio + adicionales (estilo wizard).
 	import { fade, scale } from 'svelte/transition';
-	import { formatPrice, WHATSAPP_PHONE } from '$lib/components/elegirplan/data.js';
+	import { formatPrice } from '$lib/components/elegirplan/data.js';
 	import TvCheckModal from '$lib/components/elegirplan/TvCheckModal.svelte';
 	import { INCOMPATIBLES } from './tvData.js';
 
-	let { service, precios = {}, onGrilla, onclose } = $props();
+	let {
+		service,
+		precios = {},
+		onGrilla,
+		onclose,
+		onConfirm,
+		initialSelected = {},
+		ctaLabel = 'Lo quiero',
+		ctaClass = 'btn-whatsapp'
+	} = $props();
 
-	// Selección de adicionales (estado local, se reinicia con cada apertura porque
-	// el modal se monta de nuevo gracias al {#if} del padre).
-	let selected = $state({});
+	// Selección de adicionales (estado local, sembrado desde initialSelected; se
+	// reinicia con cada apertura porque el modal se monta de nuevo por el {#if} del padre).
+	let selected = $state({ ...initialSelected });
 	// Logos de incompatibles que fallan al cargar → fallback a chip.
 	let failed = $state({});
 	// Paso del modal: 'detalle' (servicio + adicionales) → 'total' (resumen).
 	let view = $state('detalle');
-	// Chequeo de instalación (mismo gate que el wizard) antes de ir a WhatsApp.
+	// Chequeo de instalación (mismo gate que el wizard) antes de la acción final.
 	let showInstall = $state(false);
 
 	let price = $derived(formatPrice(precios[service.priceField]));
@@ -26,9 +35,10 @@
 		if (e.key === 'Escape' && !showInstall) onclose?.();
 	}
 
-	// Confirmó "La instalé, funciona" → abre WhatsApp con el combo armado.
+	// Confirmó "La instalé, funciona" → delega la acción final al contenedor
+	// (abrir WhatsApp en elegirtv, o commitear + avanzar en el wizard).
 	function confirmInstall() {
-		window.open(whatsappUrl, '_blank', 'noopener');
+		onConfirm?.(service, chosenAddons);
 		showInstall = false;
 	}
 
@@ -47,24 +57,10 @@
 	// ¿Algún ítem sin precio cargado (0)? → el total es parcial / a confirmar.
 	let hasConsultar = $derived(items.some((it) => it.value <= 0));
 
-	function lineLabel(value) {
-		return value > 0 ? `${formatPrice(value)}/mes` : 'Consultar';
-	}
-
-	// Igual que lineLabel pero con "+" adelante (resumen: todo se SUMA a internet).
+	// "+$X/mes" para el resumen (todo se SUMA a internet); "Consultar" si no hay precio.
 	function plusLabel(value) {
 		return value > 0 ? `+${formatPrice(value)}/mes` : 'Consultar';
 	}
-
-	let whatsappUrl = $derived.by(() => {
-		const lines = [`Me interesa el servicio de TV ${service.label} (${lineLabel(items[0].value)})`];
-		if (chosenAddons.length) {
-			lines.push(`Adicionales: ${chosenAddons.map((a) => a.label).join(', ')}`);
-		}
-		lines.push(`Total: ${total > 0 ? `${formatPrice(total)}/mes` : 'a consultar'}`);
-		const text = encodeURIComponent(lines.join('\n'));
-		return `https://api.whatsapp.com/send?phone=${WHATSAPP_PHONE}&text=${text}`;
-	});
 </script>
 
 <svelte:window onkeydown={onKey} />
@@ -190,8 +186,8 @@
 			{/if}
 		</div>
 
-		<button class="btn-whatsapp btn-full cta" onclick={() => (showInstall = true)}>
-			Lo quiero
+		<button class="btn-full cta {ctaClass}" onclick={() => (showInstall = true)}>
+			{ctaLabel}
 		</button>
 		<button class="btn-text btn-sm back-step" onclick={() => (view = 'detalle')}>← Volver al detalle</button>
 		{/if}

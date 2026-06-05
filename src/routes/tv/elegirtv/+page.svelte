@@ -3,6 +3,7 @@
 	import { MetaTags } from 'svelte-meta-tags';
 	import { pb } from '$lib/pocketbase';
 
+	import { formatPrice, WHATSAPP_PHONE } from '$lib/components/elegirplan/data.js';
 	import { TV_SERVICES, serviceByKey } from '$lib/components/tv/tvData.js';
 	import TvServiceCard from '$lib/components/tv/TvServiceCard.svelte';
 	import TvServiceModal from '$lib/components/tv/TvServiceModal.svelte';
@@ -27,6 +28,22 @@
 		setTimeout(() => {
 			document.getElementById('cards')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 		}, 50);
+	}
+
+	// Arma el mensaje de WhatsApp con el servicio + adicionales elegidos (lo que
+	// antes vivía dentro de TvServiceModal). Se pasa como onConfirm del modal.
+	function buildTvWhatsappUrl(service, chosenAddons) {
+		const tvVal = Number(precios[service.priceField]) || 0;
+		const lineLabel = (v) => (v > 0 ? `${formatPrice(v)}/mes` : 'Consultar');
+		const items = [
+			{ label: service.label, value: tvVal },
+			...chosenAddons.map((a) => ({ label: a.label, value: Number(precios[a.field]) || 0 }))
+		];
+		const total = items.reduce((s, it) => s + it.value, 0);
+		const lines = [`Me interesa el servicio de TV ${service.label} (${lineLabel(tvVal)})`];
+		if (chosenAddons.length) lines.push(`Adicionales: ${chosenAddons.map((a) => a.label).join(', ')}`);
+		lines.push(`Total: ${total > 0 ? `${formatPrice(total)}/mes` : 'a consultar'}`);
+		return `https://api.whatsapp.com/send?phone=${WHATSAPP_PHONE}&text=${encodeURIComponent(lines.join('\n'))}`;
 	}
 
 	onMount(async () => {
@@ -92,6 +109,7 @@
 		service={openService}
 		{precios}
 		onGrilla={() => (grillaKey = openService.key)}
+		onConfirm={(service, addons) => window.open(buildTvWhatsappUrl(service, addons), '_blank', 'noopener')}
 		onclose={() => (openKey = null)}
 	/>
 {/if}
