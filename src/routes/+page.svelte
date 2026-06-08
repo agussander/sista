@@ -20,7 +20,7 @@
 
 
 <!-- <HeroeSection></HeroeSection> -->
-<div class="section-container">
+<div class="section-container hero-section-wrap">
     <Hero></Hero>
 </div>
 <div class="section-container">
@@ -46,6 +46,15 @@
 
 .section-container:last-child {
     margin-bottom: 0;
+}
+
+/* En mobile el form vive al fondo del hero, a 3em de las cards de Fibra/TV.
+   Anulamos el margen entre hero y What para que ese gap lo controle el hero
+   (padding-bottom: 3em) + el margin-top: 0 de la primera card. */
+@media (max-width: 768px) {
+    .hero-section-wrap {
+        margin-bottom: 0;
+    }
 }
 
 .form-cont {

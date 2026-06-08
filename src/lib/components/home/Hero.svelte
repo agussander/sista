@@ -178,7 +178,15 @@
         .hero-section {
             height: auto;
             min-height: 100vh;
-            padding-bottom: 2em;
+            padding-bottom: 3em;
+            display: flex;
+            flex-direction: column;
+        }
+        .hero-content {
+            flex: 1;
+        }
+        .form-col {
+            margin-top: auto;
         }
         .text {
             top: 2em;
@@ -203,13 +211,13 @@
         }
         .hero-content {
             flex-direction: row;
-            justify-content: space-between;
             align-items: center;
-            padding-right: 4em;
         }
         .form-col {
+            flex: 1;
+            display: flex;
+            justify-content: center;
             padding: 0;
-            flex-shrink: 0;
         }
 
     }

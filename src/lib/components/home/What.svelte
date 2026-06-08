@@ -9,8 +9,8 @@ const whatInfo = [
         img: '/images/fibra-optica.png',
     },
     {
-        title: 'TV y Streaming',
-        text: 'Sumá <b><strong>Antina Play</strong></b> o <b><strong>DGO</strong></b> a tu plan y disfrutá de la mejor experiencia de entretenimiento',
+        title: 'TV',
+        text: 'Sumá <b><strong>TV</strong></b> a tu plan y disfrutá de la mejor experiencia de entretenimiento',
         img:'/images/streaming-tv.jpg'
     }
 ];
@@ -91,6 +91,13 @@ p{
     }
     img{
         max-width:40%;
+    }
+}
+
+@media (max-width: 768px){
+    /* El gap hacia el hero lo da el padding-bottom del hero (3em). */
+    .card:first-child{
+        margin-top: 0;
     }
 }
 </style>
