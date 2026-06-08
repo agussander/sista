@@ -1,95 +1,15 @@
 <script>
 import { onMount } from "svelte";
 import { pb } from '$lib/pocketbase';
-
-import {
-    priceInfo, modal, selectedPlan
-} from "$lib/stores";
+import { priceInfo } from "$lib/stores";
 
 let precios = $state({});
 let loading = $state(true);
 
-let isMobileStack = $state(false);
-let wrapperEl;
-let cardEls = $state([]);
-let rafId = null;
-
-// Abre el modal con el plan seleccionado (misma lógica que el botón "Me interesa")
-function openPlan(plan) {
-    selectedPlan.set(plan);
-    $modal = true;
-}
-
-// Función para formatear números con puntos de miles
 const formatNumber = (value) => {
     if (!value) return '';
     return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 };
-
-function applyStack() {
-    if (!wrapperEl) return;
-    const rect = wrapperEl.getBoundingClientRect();
-    const vh = window.innerHeight;
-    const totalScroll = Math.max(1, rect.height - vh);
-    const scrolled = Math.max(0, Math.min(totalScroll, -rect.top));
-    const n = cardEls.length || 1;
-
-    // Índice activo entero: cada "paso" cubre un tramo igual del scroll total.
-    // Con un pequeño umbral (0.5) para que el cambio se sienta a mitad de paso.
-    const rawProgress = n > 1 ? (scrolled / totalScroll) * (n - 1) : 0;
-    const activeIndex = Math.max(0, Math.min(n - 1, Math.round(rawProgress)));
-
-    for (let i = 0; i < cardEls.length; i++) {
-        const el = cardEls[i];
-        if (!el) continue;
-
-        const rank = i - activeIndex;
-        let ty, scale, opacity, z;
-
-        if (rank === 0) {
-            // Tarjeta actual, al frente y en su posición correcta
-            ty = -50;
-            scale = 1;
-            opacity = 1;
-            z = 1000;
-        } else if (rank > 0) {
-            // Próximas: apiladas detrás, asomando desde abajo
-            const r = Math.min(rank, 3);
-            ty = -50 + r * 6;
-            scale = 1 - r * 0.06;
-            opacity = 1;
-            z = 1000 - rank;
-        } else {
-            // Pasadas: apiladas detrás, asomando desde arriba (espejo de las próximas)
-            const r = Math.min(-rank, 3);
-            ty = -50 - r * 6;
-            scale = 1 - r * 0.06;
-            opacity = 1;
-            z = 1000 + rank;
-        }
-
-        el.style.transform = `translate(-50%, ${ty}%) scale(${scale})`;
-        el.style.opacity = String(opacity);
-        el.style.zIndex = String(z);
-    }
-}
-
-function clearStackStyles() {
-    for (const el of cardEls) {
-        if (!el) continue;
-        el.style.transform = '';
-        el.style.opacity = '';
-        el.style.zIndex = '';
-    }
-}
-
-function scheduleUpdate() {
-    if (rafId != null) return;
-    rafId = requestAnimationFrame(() => {
-        rafId = null;
-        if (isMobileStack) applyStack();
-    });
-}
 
 onMount(async () => {
     try {
@@ -110,219 +30,198 @@ onMount(async () => {
     } finally {
         loading = false;
     }
-
-    const mq = window.matchMedia('(max-width: 879px)');
-    const handleMq = () => {
-        const next = mq.matches;
-        if (next === isMobileStack) return;
-        isMobileStack = next;
-        if (!isMobileStack) {
-            clearStackStyles();
-        } else {
-            requestAnimationFrame(applyStack);
-        }
-    };
-    handleMq();
-    mq.addEventListener('change', handleMq);
-
-    window.addEventListener('scroll', scheduleUpdate, { passive: true });
-    window.addEventListener('resize', scheduleUpdate, { passive: true });
-    if (isMobileStack) {
-        requestAnimationFrame(applyStack);
-    } else {
-        clearStackStyles();
-    }
-
-    return () => {
-        window.removeEventListener('scroll', scheduleUpdate);
-        window.removeEventListener('resize', scheduleUpdate);
-        mq.removeEventListener('change', handleMq);
-        if (rafId != null) cancelAnimationFrame(rafId);
-    };
 });
 </script>
 
 <h2 id='planes'>Planes a tu medida</h2>
-<div
-    class="cont-outer"
-    class:stack-mode={isMobileStack}
-    style:--n={$priceInfo.length}
-    bind:this={wrapperEl}
->
+<a href="/elegirplan" class="ayuda-card">
+    <span class="ayuda-ico" aria-hidden="true">✨</span>
+    <span class="ayuda-text">
+        <strong>¿No sabés cuál elegir?</strong>
+        <small>Te ayudamos a elegir el mejor plan para vos</small>
+    </span>
+    <span class="ayuda-arrow" aria-hidden="true">→</span>
+</a>
+
+<div class="cont-outer">
     <div class="cont">
-        {#each $priceInfo as i, idx}
-        <div
-            class="card shadow"
-            role="button"
-            tabindex="0"
-            bind:this={cardEls[idx]}
-            onclick={() => openPlan(i.plan)}
-            onkeydown={(e) => {
-                if (e.key === 'Enter') {
-                    openPlan(i.plan);
-                } else if (e.key === ' ') {
-                    e.preventDefault();
-                    openPlan(i.plan);
-                }
-            }}
-        >
-            <div>
-                <h3>{i.plan}</h3>
-                <strong class="mb">{i.mb}mb</strong>
+        {#each $priceInfo as i}
+        <div class="card shadow">
+            <div class="card-top">
+                <span class="plan-name">{i.plan}</span>
+                <span class="precio">
+                    {#if loading}
+                        Cargando...
+                    {:else if precios[i.plan]}
+                        ${precios[i.plan]}
+                    {:else}
+                        -
+                    {/if}
+                </span>
             </div>
-            <ul>
-                {#each i.items as item}
-                <li>{item}</li>
-                {/each}
-            </ul>
-            <div>
-                {#if loading}
-                <strong class="precio">Cargando...</strong>
-                {:else if precios[i.plan]}
-                <strong class="precio">${precios[i.plan]}</strong>
-                {:else}
-                <strong class="precio">-</strong>
-                {/if}
-                <button onclick={() => openPlan(i.plan)} class="btn-secondary btn-full btn-card">Me interesa</button>
+            <div class="card-bottom">
+                <span class="mb">{i.mb}mb</span>
+                <span class="desc">{i.desc}</span>
             </div>
         </div>
         {/each}
     </div>
 </div>
-<p><a href='/precios' target="_blank">Ver precios completos</a></p>
+
+<div class="cta-wrap">
+    <a
+        href="https://api.whatsapp.com/send?phone=5492213541906&text=Hola!%20Quisiera%20información%20sobre%20los%20planes"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="btn-whatsapp"
+    >
+        Solicitar ahora
+    </a>
+</div>
 
 <style>
-p{
-    text-align: center;
+/* ── Ayuda card (sin cambios) ── */
+.ayuda-card {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    max-width: 40rem;
+    margin: 0 auto 2.5em;
+    text-align: left;
+    background: linear-gradient(135deg, #f0e7f4, #faf0f4);
+    border: 2px solid var(--violeta1);
+    border-radius: 0.9rem;
+    padding: 0.85rem 1.25rem;
+    cursor: pointer;
+    text-decoration: none;
+    transition: transform ease 150ms, box-shadow ease 150ms;
+}
+.ayuda-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(102, 37, 124, 0.15);
+}
+.ayuda-ico {
+    flex-shrink: 0;
+    width: 2.6rem;
+    height: 2.6rem;
+    border-radius: 999px;
+    background: var(--violeta1);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+}
+.ayuda-text {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+}
+.ayuda-text strong {
+    color: var(--violeta1);
+    font-size: 1.05rem;
+}
+.ayuda-text small {
+    color: #6b6b6b;
+    font-size: 0.85rem;
+    font-weight: 300;
+}
+.ayuda-arrow {
+    flex-shrink: 0;
+    color: var(--magenta);
+    font-size: 1.4rem;
+    font-weight: 700;
 }
 
+/* ── Contenedor ── */
 .cont-outer {
-    position: relative;
+    display: flex;
+    justify-content: center;
+    width: 100%;
 }
 
 .cont {
     display: flex;
-    flex-flow: row wrap;
-    justify-content: center;
-    min-width: 100vw!important;
+    flex-direction: column;
+    gap: 0.75rem;
+    width: 100%;
+    max-width: 28rem;
+    padding: 0 1rem;
+    box-sizing: border-box;
 }
 
+/* ── Tarjeta ── */
 .card {
     display: flex;
-    box-sizing: border-box;
+    flex-direction: column;
+    gap: 0.35rem;
     background: white;
-    text-align: center;
-    color: var(--text);
-    flex-flow: column nowrap;
-    width: 15em;
-    height: 20em;
-    margin: 0 .5em 2em .5em;
-    border-radius: 1rem;
-    padding: 1.2em 1em;
-    justify-content: space-between;
-    box-shadow: 0px 0px .5em rgba(0, 0, 0, .2);
-    transition: all ease-in-out 300ms;
-    cursor: pointer;
+    border-radius: 0.9rem;
+    padding: 0.85rem 1.1rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 150ms ease, box-shadow 150ms ease;
+    box-sizing: border-box;
 }
-
 .card:hover {
-    transform: scale(1.08);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.13);
 }
 
-h3 {
-    font-size: 1.8em;
+.card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
-ul {
-    list-style: none;
-    padding: 0;
+.card-bottom {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.plan-name {
+    font-weight: 600;
+    font-size: 1.15rem;
+    text-transform: capitalize;
+    color: var(--text);
 }
 
 .precio {
+    font-weight: 700;
+    font-size: 1.05rem;
     color: var(--magenta);
-    padding-left: .5em;
-    font-size: 1.1em;
-}
-
-button {
-    margin-top: .6em;
-}
-
-.btn-card {
-    padding: 0.5rem 1.75rem;
-    font-weight: 500;
-    border-width: 1.5px;
 }
 
 .mb {
-    font-weight: 500;
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--violeta1);
+    white-space: nowrap;
 }
 
-@media (min-width: 650px) {
-    .cont {
-        max-width: 40rem;
-    }
+.desc {
+    font-size: 0.83rem;
+    color: #777;
+    font-weight: 400;
 }
 
-@media (min-width: 880px) {
-    .cont {
-        max-width: 53rem;
-    }
+/* ── CTA ── */
+.cta-wrap {
+    display: flex;
+    justify-content: center;
+    margin-top: 2rem;
 }
 
-/* Desktop: grid 3×3 centrado */
+/* ── Desktop: 3 columnas ── */
 @media (min-width: 1024px) {
-    .cont-outer {
-        display: flex;
-        justify-content: center;
-    }
-
     .cont {
         display: grid;
-        grid-template-columns: repeat(3, 15em);
-        gap: 2em;
-        min-width: auto !important;
-        max-width: none;
-        width: fit-content;
-        margin: 0 auto;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+        max-width: 62rem;
+        padding: 0 1.5rem;
     }
-
-    .card {
-        width: 15em;
-        margin: 0;
-    }
-}
-
-/* Modo "stack" (apilado) en mobile: scroll sticky con animación de tarjetas */
-.cont-outer.stack-mode {
-    /* Altura total = 1 viewport para tener la stage sticky + 65vh por cada
-       transición entre tarjetas (N-1 transiciones). */
-    height: calc(100vh + (var(--n, 1) - 1) * 65vh);
-}
-
-.stack-mode .cont {
-    position: sticky;
-    top: 0;
-    height: 100vh;
-    min-width: 0 !important;
-    max-width: none;
-    display: block;
-    padding: 0;
-    overflow: visible;
-}
-
-.stack-mode .card {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    width: min(22em, 85vw);
-    height: 22em;
-    margin: 0;
-    transform: translate(-50%, -50%);
-    transform-origin: center center;
-    transition: transform 0.45s cubic-bezier(.22,.61,.36,1),
-                opacity 0.3s ease-out;
-    will-change: transform, opacity;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
 }
 </style>
