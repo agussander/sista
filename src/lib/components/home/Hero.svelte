@@ -188,6 +188,9 @@
         .form-col {
             margin-top: auto;
         }
+        .lines-wrapper {
+            bottom: -10%;
+        }
         .text {
             top: 2em;
         }
