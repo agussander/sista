@@ -1,6 +1,7 @@
 <script>
 	import Precios from './../../../routes/admin/_components/mantenimiento/Dashboard/precios/Precios.svelte';
     import AnimatedLines from '$lib/components/features/AnimatedLines.svelte';
+    import LlamenmeForm from './LlamenmeForm.svelte';
     import { fade, fly } from 'svelte/transition';
     import { onMount } from 'svelte';
     import { scrollElement, setGlobalOptions,scrollTo } from 'svelte-scrolling';
@@ -21,40 +22,47 @@
 </script>
 
 <section class="hero-section">
-    <div class="text">
+    <div class="hero-content">
+        <div class="text">
+            {#if mounted}
+                <img class="logo-sista" src="/images/Sista-logo-violeta.svg" alt="logo-sista"
+                     transition:fade={{ duration: 600, delay: 0 }}>
+                <h1 transition:fly={{ y: 30, duration: 700, delay: 200 }}>Internet por <br> Fibra Óptica</h1>
+                <div class="wifi-tv" transition:fly={{ y: 30, duration: 700, delay: 400 }}>
+                    <img class="icon-tv" src="/images/SVG/tv-green.svg" alt="icono-tv">
+                    <img class="icon-wifi" src="/images/SVG/wifi-green.svg" alt="icono-wifi">
+                    <p>WiFi + TV</p>
+                </div>
+                <div class="location-chips" transition:fly={{ y: 30, duration: 700, delay: 600 }}>
+                    <span role="button" tabindex="0" onclick={handleChipClick} onkeydown={handleChipClick}>
+                        <img class="location-icon" src="/images/icon-location-grey.svg" alt="Ubicación">
+                        Punta Lara
+                    </span>
+                    <span role="button" tabindex="0" onclick={handleChipClick} onkeydown={handleChipClick}>
+                        <img class="location-icon" src="/images/icon-location-grey.svg" alt="Ubicación">
+                        Ensenada
+                    </span>
+                    <span role="button" tabindex="0" onclick={handleChipClick} onkeydown={handleChipClick}>
+                        <img class="location-icon" src="/images/icon-location-grey.svg" alt="Ubicación">
+                        Tolosa
+                    </span>
+                    <span role="button" tabindex="0" onclick={handleChipClick} onkeydown={handleChipClick}>
+                        <img class="location-icon" src="/images/icon-location-grey.svg" alt="Ubicación">
+                        El dique
+                    </span>
+                    <span role="button" tabindex="0" onclick={handleChipClick} onkeydown={handleChipClick}>
+                        <img class="location-icon" src="/images/icon-location-grey.svg" alt="Ubicación">
+                        Campamento
+                    </span>
+                    <span class="ver-todos" role="button" tabindex="0" onclick={handleChipClick} onkeydown={handleChipClick}>
+                        + más
+                    </span>
+                </div>
+            {/if}
+        </div>
         {#if mounted}
-            <img class="logo-sista" src="/images/Sista-logo-violeta.svg" alt="logo-sista" 
-                 transition:fade={{ duration: 600, delay: 0 }}>
-            <h1 transition:fly={{ y: 30, duration: 700, delay: 200 }}>Internet por <br> Fibra Óptica</h1>
-            <div class="wifi-tv" transition:fly={{ y: 30, duration: 700, delay: 400 }}>
-                <img class="icon-tv" src="/images/SVG/tv-green.svg" alt="icono-tv">
-                <img class="icon-wifi" src="/images/SVG/wifi-green.svg" alt="icono-wifi">
-                <p>WiFi + TV</p>
-            </div>
-            <div class="location-chips" transition:fly={{ y: 30, duration: 700, delay: 600 }}>
-                <span role="button" tabindex="0" onclick={handleChipClick} onkeydown={handleChipClick}>
-                    <img class="location-icon" src="/images/icon-location-grey.svg" alt="Ubicación">
-                    Punta Lara
-                </span>
-                <span role="button" tabindex="0" onclick={handleChipClick} onkeydown={handleChipClick}>
-                    <img class="location-icon" src="/images/icon-location-grey.svg" alt="Ubicación">
-                    Ensenada
-                </span>
-                <span role="button" tabindex="0" onclick={handleChipClick} onkeydown={handleChipClick}>
-                    <img class="location-icon" src="/images/icon-location-grey.svg" alt="Ubicación">
-                    Tolosa
-                </span>
-                <span role="button" tabindex="0" onclick={handleChipClick} onkeydown={handleChipClick}>
-                    <img class="location-icon" src="/images/icon-location-grey.svg" alt="Ubicación">
-                    El dique
-                </span>
-                <span role="button" tabindex="0" onclick={handleChipClick} onkeydown={handleChipClick}>
-                    <img class="location-icon" src="/images/icon-location-grey.svg" alt="Ubicación">
-                    Campamento
-                </span>
-                <span class="ver-todos" role="button" tabindex="0" onclick={handleChipClick} onkeydown={handleChipClick}>
-                    + más
-                </span>
+            <div class="form-col" transition:fly={{ y: 30, duration: 700, delay: 800 }}>
+                <LlamenmeForm />
             </div>
         {/if}
     </div>
@@ -71,7 +79,19 @@
         position: relative;
         width: 100%;
         height: 100vh;
-        
+
+    }
+    .hero-content {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 2em;
+    }
+    .form-col {
+        position: relative;
+        z-index: 2;
+        padding: 0 2em;
     }
     .logo-sista{
         max-width: 10em;
@@ -155,6 +175,14 @@
         .text {
             padding: 0 1em;
         }
+        .hero-section {
+            height: auto;
+            min-height: 100vh;
+            padding-bottom: 2em;
+        }
+        .text {
+            top: 2em;
+        }
     }
     @media (min-width: 768px) {
         .hero-section{
@@ -172,6 +200,16 @@
         }
         .lines-wrapper{
             bottom: -40%;
+        }
+        .hero-content {
+            flex-direction: row;
+            justify-content: space-between;
+            align-items: center;
+            padding-right: 4em;
+        }
+        .form-col {
+            padding: 0;
+            flex-shrink: 0;
         }
 
     }
