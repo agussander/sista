@@ -16,32 +16,38 @@ export const datosBaja=writable({});
 export const priceInfo = readable([{
     plan: 'home',
     mb: '75',
-    items: ['Wi-Fi','Navegación sin fronteras'],
+    desc: 'Uso básico',
+    items: ['Wi-Fi', 'Navegación sin fronteras'],
 },
 {
     plan: 'fast',
     mb: '150',
-    items: ['Wi-fi Dual Band','Alta velocidad'],
+    desc: 'Ideal para streaming y trabajo',
+    items: ['Ilimitado', 'Alta velocidad'],
 },
 {
     plan: 'power',
     mb: '300',
-    items: ['Wi-fi Dual Band', 'Mayor velocidad', 'Más dispositivos'],
+    desc: 'Mayor velocidad, más dispositivos',
+    items: ['Ilimitado', 'Mayor velocidad', 'Más dispositivos'],
 },
 {
     plan: 'gamer',
     mb: '300',
-    items: ['Tráfico simétrico','Wifi Dual Band','Cableado a tu dispositivo'],
+    desc: 'Tráfico simétrico para gaming',
+    items: ['Tráfico simétrico', 'Ilimitado', 'Cableado a tu dispositivo'],
 },
 {
     plan: 'worker',
     mb: '200',
-    items: ['Tráfico simétrico','Wi-fi Dual Band','Cableado a tu puesto de trabajo'],
+    desc: 'Simétrico para trabajo remoto',
+    items: ['Tráfico simétrico', 'Ilimitado', 'Cableado a tu puesto de trabajo'],
 },
 {
     plan: 'max',
     mb: '1000',
-    items: ['Tráfico simétrico','Wi-fi Dual Band','Máximo rendimiento'],
+    desc: 'El máximo rendimiento disponible',
+    items: ['Tráfico simétrico', 'Ilimitado', 'Máximo rendimiento'],
 },
 ]);
 
