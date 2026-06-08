@@ -8,6 +8,7 @@ import Tecnicos from "./tecnicos/Tecnicos.svelte";
 import Conectarlaciudad from "./conectarlaciudad/Conectarlaciudad.svelte";
 import SorteoConectarlaciudad from "./conectarlaciudad/SorteoConectarlaciudad.svelte";
 import TolosanoCodigos from "./tolosano/TolosanoCodigos.svelte";
+import Llamenme from "./llamenme/Llamenme.svelte";
 
 let {selected=false} = $props();
 </script>
@@ -32,6 +33,8 @@ let {selected=false} = $props();
             <Trabajos></Trabajos>
         {:else if selected === 'tecnicos'}
             <Tecnicos></Tecnicos>
+        {:else if selected === 'llamenme'}
+            <Llamenme></Llamenme>
         {/if}
     {/if}
 </section>
