@@ -46,7 +46,7 @@ onMount(async () => {
 <div class="cont-outer">
     <div class="cont">
         {#each $priceInfo as i}
-        <div class="card shadow">
+        <div class="card">
             <div class="card-top">
                 <span class="plan-name">{i.plan}</span>
                 <span class="precio">
