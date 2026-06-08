@@ -90,7 +90,8 @@ reCAPTCHA v3 actualmente embebida en `form-handler.php`.
      Si la respuesta no es 2xx → `{ success:false, message:'pb' }` (loguea el
      cuerpo de error) y **no** se intenta el email.
   5. **Email best-effort**: si el write a pb fue OK, `MailHandler->send(...)`
-     con subject "Quiero que me llamen" y campos `Nombre`, `Número`. Si el mail
+     con subject "Quiero que me llamen" y campos `Nombre`, `Número`, con
+     destinatario fijo `agustin@sista.ar` (`MailHandler->setTo(...)`). Si el mail
      falla, se loguea pero igual `{ success:true }` (el lead ya está guardado).
   6. `{ success:true }`.
 - No requiere secrets nuevos: usa `RECAPTCHA_SECRET_KEY`, `SMTP_*`,
@@ -101,8 +102,8 @@ reCAPTCHA v3 actualmente embebida en `form-handler.php`.
 **`src/routes/admin/_components/mantenimiento/Dashboard/llamenme/Llamenme.svelte`** (nuevo):
 
 - `onMount`: `pb.collection('quiero_que_me_llamen').getList(1, 200, { sort: '-created' })`.
-- Tabla con columnas: **Nombre**, **Número** (link `https://wa.me/<numero>` y/o
-  `tel:`), **Fecha** (formateada `es-AR` con fecha+hora).
+- Tabla con columnas: **Nombre**, **Número** (texto plano, sin link — es para
+  que el equipo llame), **Fecha** (formateada `es-AR` con fecha+hora).
 - Encabezado con contador de leads y botón "Refrescar".
 - Estados de carga (`Spinner`) y vacío ("Todavía no hay solicitudes").
 - Manejo de error si la lectura falla (p. ej. permisos).
