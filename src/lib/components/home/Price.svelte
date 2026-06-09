@@ -134,16 +134,14 @@ function onKey(e) {
                 onclick={() => open(idx)}
                 aria-expanded={openIndex === idx}
             >
-                <div class="card-main">
-                    <div class="card-info">
-                        <span class="eyebrow">
-                            <span class="plan-name">{i.plan}</span>
-                            {#if i.symmetric}<span class="chip">Simétrico</span>{/if}
-                        </span>
-                        <span class="speed">{i.mb}<span class="unit">mb</span></span>
-                    </div>
+                <span class="eyebrow">
+                    <span class="plan-name">{i.plan}</span>
+                    {#if i.symmetric}<span class="chip">Simétrico</span>{/if}
+                </span>
+                <span class="figures">
+                    <span class="speed">{i.mb}<span class="unit">mb</span></span>
                     <span class="precio">{priceLabel(i.plan)}{#if !loading && precios[i.plan]}<span class="per">/mes</span>{/if}</span>
-                </div>
+                </span>
                 <span class="desc">{i.desc}</span>
             </button>
 
@@ -173,8 +171,10 @@ function onKey(e) {
                             <span class="plan-name">{$priceInfo[openIndex].plan}</span>
                             {#if $priceInfo[openIndex].symmetric}<span class="chip">Simétrico</span>{/if}
                         </span>
-                        <span class="panel-speed">{$priceInfo[openIndex].mb}<span class="unit">mb</span></span>
-                        <span class="panel-price">{priceLabel($priceInfo[openIndex].plan)}{#if !loading && precios[$priceInfo[openIndex].plan]}<span class="per">/mes</span>{/if}</span>
+                        <span class="panel-figures">
+                            <span class="panel-speed">{$priceInfo[openIndex].mb}<span class="unit">mb</span></span>
+                            <span class="panel-price">{priceLabel($priceInfo[openIndex].plan)}{#if !loading && precios[$priceInfo[openIndex].plan]}<span class="per">/mes</span>{/if}</span>
+                        </span>
                     </div>
                     <PlanDetails plan={$priceInfo[openIndex]} onSimetrico={() => (showSimetrico = true)} />
                 </div>
@@ -274,11 +274,12 @@ function onKey(e) {
     border-bottom: none;
 }
 
-/* La tarjeta es un botón: reseteamos estilos por defecto. */
+/* La tarjeta es un botón: reseteamos estilos por defecto y alineamos a la izq. */
 .card {
     display: flex;
     flex-direction: column;
-    gap: 0.35rem;
+    align-items: flex-start;
+    gap: 0.45rem;
     width: 100%;
     padding: 0.9rem 1.25rem;
     box-sizing: border-box;
@@ -288,21 +289,6 @@ function onKey(e) {
     color: inherit;
     text-align: left;
     cursor: pointer;
-}
-
-/* Fila principal: bloque (etiqueta + velocidad) a la izquierda, precio a la derecha. */
-.card-main {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 0.75rem;
-}
-
-.card-info {
-    display: flex;
-    flex-direction: column;
-    gap: 0.2rem;
-    min-width: 0;
 }
 
 .eyebrow {
@@ -320,56 +306,64 @@ function onKey(e) {
     color: #9b8aa6;
 }
 
+/* Velocidad (izq) + precio (der) compartiendo la misma línea base. */
+.figures {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+    width: 100%;
+}
+
 /* Velocidad = número protagonista (más importante que el nombre). */
 .speed {
     display: flex;
     align-items: baseline;
-    gap: 0.18rem;
-    font-size: 1.9rem;
+    gap: 0.15rem;
+    font-size: 1.5rem;
     font-weight: 800;
     line-height: 1;
     color: var(--violeta1);
 }
 .unit {
-    font-size: 0.85rem;
+    font-size: 0.78rem;
     font-weight: 600;
     color: var(--violeta1);
-    opacity: 0.6;
+    opacity: 0.55;
 }
 
 /* Precio = peso medium (de-enfatizado), mantiene el acento magenta. */
 .precio {
     display: flex;
     align-items: baseline;
-    gap: 0.15rem;
-    font-size: 1.25rem;
+    gap: 0.13rem;
+    font-size: 1.1rem;
     font-weight: 500;
     color: var(--magenta);
     white-space: nowrap;
 }
 .per {
-    font-size: 0.78rem;
+    font-size: 0.72rem;
     font-weight: 400;
     color: #9a9a9a;
 }
 
 .desc {
-    display: block;
-    margin-top: 0.55rem;
+    text-align: left;
     font-size: 0.85rem;
     color: #777;
     font-weight: 400;
 }
 
-/* ── Chip "Simétrico" ── */
+/* ── Chip "Simétrico" (gris, acento sutil) ── */
 .chip {
     flex-shrink: 0;
     font-size: 0.6rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: #fff;
-    background: var(--magenta);
+    color: #7a7a7a;
+    background: #ededed;
     padding: 0.12rem 0.45rem;
     border-radius: 999px;
     line-height: 1.5;
@@ -508,15 +502,20 @@ function onKey(e) {
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 0.35rem;
+        gap: 0.5rem;
         text-align: center;
+    }
+    .panel-figures {
+        display: flex;
+        align-items: baseline;
+        gap: 0.85rem;
     }
     /* Misma jerarquía que la tarjeta, en grande: velocidad protagonista. */
     .panel-speed {
         display: flex;
         align-items: baseline;
         gap: 0.2rem;
-        font-size: 2.6rem;
+        font-size: 2rem;
         font-weight: 800;
         line-height: 1;
         color: var(--violeta1);
@@ -525,7 +524,7 @@ function onKey(e) {
         display: flex;
         align-items: baseline;
         gap: 0.15rem;
-        font-size: 1.3rem;
+        font-size: 1.25rem;
         font-weight: 500;
         color: var(--magenta);
     }
