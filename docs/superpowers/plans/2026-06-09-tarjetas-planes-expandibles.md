@@ -462,17 +462,17 @@ function onKey(e) {
                 onclick={() => open(idx)}
                 aria-expanded={openIndex === idx}
             >
-                <div class="card-top">
-                    <span class="name-wrap">
-                        <span class="plan-name">{i.plan}</span>
-                        {#if i.symmetric}<span class="chip">Simétrico</span>{/if}
-                    </span>
-                    <span class="precio">{priceLabel(i.plan)}</span>
+                <div class="card-main">
+                    <div class="card-info">
+                        <span class="eyebrow">
+                            <span class="plan-name">{i.plan}</span>
+                            {#if i.symmetric}<span class="chip">Simétrico</span>{/if}
+                        </span>
+                        <span class="speed">{i.mb}<span class="unit">mb</span></span>
+                    </div>
+                    <span class="precio">{priceLabel(i.plan)}{#if !loading && precios[i.plan]}<span class="per">/mes</span>{/if}</span>
                 </div>
-                <div class="card-bottom">
-                    <span class="mb">{i.mb}mb</span>
-                    <span class="desc">{i.desc}</span>
-                </div>
+                <span class="desc">{i.desc}</span>
             </button>
 
             {#if openIndex === idx && !isDesktop}
@@ -497,9 +497,12 @@ function onKey(e) {
                 <button class="close" type="button" onclick={close} bind:this={closeEl} aria-label="Cerrar">✕</button>
                 <div class="panel-body">
                     <div class="panel-head">
-                        <span class="panel-name">{$priceInfo[openIndex].plan}</span>
-                        {#if $priceInfo[openIndex].symmetric}<span class="chip">Simétrico</span>{/if}
-                        <span class="panel-price">{priceLabel($priceInfo[openIndex].plan)}</span>
+                        <span class="eyebrow">
+                            <span class="plan-name">{$priceInfo[openIndex].plan}</span>
+                            {#if $priceInfo[openIndex].symmetric}<span class="chip">Simétrico</span>{/if}
+                        </span>
+                        <span class="panel-speed">{$priceInfo[openIndex].mb}<span class="unit">mb</span></span>
+                        <span class="panel-price">{priceLabel($priceInfo[openIndex].plan)}{#if !loading && precios[$priceInfo[openIndex].plan]}<span class="per">/mes</span>{/if}</span>
                     </div>
                     <PlanDetails plan={$priceInfo[openIndex]} onSimetrico={() => (showSimetrico = true)} />
                 </div>
@@ -615,49 +618,73 @@ function onKey(e) {
     cursor: pointer;
 }
 
-.card-top {
+/* Fila principal: bloque (etiqueta + velocidad) a la izquierda, precio a la derecha. */
+.card-main {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 0.6rem;
+    gap: 0.75rem;
 }
 
-.name-wrap {
+.card-info {
     display: flex;
-    align-items: center;
-    gap: 0.5rem;
+    flex-direction: column;
+    gap: 0.2rem;
     min-width: 0;
 }
 
-.card-bottom {
+.eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Nombre del plan = etiqueta secundaria (eyebrow), no protagonista. */
+.plan-name {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #9b8aa6;
+}
+
+/* Velocidad = número protagonista (más importante que el nombre). */
+.speed {
     display: flex;
     align-items: baseline;
-    gap: 0.6rem;
+    gap: 0.18rem;
+    font-size: 1.9rem;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--violeta1);
 }
-
-.plan-name {
+.unit {
+    font-size: 0.85rem;
     font-weight: 600;
-    font-size: 1.15rem;
-    text-transform: capitalize;
-    color: var(--text);
+    color: var(--violeta1);
+    opacity: 0.6;
 }
 
+/* Precio = peso medium (de-enfatizado), mantiene el acento magenta. */
 .precio {
-    font-weight: 700;
-    font-size: 1.05rem;
+    display: flex;
+    align-items: baseline;
+    gap: 0.15rem;
+    font-size: 1.25rem;
+    font-weight: 500;
     color: var(--magenta);
     white-space: nowrap;
 }
-
-.mb {
-    font-weight: 700;
-    font-size: 0.95rem;
-    color: var(--violeta1);
-    white-space: nowrap;
+.per {
+    font-size: 0.78rem;
+    font-weight: 400;
+    color: #9a9a9a;
 }
 
 .desc {
-    font-size: 0.83rem;
+    display: block;
+    margin-top: 0.55rem;
+    font-size: 0.85rem;
     color: #777;
     font-weight: 400;
 }
@@ -665,15 +692,15 @@ function onKey(e) {
 /* ── Chip "Simétrico" ── */
 .chip {
     flex-shrink: 0;
-    font-size: 0.62rem;
+    font-size: 0.6rem;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.03em;
+    letter-spacing: 0.04em;
     color: #fff;
     background: var(--magenta);
-    padding: 0.15rem 0.5rem;
+    padding: 0.12rem 0.45rem;
     border-radius: 999px;
-    line-height: 1.4;
+    line-height: 1.5;
 }
 
 .inline-details {
@@ -804,18 +831,27 @@ function onKey(e) {
 
     .panel-head {
         display: flex;
+        flex-direction: column;
         align-items: center;
-        gap: 0.6rem;
+        gap: 0.35rem;
+        text-align: center;
     }
-    .panel-name {
-        font-weight: 700;
-        font-size: 1.6rem;
-        text-transform: capitalize;
-        color: var(--text);
+    /* Misma jerarquía que la tarjeta, en grande: velocidad protagonista. */
+    .panel-speed {
+        display: flex;
+        align-items: baseline;
+        gap: 0.2rem;
+        font-size: 2.6rem;
+        font-weight: 800;
+        line-height: 1;
+        color: var(--violeta1);
     }
     .panel-price {
-        font-weight: 800;
-        font-size: 1.4rem;
+        display: flex;
+        align-items: baseline;
+        gap: 0.15rem;
+        font-size: 1.3rem;
+        font-weight: 500;
         color: var(--magenta);
     }
 }
@@ -837,6 +873,7 @@ Expected: PASS — `planCard`, `stores` y los tests previos (`data.test.js`) sin
 > El preview MCP está roto en este entorno (TCC sobre ~/Documents). Verificación manual por el usuario con `npm run dev`.
 
 Run: `npm run dev` y abrir la home. Checklist:
+- [ ] Jerarquía de la tarjeta colapsada: el número de **mb es lo más prominente** (grande, violeta); el nombre del plan se lee como etiqueta chica en mayúsculas; el precio en peso medium con "/mes" tenue.
 - [ ] Desktop (≥1024px): click en una tarjeta → crece desde su posición hasta llenar el contenedor de las 6 tarjetas, con el resto atenuado. Se ven las características y el botón "Pedir este plan".
 - [ ] Cierra con ✕, Escape y click en el fondo atenuado; vuelve a su lugar.
 - [ ] Las tarjetas gamer/worker/max muestran el chip "Simétrico". Al abrirlas, el link "¿Qué es simétrico?" abre el `SimetricoModal`.
