@@ -49,7 +49,6 @@ export const priceInfo = readable([{
     plan: 'max',
     mb: '1000',
     desc: 'El máximo rendimiento disponible',
-    symmetric: true,
     items: ['Tráfico simétrico', 'Ilimitado', 'Máximo rendimiento'],
 },
 ]);
