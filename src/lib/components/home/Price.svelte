@@ -13,9 +13,9 @@ let openIndex = $state(null);
 let showSimetrico = $state(false);
 let isDesktop = $state(false);
 
-// FLIP (desktop): caja de inicio (posición/tamaño de la tarjeta clickeada) y
-// flag que dispara la transición hacia inset:0 del contenedor.
-let flip = $state({ t: 0, l: 0, w: 0, h: 0 });
+// FLIP (desktop): caja de inicio (tarjeta clickeada) y caja destino (contenedor
+// de las 6 tarjetas), ambas en coords de viewport — el overlay es position:fixed.
+let flip = $state({ t: 0, l: 0, w: 0, h: 0, ot: 0, ol: 0, ow: 0, oh: 0 });
 let animating = $state(false);
 
 let contEl;
@@ -82,10 +82,14 @@ async function open(idx) {
         return;
     }
 
-    // Desktop: medir la caja de la tarjeta relativa al contenedor (FLIP "First").
-    const c = contEl.getBoundingClientRect();
+    // Desktop: medir en viewport la caja de la tarjeta (inicio) y la del
+    // contenedor de las 6 tarjetas (destino). El overlay es position:fixed.
     const r = cardEls[idx].getBoundingClientRect();
-    flip = { t: r.top - c.top, l: r.left - c.left, w: r.width, h: r.height };
+    const c = contEl.getBoundingClientRect();
+    flip = {
+        t: r.top, l: r.left, w: r.width, h: r.height,
+        ot: c.top, ol: c.left, ow: c.width, oh: c.height,
+    };
     openIndex = idx;
     await tick();
     // Dos rAF para garantizar que el overlay pintó en la caja de inicio antes
@@ -154,12 +158,12 @@ function onKey(e) {
         {/each}
 
         {#if openIndex !== null && isDesktop}
-            <div class="dim" class:open={animating} onclick={close} role="presentation"></div>
+            <div class="backdrop" class:open={animating} onclick={close} role="presentation"></div>
             <div
                 class="overlay"
                 class:open={animating}
                 bind:this={overlayEl}
-                style="--t:{flip.t}px;--l:{flip.l}px;--w:{flip.w}px;--h:{flip.h}px;"
+                style="--t:{flip.t}px;--l:{flip.l}px;--w:{flip.w}px;--h:{flip.h}px;--ot:{flip.ot}px;--ol:{flip.ol}px;--ow:{flip.ow}px;--oh:{flip.oh}px;"
                 role="dialog"
                 aria-modal="true"
                 aria-label="Detalle del plan {$priceInfo[openIndex].plan}"
@@ -303,7 +307,7 @@ function onKey(e) {
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: #9b8aa6;
+    color: var(--violeta1);
 }
 
 /* Velocidad (izq) + precio (der) compartiendo la misma línea base. */
@@ -329,7 +333,6 @@ function onKey(e) {
     font-size: 0.78rem;
     font-weight: 600;
     color: var(--violeta1);
-    opacity: 0.55;
 }
 
 /* Precio = peso medium (de-enfatizado), mantiene el acento magenta. */
@@ -381,7 +384,7 @@ function onKey(e) {
 }
 
 /* ── Overlay desktop (FLIP): oculto por defecto en mobile ── */
-.dim,
+.backdrop,
 .overlay {
     display: none;
 }
@@ -423,33 +426,32 @@ function onKey(e) {
         outline-offset: 2px;
     }
 
-    .dim {
+    .backdrop {
         display: block;
-        position: absolute;
+        position: fixed;
         inset: 0;
-        z-index: 20;
-        background: rgba(43, 18, 53, 0.18);
+        z-index: 900;
+        background: rgba(43, 18, 53, 0.28);
         opacity: 0;
         transition: opacity 280ms ease;
         cursor: pointer;
-        border-radius: 0.9rem;
     }
-    .dim.open {
+    .backdrop.open {
         opacity: 1;
     }
 
     .overlay {
         display: block;
-        position: absolute;
+        position: fixed;
         top: var(--t);
         left: var(--l);
         width: var(--w);
         height: var(--h);
-        z-index: 30;
+        z-index: 901;
         background: #fff;
         border-radius: 0.9rem;
         box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
-        overflow: auto;
+        overflow: hidden;
         transition:
             top 300ms cubic-bezier(0.23, 1, 0.32, 1),
             left 300ms cubic-bezier(0.23, 1, 0.32, 1),
@@ -457,10 +459,10 @@ function onKey(e) {
             height 300ms cubic-bezier(0.23, 1, 0.32, 1);
     }
     .overlay.open {
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
+        top: var(--ot);
+        left: var(--ol);
+        width: var(--ow);
+        height: var(--oh);
     }
 
     .close {
@@ -483,12 +485,14 @@ function onKey(e) {
 
     .panel-body {
         display: flex;
-        flex-direction: column;
+        flex-direction: row;
+        flex-wrap: wrap;
         align-items: center;
         justify-content: center;
-        gap: 1rem;
-        min-height: 100%;
-        padding: 1.5rem 2rem;
+        gap: 1.25rem 3rem;
+        width: 100%;
+        height: 100%;
+        padding: 1.25rem 2.5rem;
         box-sizing: border-box;
         opacity: 0;
         transition: opacity 150ms ease;

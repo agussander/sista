@@ -1,6 +1,7 @@
 <script>
 	// Contenido que se revela al abrir una tarjeta de plan. Reusado tanto por el
-	// overlay de desktop como por el acordeón de mobile.
+	// overlay de desktop (layout horizontal) como por el acordeón de mobile
+	// (layout vertical). El breakpoint 1024px distingue ambos contextos.
 	import { planWhatsappUrl } from '$lib/components/home/planCard.js';
 
 	let { plan, onSimetrico } = $props();
@@ -9,22 +10,24 @@
 </script>
 
 <div class="details">
-	<ul class="features">
-		{#each plan.items as item}
-			<li>
-				<svg class="check" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-					<path d="M5 13l4 4L19 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
-				</svg>
-				<span>{item}</span>
-			</li>
-		{/each}
-	</ul>
+	<div class="feature-group">
+		<ul class="features">
+			{#each plan.items as item}
+				<li>
+					<svg class="check" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+						<path d="M5 13l4 4L19 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+					</svg>
+					<span>{item}</span>
+				</li>
+			{/each}
+		</ul>
 
-	{#if plan.symmetric}
-		<button type="button" class="simetrico-link" onclick={onSimetrico}>
-			¿Qué es simétrico?
-		</button>
-	{/if}
+		{#if plan.symmetric}
+			<button type="button" class="simetrico-link" onclick={onSimetrico}>
+				¿Qué es simétrico?
+			</button>
+		{/if}
+	</div>
 
 	<a class="pedir" href={waUrl} target="_blank" rel="noopener noreferrer">
 		<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -43,6 +46,12 @@
 		max-width: 26rem;
 		margin: 0 auto;
 		text-align: left;
+	}
+
+	.feature-group {
+		display: flex;
+		flex-direction: column;
+		gap: 0.7rem;
 	}
 
 	.features {
@@ -83,26 +92,45 @@
 		opacity: 0.75;
 	}
 
+	/* Botón = verde de la página (--verde) con texto violeta, igual que los
+	   demás CTAs de WhatsApp del sitio. */
 	.pedir {
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
 		gap: 0.55rem;
 		align-self: stretch;
-		background: #25d366;
-		color: #fff;
+		background: var(--verde);
+		color: var(--violeta1);
 		font-weight: 700;
 		font-size: 1rem;
 		text-decoration: none;
 		border-radius: 0.7rem;
-		padding: 0.8rem 1.2rem;
-		transition: filter 150ms ease, transform 150ms ease;
+		padding: 0.8rem 1.4rem;
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+		transition: transform 150ms ease, box-shadow 150ms ease;
 	}
 	.pedir:hover {
-		filter: brightness(0.95);
-		transform: translateY(-1px);
+		transform: translateY(-2px);
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 	}
 	.pedir:active {
 		transform: scale(0.98);
+	}
+
+	/* Desktop (= contexto del overlay): layout horizontal, features y botón
+	   lado a lado, para repartir el contenido en el ancho sin scroll. */
+	@media (min-width: 1024px) {
+		.details {
+			flex-direction: row;
+			align-items: center;
+			gap: 2.5rem;
+			max-width: none;
+			width: auto;
+		}
+		.pedir {
+			align-self: center;
+			flex-shrink: 0;
+		}
 	}
 </style>
