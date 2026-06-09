@@ -505,9 +505,9 @@ function onKey(e) {
     .panel-head {
         display: flex;
         flex-direction: column;
-        align-items: center;
+        align-items: flex-start;
         gap: 0.5rem;
-        text-align: center;
+        text-align: left;
     }
     .panel-figures {
         display: flex;
