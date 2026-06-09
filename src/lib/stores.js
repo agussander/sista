@@ -35,18 +35,21 @@ export const priceInfo = readable([{
     plan: 'gamer',
     mb: '300',
     desc: 'Tráfico simétrico para gaming',
+    symmetric: true,
     items: ['Tráfico simétrico', 'Ilimitado', 'Cableado a tu dispositivo'],
 },
 {
     plan: 'worker',
     mb: '200',
     desc: 'Simétrico para trabajo remoto',
+    symmetric: true,
     items: ['Tráfico simétrico', 'Ilimitado', 'Cableado a tu puesto de trabajo'],
 },
 {
     plan: 'max',
     mb: '1000',
     desc: 'El máximo rendimiento disponible',
+    symmetric: true,
     items: ['Tráfico simétrico', 'Ilimitado', 'Máximo rendimiento'],
 },
 ]);
