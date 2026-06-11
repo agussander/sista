@@ -34,6 +34,28 @@ function priceLabel(key) {
     return precios[key] ? `$${precios[key]}` : '-';
 }
 
+// ── Deep-linking: reflejar el estado (plan abierto / modal) en la URL ──
+function syncUrl() {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (openIndex !== null) params.set('plan', $priceInfo[openIndex].plan);
+    else params.delete('plan');
+    if (showSimetrico) params.set('simetrico', '1');
+    else params.delete('simetrico');
+    const qs = params.toString();
+    const url = window.location.pathname + (qs ? `?${qs}` : '') + window.location.hash;
+    history.replaceState(history.state, '', url);
+}
+
+function openSimetrico() {
+    showSimetrico = true;
+    syncUrl();
+}
+function closeSimetrico() {
+    showSimetrico = false;
+    syncUrl();
+}
+
 onMount(async () => {
     try {
         const record = await pb.collection('precios').getFirstListItem('');
@@ -69,7 +91,36 @@ onMount(() => {
     return () => mql.removeEventListener('change', onChange);
 });
 
-async function open(idx) {
+onMount(() => {
+    // Deep-linking: abrir el plan / modal indicado por la URL al cargar.
+    const apply = (animated) => {
+        const params = new URLSearchParams(window.location.search);
+        const planParam = params.get('plan');
+        const idx = planParam ? $priceInfo.findIndex((p) => p.plan === planParam) : -1;
+        showSimetrico = params.get('simetrico') === '1';
+        if (idx === -1) {
+            animating = false;
+            openIndex = null;
+        } else if (idx !== openIndex) {
+            open(idx, { instant: !animated });
+        }
+    };
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('plan') || params.get('simetrico') === '1') {
+        requestAnimationFrame(() => {
+            document.getElementById('planes')?.scrollIntoView({ behavior: 'auto', block: 'start' });
+            apply(false);
+        });
+    }
+
+    // Sincronizar con back/forward del navegador.
+    const onPop = () => apply(false);
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+});
+
+async function open(idx, { instant = false } = {}) {
     // Toca la misma tarjeta abierta -> cerrar.
     if (openIndex === idx) {
         close();
@@ -79,21 +130,24 @@ async function open(idx) {
 
     if (!isDesktop) {
         openIndex = idx; // acordeón: el slide se encarga de la animación
+        syncUrl();
         return;
     }
 
     // Desktop: medir en viewport la caja de la tarjeta (inicio) y la del
     // contenedor de las 6 tarjetas (destino). El overlay es position:fixed.
-    const r = cardEls[idx].getBoundingClientRect();
+    // `instant` (al abrir desde la URL) arranca ya en el destino, sin crecer.
     const c = contEl.getBoundingClientRect();
+    const r = instant ? c : cardEls[idx].getBoundingClientRect();
     flip = {
         t: r.top, l: r.left, w: r.width, h: r.height,
         ot: c.top, ol: c.left, ow: c.width, oh: c.height,
     };
     openIndex = idx;
+    syncUrl();
     await tick();
     // Dos rAF para garantizar que el overlay pintó en la caja de inicio antes
-    // de transicionar a inset:0.
+    // de transicionar al destino.
     requestAnimationFrame(() => requestAnimationFrame(() => {
         animating = true;
         closeEl?.focus();
@@ -106,6 +160,7 @@ function close() {
 
     if (!isDesktop) {
         openIndex = null;
+        syncUrl();
         ret?.focus?.();
         return;
     }
@@ -114,6 +169,7 @@ function close() {
     animating = false;
     setTimeout(() => {
         openIndex = null;
+        syncUrl();
         ret?.focus?.();
     }, 300);
 }
@@ -151,7 +207,7 @@ function onKey(e) {
 
             {#if openIndex === idx && !isDesktop}
                 <div class="inline-details" transition:slide={{ duration: 250 }}>
-                    <PlanDetails plan={i} onSimetrico={() => (showSimetrico = true)} />
+                    <PlanDetails plan={i} onSimetrico={openSimetrico} />
                 </div>
             {/if}
         </div>
@@ -180,12 +236,19 @@ function onKey(e) {
                             <span class="panel-price">{priceLabel($priceInfo[openIndex].plan)}{#if !loading && precios[$priceInfo[openIndex].plan]}<span class="per">/mes</span>{/if}</span>
                         </span>
                     </div>
-                    <PlanDetails plan={$priceInfo[openIndex]} onSimetrico={() => (showSimetrico = true)} />
+                    <PlanDetails plan={$priceInfo[openIndex]} onSimetrico={openSimetrico} />
                 </div>
             </div>
         {/if}
     </div>
 </div>
+
+<a href="/elegirplan?paso=promo&tipo=tv" class="ayuda-card">
+    <span class="ayuda-text">
+        <strong>Internet + TV</strong>
+    </span>
+    <span class="ayuda-arrow" aria-hidden="true">→</span>
+</a>
 
 <a href="/elegirplan" class="ayuda-card">
     <span class="ayuda-text">
@@ -209,7 +272,7 @@ function onKey(e) {
 </div>
 
 {#if showSimetrico}
-    <SimetricoModal onclose={() => (showSimetrico = false)} />
+    <SimetricoModal onclose={closeSimetrico} />
 {/if}
 
 <style>
