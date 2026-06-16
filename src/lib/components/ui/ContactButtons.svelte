@@ -1,14 +1,12 @@
 <script>
 import { goto } from '$app/navigation';
-import { browser } from '$app/environment';
 let {text = 'Comunicate por:'} = $props();
 
 const options = [
     {
         name: 'WhatsApp',
         icon: '/images/wsp-violet.svg',
-        link: 'https://api.whatsapp.com/send?phone=5492213541906&text=Hola!%20Quisiera%20m%C3%A1s%20informaci%C3%B3n%20sobre%20Sista',
-        external: true
+        link: '/contacto/whatsapp'
     },
     {
         name: 'Email',
@@ -22,16 +20,8 @@ const options = [
     }
 ]
 
-let selected = $state('');
-
 const onSelect = (option) => {
-    if(selected === 'WhatsApp'){
-        if (browser && typeof window !== 'undefined') {
-            window.open('https://api.whatsapp.com/send?phone=5492213541906&text=Hola!%20Quisiera%20m%C3%A1s%20informaci%C3%B3n%20sobre%20Sista', '_blank');
-        }
-    }else{
-        goto(option.link);
-    }
+    goto(option.link);
 }
 
 </script>
@@ -40,14 +30,11 @@ const onSelect = (option) => {
     <h4>{text}</h4>
     <div class="options">
         {#each options as option}
-            <div class="option" onclick={() => {selected = option.name; onSelect(option)}}>
+            <div class="option" onclick={() => onSelect(option)}>
                 <span href={option.link}>
                     <img src={option.icon} alt={option.name} />
                     {option.name}
                 </span>
-                {#if option.external}
-                    <svg class="external-link-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-                {/if}
             </div>
         {/each}
     </div>
@@ -114,14 +101,5 @@ span{
     justify-content: center;
     align-items: center;
     gap: 1rem;
-}
-.external-link-icon {
-    width: 1em;
-    height: 1em;
-    stroke: var(--text);
-    stroke-width: 2;
-    fill: none;
-    stroke-linecap: round;
-    stroke-linejoin: round;
 }
 </style>

@@ -10,13 +10,13 @@ const whatInfo = [
     },
     {
         title: 'TV',
-        text: 'Sumá <b><strong>TV</strong></b> a tu plan y disfrutá de la mejor experiencia de entretenimiento',
+        text: 'Sumá TV a tu plan y disfrutá de la mejor experiencia de entretenimiento',
         img:'/images/streaming-tv.jpg'
     }
 ];
 
 function handleClick(title) {
-    if (title === 'TV y Streaming') {
+    if (title === 'TV') {
         goto('/tv');
     } else if (title === 'Fibra Óptica') {
         goto('/fibra-optica');

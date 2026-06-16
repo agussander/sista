@@ -82,7 +82,7 @@
 	<button class="ayuda-card" onclick={() => (expanded = true)}>
 		<span class="ayuda-ico" aria-hidden="true">✨</span>
 		<span class="ayuda-text">
-			<strong>¿No sabés cuál elegir?</strong>
+			<strong>¿Te ayudamos a elegir?</strong>
 			<small>Respondé 4 preguntas y te recomendamos el servicio ideal</small>
 		</span>
 		<span class="ayuda-arrow" aria-hidden="true">→</span>

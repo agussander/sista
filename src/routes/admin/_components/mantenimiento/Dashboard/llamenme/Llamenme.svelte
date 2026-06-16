@@ -3,6 +3,14 @@ import { pb } from '$lib/pocketbase';
 import { onMount } from 'svelte';
 import Spinner from '$lib/components/ui/Spinner.svelte';
 
+// Agentes disponibles para asignar. El "value" debe coincidir con el valor
+// guardado en el campo select "agente" de PocketBase (en minúscula).
+const agentes = [
+    { value: 'agustin', label: 'Agustín' },
+    { value: 'felipe', label: 'Felipe' },
+    { value: 'gustavo', label: 'Gustavo' }
+];
+
 let leads = $state([]);
 let loading = $state(true);
 let error = $state('');
@@ -23,12 +31,45 @@ async function load() {
     }
 }
 
-function formatDate(d) {
+const isAssigned = (l) => !!l.agente;
+
+async function assign(lead, value) {
+    const agente = value || null;
+    const prev = lead.agente;
+    lead.agente = agente;
+    try {
+        await pb.collection('quiero_que_me_llamen').update(lead.id, { agente });
+    } catch (e) {
+        console.error(e);
+        lead.agente = prev;
+        error = 'No se pudo asignar el agente.';
+        setTimeout(() => (error = ''), 3000);
+    }
+}
+
+// Devuelve un texto relativo del tipo "hace 3 minutos / 3 horas / 3 días / 1 mes".
+function timeAgo(d) {
     if (!d) return '';
-    return new Date(d).toLocaleDateString('es-AR', {
-        year: 'numeric', month: '2-digit', day: '2-digit',
-        hour: '2-digit', minute: '2-digit'
-    });
+    const diffMs = Date.now() - new Date(d).getTime();
+    if (diffMs < 0) return 'recién';
+
+    const sec = Math.floor(diffMs / 1000);
+    if (sec < 60) return 'hace unos segundos';
+
+    const min = Math.floor(sec / 60);
+    if (min < 60) return `hace ${min} ${min === 1 ? 'minuto' : 'minutos'}`;
+
+    const hours = Math.floor(min / 60);
+    if (hours < 24) return `hace ${hours} ${hours === 1 ? 'hora' : 'horas'}`;
+
+    const days = Math.floor(hours / 24);
+    if (days < 30) return `hace ${days} ${days === 1 ? 'día' : 'días'}`;
+
+    const months = Math.floor(days / 30);
+    if (months < 12) return `hace ${months} ${months === 1 ? 'mes' : 'meses'}`;
+
+    const years = Math.floor(months / 12);
+    return `hace ${years} ${years === 1 ? 'año' : 'años'}`;
 }
 </script>
 
@@ -51,14 +92,26 @@ function formatDate(d) {
         <div class="table-wrap">
             <table>
                 <thead>
-                    <tr><th>Nombre</th><th>Número</th><th>Fecha</th></tr>
+                    <tr><th>Asignar</th><th>Número</th><th>Recibido</th></tr>
                 </thead>
                 <tbody>
                     {#each leads as l}
-                        <tr>
-                            <td>{l.nombre}</td>
+                        <tr class:assigned={isAssigned(l)}>
+                            <td class="assign-cell">
+                                <span class="tick" class:visible={isAssigned(l)} aria-hidden="true">✓</span>
+                                <select
+                                    class="assign-select"
+                                    value={l.agente ?? ''}
+                                    onchange={(e) => assign(l, e.target.value)}
+                                >
+                                    <option value="">Sin asignar</option>
+                                    {#each agentes as a}
+                                        <option value={a.value}>{a.label}</option>
+                                    {/each}
+                                </select>
+                            </td>
                             <td>{l.numero}</td>
-                            <td class="date">{formatDate(l.created)}</td>
+                            <td class="date">{timeAgo(l.created)}</td>
                         </tr>
                     {/each}
                 </tbody>
@@ -139,5 +192,45 @@ th {
 td.date {
     color: #666;
     white-space: nowrap;
+}
+.assign-cell {
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+}
+.tick {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.2em;
+    color: #2e9e5b;
+    font-weight: 700;
+    visibility: hidden;
+}
+.tick.visible {
+    visibility: visible;
+}
+.assign-select {
+    border: 1.5px solid #ddd;
+    border-radius: 0.4em;
+    padding: 0.35em 0.5em;
+    font-size: 0.9em;
+    font-family: inherit;
+    background: #fff;
+    color: #333;
+    cursor: pointer;
+}
+.assign-select:focus {
+    outline: none;
+    border-color: var(--violeta1);
+}
+/* Filas ya asignadas: más apagadas / en gris. */
+tr.assigned td {
+    color: #9a9a9a;
+}
+tr.assigned .assign-select {
+    color: #9a9a9a;
+    background: #f6f6f6;
+    border-color: #e6e6e6;
 }
 </style>

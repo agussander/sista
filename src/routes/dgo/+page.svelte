@@ -1,6 +1,28 @@
 <script>
+    import { MetaTags } from 'svelte-meta-tags';
     import ChannelGrid from '$lib/components/features/ChannelGrid.svelte';
 </script>
+
+<MetaTags
+    title="DGO · Sista"
+    description="DGO, el servicio de streaming de DirecTV: canales en vivo, deportes y contenido on demand. Sumalo a tu Internet de Sista."
+    openGraph={{
+        type: 'website',
+        images: [
+            {
+                url: 'https://sista.com.ar/images/tv/logo-dgo-meta.png',
+                width: 1200,
+                height: 630,
+                alt: 'DGO'
+            }
+        ]
+    }}
+    twitter={{
+        cardType: 'summary_large_image',
+        image: 'https://sista.com.ar/images/tv/logo-dgo-meta.png',
+        imageAlt: 'DGO'
+    }}
+/>
 
 <svelte:head>
     <link rel="preconnect" href="https://fonts.googleapis.com" />

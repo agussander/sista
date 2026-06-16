@@ -11,18 +11,14 @@
 // =============================================================================
 
 import { serviceByKey } from '$lib/components/tv/tvData.js';
+// Fuente única de los planes de Internet: $lib/plans.js (compartida con el
+// inicio vía el store priceInfo). Se reexporta para los consumidores del wizard.
+import { INTERNET_PLANS } from '$lib/plans.js';
 
 export const WHATSAPP_PHONE = '5492213541906';
 
 // --- Planes de Internet (los 6 actuales) ------------------------------------
-export const INTERNET_PLANS = [
-	{ key: 'home',   label: 'Home',   mb: 75,   tag: null,          features: ['Wi-Fi', 'Navegación sin fronteras'] },
-	{ key: 'fast',   label: 'Fast',   mb: 150,  tag: null,          features: ['Wi-Fi Dual Band', 'Alta velocidad'] },
-	{ key: 'power',  label: 'Power',  mb: 300,  tag: 'recomendado', features: ['Wi-Fi Dual Band', 'Mayor velocidad', 'Más dispositivos'] },
-	{ key: 'gamer',  label: 'Gamer',  mb: 300,  tag: 'simétrico',   features: ['Tráfico simétrico', 'Wi-Fi Dual Band', 'Cableado a tu dispositivo'] },
-	{ key: 'worker', label: 'Worker', mb: 200,  tag: 'simétrico',   features: ['Tráfico simétrico', 'Wi-Fi Dual Band', 'Cableado a tu puesto de trabajo'] },
-	{ key: 'max',    label: 'MAX',    mb: 1000, tag: null,          features: ['Tráfico simétrico', 'Wi-Fi Dual Band', 'Máximo rendimiento'] }
-];
+export { INTERNET_PLANS };
 
 // --- Adicionales ------------------------------------------------------------
 // `tvAddon: true` → se elige dentro del modal de TV (Pack Fútbol, Cine), no en
@@ -46,8 +42,8 @@ export const PROMO = { plan: 'power', tvGratis: 'gigared', mesesGratis: 6 };
 // --- Servicios incompatibles (aviso en Antina / Gigared) --------------------
 // Los logos pueden no existir aún: TvCheckModal cae a un "chip" con el nombre.
 export const INCOMPATIBLES = [
-	{ label: 'Magis', logo: '/images/tv/logo-magis.png' },
-	{ label: 'Xuper', logo: '/images/tv/logo-xuper.png' }
+	{ label: 'Magis', logo: '/images/tv/magis-logo.png' },
+	{ label: 'Xuper', logo: '/images/tv/xuper-logo.jpg' }
 ];
 
 // --- Recomendador (Paso 3b) -------------------------------------------------
@@ -96,9 +92,9 @@ export function formatPrice(value) {
 	return '$' + formatNumber(n);
 }
 
-// "75mb" / "1GB"
+// Velocidad en mb ("75mb", "1000mb")
 export function speedLabel(mb) {
-	return mb >= 1000 ? `${mb / 1000}GB` : `${mb}mb`;
+	return `${mb}mb`;
 }
 
 export function planByKey(key) {
@@ -192,10 +188,12 @@ export function summaryItems(w) {
 		const tv = tvByKey(w.tvPlatform);
 		if (tv) {
 			const free = w.promo && w.tvPlatform === PROMO.tvGratis;
+			const listValue = Number(p[tv.field]) || 0;
 			items.push({
 				step: 'tv',
-				label: `TV · ${tv.label}${free ? ` (gratis ${PROMO.mesesGratis} meses)` : ''}`,
-				value: free ? 0 : Number(p[tv.field]) || 0,
+				label: `TV · ${tv.label}`,
+				value: free ? 0 : listValue,
+				listValue,
 				free
 			});
 		}
@@ -203,10 +201,12 @@ export function summaryItems(w) {
 
 	for (const addon of ADDONS) {
 		if (w.addons?.[addon.key]) {
+			const value = Number(p[addon.field]) || 0;
 			items.push({
 				step: addon.tvAddon ? 'tv' : 'adicionales',
 				label: addon.label,
-				value: Number(p[addon.field]) || 0
+				value,
+				listValue: value
 			});
 		}
 	}
@@ -217,6 +217,11 @@ export function summaryItems(w) {
 // Total mensual (excluye lo "gratis" de la promo)
 export function computeTotal(w) {
 	return summaryItems(w).reduce((sum, it) => sum + (it.free ? 0 : it.value), 0);
+}
+
+// Total a precio de lista (incluye lo "gratis" a su precio sin promo)
+export function computeListTotal(w) {
+	return summaryItems(w).reduce((sum, it) => sum + (it.listValue ?? it.value), 0);
 }
 
 // ¿Algún ítem seleccionado está "a consultar" (precio 0)? → el total es parcial
@@ -243,10 +248,13 @@ export function buildWhatsappUrl(w) {
 	}
 
 	const total = computeTotal(w);
-	lines.push('', `Total mensual: ${total > 0 ? formatPrice(total) : 'Consultar'}`);
-
-	const inst = Number(w.precios?.instalacion) || 0;
-	if (inst > 0) lines.push(`Instalación (única vez): ${formatPrice(inst)}`);
+	const listTotal = computeListTotal(w);
+	if (w.promo && listTotal > total && total > 0) {
+		lines.push('', `Total precio de lista: ${formatPrice(listTotal)}/mes`);
+		lines.push(`Total con promo (primeros ${PROMO.mesesGratis} meses): ${formatPrice(total)}/mes`);
+	} else {
+		lines.push('', `Total mensual: ${total > 0 ? formatPrice(total) : 'Consultar'}`);
+	}
 
 	const text = encodeURIComponent(lines.join('\n'));
 	return `https://api.whatsapp.com/send?phone=${WHATSAPP_PHONE}&text=${text}`;

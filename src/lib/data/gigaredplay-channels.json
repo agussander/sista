@@ -1,0 +1,387 @@
+[
+  {
+    "categoria": "Aire y Noticias",
+    "nombre": "Canal local Buenos Aires",
+    "url_logo": "/images/gigaredplay/canal-local-buenos-aires.png"
+  },
+  {
+    "categoria": "Aire y Noticias",
+    "nombre": "América",
+    "url_logo": "/images/gigaredplay/america.png"
+  },
+  {
+    "categoria": "Aire y Noticias",
+    "nombre": "Telefe",
+    "url_logo": "/images/gigaredplay/telefe.jpg"
+  },
+  {
+    "categoria": "Aire y Noticias",
+    "nombre": "TV Pública",
+    "url_logo": "/images/gigaredplay/tvpublica.png"
+  },
+  {
+    "categoria": "Aire y Noticias",
+    "nombre": "Canal 9",
+    "url_logo": "/images/gigaredplay/canal9.jpg"
+  },
+  {
+    "categoria": "Aire y Noticias",
+    "nombre": "LN+",
+    "url_logo": "/images/gigaredplay/ln.jpg"
+  },
+  {
+    "categoria": "Aire y Noticias",
+    "nombre": "C5N",
+    "url_logo": "/images/gigaredplay/c5n.png"
+  },
+  {
+    "categoria": "Aire y Noticias",
+    "nombre": "Crónica TV",
+    "url_logo": "/images/gigaredplay/cronicatv.png"
+  },
+  {
+    "categoria": "Aire y Noticias",
+    "nombre": "Canal 26",
+    "url_logo": "/images/gigaredplay/canal26.png"
+  },
+  {
+    "categoria": "Aire y Noticias",
+    "nombre": "A24",
+    "url_logo": "/images/gigaredplay/a24.png"
+  },
+  {
+    "categoria": "Aire y Noticias",
+    "nombre": "CNN Español",
+    "url_logo": "/images/gigaredplay/cnn-espanol.png"
+  },
+  {
+    "categoria": "Aire y Noticias",
+    "nombre": "Net TV",
+    "url_logo": "/images/gigaredplay/nettv.jpg"
+  },
+  {
+    "categoria": "Aire y Noticias",
+    "nombre": "DNews",
+    "url_logo": "/images/gigaredplay/dnews.jpeg"
+  },
+  {
+    "categoria": "Deportes",
+    "nombre": "DeporTV",
+    "url_logo": "/images/gigaredplay/deportv.jpg"
+  },
+  {
+    "categoria": "Deportes",
+    "nombre": "TyC Sports",
+    "url_logo": "/images/gigaredplay/tycsports.png"
+  },
+  {
+    "categoria": "Deportes",
+    "nombre": "ESPN",
+    "url_logo": "/images/gigaredplay/espn2.jpg"
+  },
+  {
+    "categoria": "Deportes",
+    "nombre": "ESPN 2",
+    "url_logo": "/images/gigaredplay/espn.jpg"
+  },
+  {
+    "categoria": "Deportes",
+    "nombre": "ESPN 3",
+    "url_logo": "/images/gigaredplay/espn3.jpg"
+  },
+  {
+    "categoria": "Deportes",
+    "nombre": "ESPN 4",
+    "url_logo": "/images/gigaredplay/espn-plus.png"
+  },
+  {
+    "categoria": "Deportes",
+    "nombre": "Fox Sports",
+    "url_logo": "/images/gigaredplay/foxsports.png"
+  },
+  {
+    "categoria": "Deportes",
+    "nombre": "Fox Sports 2",
+    "url_logo": "/images/gigaredplay/foxsports2.png"
+  },
+  {
+    "categoria": "Deportes",
+    "nombre": "Fox Sports 3",
+    "url_logo": "/images/gigaredplay/foxsports3.png"
+  },
+  {
+    "categoria": "Deportes",
+    "nombre": "El Garage",
+    "url_logo": "/images/gigaredplay/elgarage.jpg"
+  },
+  {
+    "categoria": "Deportes",
+    "nombre": "Discovery Turbo",
+    "url_logo": "/images/gigaredplay/turbo.jpg"
+  },
+  {
+    "categoria": "Infantiles",
+    "nombre": "Paka Paka",
+    "url_logo": "/images/gigaredplay/pakapaka.png"
+  },
+  {
+    "categoria": "Infantiles",
+    "nombre": "Disney Channel",
+    "url_logo": "/images/gigaredplay/disneychannel.png"
+  },
+  {
+    "categoria": "Infantiles",
+    "nombre": "Disney Junior",
+    "url_logo": "/images/gigaredplay/disneyjunior.png"
+  },
+  {
+    "categoria": "Infantiles",
+    "nombre": "Nickelodeon",
+    "url_logo": "/images/gigaredplay/nick.png"
+  },
+  {
+    "categoria": "Infantiles",
+    "nombre": "Discovery Kids",
+    "url_logo": "/images/gigaredplay/discoverykids.png"
+  },
+  {
+    "categoria": "Infantiles",
+    "nombre": "Plim",
+    "url_logo": "/images/gigaredplay/plim.png"
+  },
+  {
+    "categoria": "Infantiles",
+    "nombre": "ZooMoo",
+    "url_logo": "/images/gigaredplay/zoomoo.jpg"
+  },
+  {
+    "categoria": "Cine y Series",
+    "nombre": "Cine AR",
+    "url_logo": "/images/gigaredplay/incaatv.jpg"
+  },
+  {
+    "categoria": "Cine y Series",
+    "nombre": "Cinecanal",
+    "url_logo": "/images/gigaredplay/cinecanal.jpg"
+  },
+  {
+    "categoria": "Cine y Series",
+    "nombre": "TNT",
+    "url_logo": "/images/gigaredplay/tnt.jpg"
+  },
+  {
+    "categoria": "Cine y Series",
+    "nombre": "FX",
+    "url_logo": "/images/gigaredplay/fx.jpg"
+  },
+  {
+    "categoria": "Cine y Series",
+    "nombre": "Star Channel",
+    "url_logo": "/images/gigaredplay/star-channel.png"
+  },
+  {
+    "categoria": "Cine y Series",
+    "nombre": "Sony",
+    "url_logo": "/images/gigaredplay/sony.png"
+  },
+  {
+    "categoria": "Cine y Series",
+    "nombre": "Universal",
+    "url_logo": "/images/gigaredplay/universal.jpg"
+  },
+  {
+    "categoria": "Cine y Series",
+    "nombre": "AXN",
+    "url_logo": "/images/gigaredplay/axn.png"
+  },
+  {
+    "categoria": "Cine y Series",
+    "nombre": "Studio Universal",
+    "url_logo": "/images/gigaredplay/studiouniversal.jpg"
+  },
+  {
+    "categoria": "Cine y Series",
+    "nombre": "A&E",
+    "url_logo": "/images/gigaredplay/a-e.png"
+  },
+  {
+    "categoria": "Cine y Series",
+    "nombre": "Syfy",
+    "url_logo": "/images/gigaredplay/syfy.png"
+  },
+  {
+    "categoria": "Cine y Series",
+    "nombre": "AMC",
+    "url_logo": "/images/gigaredplay/amc.jpg"
+  },
+  {
+    "categoria": "Cine y Series",
+    "nombre": "Golden",
+    "url_logo": "/images/gigaredplay/golden.jpg"
+  },
+  {
+    "categoria": "Cine y Series",
+    "nombre": "Sony Movies",
+    "url_logo": "/images/gigaredplay/sonymovies.png"
+  },
+  {
+    "categoria": "Cine y Series",
+    "nombre": "Eurochannel",
+    "url_logo": "/images/gigaredplay/eurochannel.jpg"
+  },
+  {
+    "categoria": "Cine y Series",
+    "nombre": "Golden Plus",
+    "url_logo": "/images/gigaredplay/golden-plus.png"
+  },
+  {
+    "categoria": "Cine y Series",
+    "nombre": "Investigation Discovery",
+    "url_logo": "/images/gigaredplay/investigationdiscovery.jpg"
+  },
+  {
+    "categoria": "Cine y Series",
+    "nombre": "Comedy Central",
+    "url_logo": "/images/gigaredplay/comedycentral.jpg"
+  },
+  {
+    "categoria": "Cine y Series",
+    "nombre": "Golden Edge",
+    "url_logo": "/images/gigaredplay/goldenedge.png"
+  },
+  {
+    "categoria": "Cine y Series",
+    "nombre": "Cine Familiar",
+    "url_logo": "/images/gigaredplay/cine-familiar.png"
+  },
+  {
+    "categoria": "Cine y Series",
+    "nombre": "Cine Premium",
+    "url_logo": "/images/gigaredplay/cine-premium.png"
+  },
+  {
+    "categoria": "Cine y Series",
+    "nombre": "Telenovelas",
+    "url_logo": "/images/gigaredplay/telenovelas.png"
+  },
+  {
+    "categoria": "Documentales y Estilo",
+    "nombre": "elgourmet",
+    "url_logo": "/images/gigaredplay/elgourmet.png"
+  },
+  {
+    "categoria": "Documentales y Estilo",
+    "nombre": "E!",
+    "url_logo": "/images/gigaredplay/e.jpg"
+  },
+  {
+    "categoria": "Documentales y Estilo",
+    "nombre": "Discovery H&H (Home & Health)",
+    "url_logo": "/images/gigaredplay/discoveryhealth.jpg"
+  },
+  {
+    "categoria": "Documentales y Estilo",
+    "nombre": "AMC Series",
+    "url_logo": "/images/gigaredplay/maschic.jpg"
+  },
+  {
+    "categoria": "Documentales y Estilo",
+    "nombre": "TLC",
+    "url_logo": "/images/gigaredplay/tlc.jpg"
+  },
+  {
+    "categoria": "Documentales y Estilo",
+    "nombre": "Love Nature",
+    "url_logo": "/images/gigaredplay/lovenature.png"
+  },
+  {
+    "categoria": "Documentales y Estilo",
+    "nombre": "Unife",
+    "url_logo": "/images/gigaredplay/unife.jpg"
+  },
+  {
+    "categoria": "Documentales y Estilo",
+    "nombre": "Discovery Science",
+    "url_logo": "/images/gigaredplay/science.jpg"
+  },
+  {
+    "categoria": "Documentales y Estilo",
+    "nombre": "Nat Geo",
+    "url_logo": "/images/gigaredplay/nationalgeographic.jpg"
+  },
+  {
+    "categoria": "Documentales y Estilo",
+    "nombre": "Discovery Channel",
+    "url_logo": "/images/gigaredplay/discovery-channel.jpg"
+  },
+  {
+    "categoria": "Documentales y Estilo",
+    "nombre": "Animal Planet",
+    "url_logo": "/images/gigaredplay/animalplanet.jpg"
+  },
+  {
+    "categoria": "Documentales y Estilo",
+    "nombre": "HGTV",
+    "url_logo": "/images/gigaredplay/hgtv.jpg"
+  },
+  {
+    "categoria": "Documentales y Estilo",
+    "nombre": "History",
+    "url_logo": "/images/gigaredplay/history.png"
+  },
+  {
+    "categoria": "Documentales y Estilo",
+    "nombre": "Museum TV",
+    "url_logo": "/images/gigaredplay/museum-tv.png"
+  },
+  {
+    "categoria": "Documentales y Estilo",
+    "nombre": "Films & Arts",
+    "url_logo": "/images/gigaredplay/filmandarts.png"
+  },
+  {
+    "categoria": "Documentales y Estilo",
+    "nombre": "Discovery World",
+    "url_logo": "/images/gigaredplay/discoveryworld.jpg"
+  },
+  {
+    "categoria": "Internacionales",
+    "nombre": "RAI",
+    "url_logo": "/images/gigaredplay/rai.jpg"
+  },
+  {
+    "categoria": "Internacionales",
+    "nombre": "TVE",
+    "url_logo": "/images/gigaredplay/tve.jpg"
+  },
+  {
+    "categoria": "Internacionales",
+    "nombre": "Canal 24h",
+    "url_logo": "/images/gigaredplay/24.jpg"
+  },
+  {
+    "categoria": "Música",
+    "nombre": "MTV",
+    "url_logo": "/images/gigaredplay/mtv.png"
+  },
+  {
+    "categoria": "Música",
+    "nombre": "CM",
+    "url_logo": "/images/gigaredplay/c-m.png"
+  },
+  {
+    "categoria": "Música",
+    "nombre": "Allegro HD",
+    "url_logo": "/images/gigaredplay/allegro-hd.png"
+  },
+  {
+    "categoria": "Música",
+    "nombre": "Telehit",
+    "url_logo": "/images/gigaredplay/telehit.png"
+  },
+  {
+    "categoria": "Música",
+    "nombre": "Telehit Música Plus",
+    "url_logo": "/images/gigaredplay/telehitmusicaplus.png"
+  }
+]

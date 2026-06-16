@@ -75,6 +75,22 @@
 	title="Elegí tu TV · Sista"
 	description="Conocé los 3 servicios de TV de Sista: Gigared Play, Antina Play y DGO. Canales, precios y adicionales."
 	robots="noindex, nofollow"
+	openGraph={{
+		type: 'website',
+		images: [
+			{
+				url: 'https://sista.com.ar/images/tv/tv-meta-img.png',
+				width: 600,
+				height: 600,
+				alt: 'TV de Sista'
+			}
+		]
+	}}
+	twitter={{
+		cardType: 'summary',
+		image: 'https://sista.com.ar/images/tv/tv-meta-img.png',
+		imageAlt: 'TV de Sista'
+	}}
 />
 
 <main>
@@ -91,6 +107,10 @@
 			<p>Cargando precios…</p>
 		</div>
 	{:else}
+		<div class="ayuda">
+			<AyudameElegirTv {precios} onPick={(key) => openModal(key)} />
+		</div>
+
 		<div id="cards" class="cards">
 			{#each TV_SERVICES as service (service.key)}
 				<TvServiceCard
@@ -100,10 +120,6 @@
 					onGrilla={() => (grillaKey = service.key)}
 				/>
 			{/each}
-		</div>
-
-		<div class="ayuda">
-			<AyudameElegirTv {precios} onPick={(key) => openModal(key)} />
 		</div>
 	{/if}
 </main>
@@ -156,7 +172,7 @@
 
 	.ayuda {
 		max-width: 30rem;
-		margin: 2rem auto 0;
+		margin: 0 auto 2rem;
 	}
 
 	.loading {

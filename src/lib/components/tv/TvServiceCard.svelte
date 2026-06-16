@@ -30,6 +30,15 @@
 	onclick={() => onOpen?.()}
 	onkeydown={handleKey}
 >
+	{#if service.badge}
+		<span class="badge">
+			{#if service.badgeIcon}
+				<img class="badge-icon" src={service.badgeIcon} alt="FIFA 26" />
+			{/if}
+			<span class="badge-text">{service.badge}</span>
+		</span>
+	{/if}
+
 	<div class="logo-wrap">
 		<img src={service.logo} alt={service.label} />
 	</div>
@@ -72,6 +81,7 @@
 
 <style>
 	.card {
+		position: relative;
 		display: flex;
 		flex-direction: column;
 		gap: 0.85rem;
@@ -84,6 +94,35 @@
 		box-shadow: 0 6px 24px rgba(102, 37, 124, 0.08);
 		transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 		text-align: center;
+	}
+
+	/* Destacado (partidos / mundial): chip celeste montado sobre el borde
+	   superior derecho — mitad afuera, mitad adentro de la tarjeta. */
+	.badge {
+		position: absolute;
+		top: -0.7rem;
+		left: 1rem;
+		z-index: 2;
+		max-width: 11rem;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
+		padding: 0.35rem 0.7rem;
+		background: var(--celeste);
+		color: #fff;
+		font-size: 0.73rem;
+		font-weight: 500;
+		line-height: 1.2;
+		text-align: left;
+		border-radius: 0.8rem;
+		box-shadow: 0 5px 14px rgba(32, 94, 150, 0.35);
+	}
+	.badge-icon {
+		flex-shrink: 0;
+		width: 1.4rem;
+		height: 1.4rem;
+		object-fit: contain;
+		border-radius: 0.25rem;
 	}
 	.card:focus-visible {
 		border-color: color-mix(in srgb, var(--violeta1) 45%, #ececec);
@@ -186,7 +225,7 @@
 		font-weight: 600;
 	}
 	.features li.neg .txt {
-		color: #9a9a9a;
+		color: #6f6f6f;
 	}
 	.ico {
 		flex-shrink: 0;
@@ -200,14 +239,13 @@
 		color: #1ba37a;
 	}
 	.neg .ico {
-		color: #c9c9c9;
+		color: #9a9a9a;
 	}
 	.dot {
 		width: 0.4rem;
 		height: 0.4rem;
 		border-radius: 999px;
 		background: var(--violeta1);
-		opacity: 0.5;
 	}
 
 	.more {

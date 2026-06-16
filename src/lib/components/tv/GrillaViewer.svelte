@@ -1,6 +1,6 @@
 <script>
 	// Overlay full-screen scrolleable con la grilla de canales de un servicio.
-	// Gigared / Antina → imagen. DGO → componente interactivo <ChannelGrid/>.
+	// DGO / Gigared → componente interactivo <ChannelGrid/>. Antina → imagen.
 	import { fade, fly } from 'svelte/transition';
 	import ChannelGrid from '$lib/components/features/ChannelGrid.svelte';
 
@@ -32,7 +32,7 @@
 
 		<div class="content">
 			{#if service.grilla.type === 'channelgrid'}
-				<ChannelGrid />
+				<ChannelGrid channels={service.grilla.channels} accent={service.grilla.accent} />
 			{:else}
 				<img class="grilla-img" src={service.grilla.src} alt={service.grilla.alt} />
 			{/if}

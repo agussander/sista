@@ -11,13 +11,39 @@
     setGlobalOptions({offset: -100});
 
     let mounted = false;
+    let showLlamenme = false;
 
     const handleChipClick = () => {
         scrollElement('cobertura');
     };
 
+    // El form "quiero que me llamen" solo se muestra en horario de atención:
+    // lunes a viernes de 9:30 a 16:30 (hora de Buenos Aires, GMT-3).
+    // Se calcula la hora en la zona horaria de Argentina sin depender del reloj
+    // ni la zona horaria del dispositivo del visitante.
+    function isWithinCallHours(now = new Date()) {
+        const parts = new Intl.DateTimeFormat('en-US', {
+            timeZone: 'America/Argentina/Buenos_Aires',
+            weekday: 'short',
+            hour: '2-digit',
+            minute: '2-digit',
+            hourCycle: 'h23'
+        }).formatToParts(now);
+
+        const get = (type) => parts.find((p) => p.type === type)?.value;
+
+        const isWeekday = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].includes(get('weekday'));
+        const minutes = parseInt(get('hour'), 10) * 60 + parseInt(get('minute'), 10);
+
+        const start = 9 * 60 + 30;  // 9:30
+        const end = 16 * 60 + 30;   // 16:30
+
+        return isWeekday && minutes >= start && minutes <= end;
+    }
+
     onMount(() => {
         mounted = true;
+        showLlamenme = isWithinCallHours();
     });
 </script>
 
@@ -60,7 +86,7 @@
                 </div>
             {/if}
         </div>
-        {#if mounted}
+        {#if mounted && showLlamenme}
             <div class="form-col" transition:fly={{ y: 30, duration: 700, delay: 800 }}>
                 <LlamenmeForm />
             </div>

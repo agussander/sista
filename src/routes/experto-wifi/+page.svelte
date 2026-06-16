@@ -156,7 +156,7 @@
 </script>
 
 <MetaTags
-	title="Experto WiFi — Diagnóstico técnico de WiFi a domicilio"
+	title="Experto WiFi · Diagnóstico técnico de WiFi a domicilio"
 	description="Evaluamos la cobertura WiFi de tu casa u oficina. Diagnóstico técnico personalizado y plan a medida. Una unidad de Sista."
 />
 

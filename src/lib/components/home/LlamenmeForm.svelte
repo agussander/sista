@@ -7,7 +7,6 @@
     let recaptchaReady = false;
     let submitted = false;
     let errorMsg = '';
-    let nombre = '';
     let numero = '';
     let website = ''; // honeypot
     let recaptchaComponent;
@@ -39,7 +38,6 @@
             }
 
             const formData = new FormData();
-            formData.append('nombre', nombre);
             formData.append('numero', numero);
             formData.append('website', website);
             formData.append('g-recaptcha-response', token);
@@ -64,6 +62,7 @@
     }
 </script>
 
+<div class="llamenme-wrapper">
 <div class="llamenme">
     {#if submitted}
         <div class="success">
@@ -72,7 +71,6 @@
         </div>
     {:else}
         <form on:submit={handleSubmit}>
-            <input name="nombre" type="text" placeholder="Nombre" bind:value={nombre} required>
             <input name="numero" type="tel" placeholder="Número de teléfono" bind:value={numero} required>
 
             <!-- honeypot: invisible para humanos, los bots lo completan -->
@@ -95,20 +93,42 @@
             {/if}
 
             <button type="submit" class="btn-primary btn-full" disabled={!recaptchaReady || loading}>
+                {#if !loading}
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.18h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.77a16 16 0 0 0 6 6l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                {/if}
                 {loading ? 'Enviando…' : 'Quiero que me llamen'}
             </button>
         </form>
     {/if}
 </div>
 
+<div class="extra-actions">
+    <a href="https://clientes.sista.com.ar" target="_blank" rel="noopener noreferrer" class="action-btn">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Clientes
+    </a>
+    <a href="/elegirplan" class="action-btn">
+        Ver planes
+    </a>
+</div>
+
+</div>
+
 <style>
+    .llamenme-wrapper {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1em;
+        width: 100%;
+        max-width: 22em;
+    }
     .llamenme {
         background: #fff;
         padding: 1.5em;
         border-radius: 0.8rem;
         box-shadow: 0 0.5em 1.5em rgba(0, 0, 0, 0.15);
         width: 100%;
-        max-width: 22em;
         box-sizing: border-box;
     }
     form {
@@ -146,6 +166,41 @@
     button[disabled] {
         opacity: 0.5;
         cursor: not-allowed;
+    }
+    button svg {
+        flex-shrink: 0;
+    }
+    .btn-primary {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5em;
+    }
+    .extra-actions {
+        display: flex;
+        gap: 0.75em;
+        width: 100%;
+    }
+    .action-btn {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.4em;
+        padding: 0.7em 1em;
+        border-radius: 1000px;
+        border: none;
+        background: #fff;
+        color: var(--violeta1);
+        font-family: 'nexa';
+        font-size: 0.9em;
+        font-weight: 700;
+        text-decoration: none;
+        box-shadow: 0 0.25em 0.6em rgba(0, 0, 0, 0.08);
+        transition: background 0.15s;
+    }
+    .action-btn:hover {
+        background: #f3f4f6;
     }
     .success {
         text-align: center;

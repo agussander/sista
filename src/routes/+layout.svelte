@@ -29,7 +29,8 @@
 		'/antinaplay',
 		'/gigaredplay',
 		'/whatsapp',
-		'/experto-wifi'
+		'/experto-wifi',
+		'/elegirplan'
 	];
 
 	const setMobile = () => ($mobile = $windowX < 750);
@@ -157,7 +158,7 @@
 		/></noscript>
 		<!-- End Meta Pixel Code -->
 	{:else}
-		<title>Sista — Sitio en mantenimiento</title>
+		<title>Sista · Sitio en mantenimiento</title>
 		<meta name="robots" content="noindex, nofollow" />
 	{/if}
 </svelte:head>

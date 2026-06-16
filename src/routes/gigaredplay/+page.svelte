@@ -1,13 +1,47 @@
+<script>
+    import { MetaTags } from 'svelte-meta-tags';
+    import ChannelGrid from '$lib/components/features/ChannelGrid.svelte';
+    import gigaredplayChannels from '$lib/data/gigaredplay-channels.json';
+</script>
+
+<MetaTags
+    title="Gigared Play · Sista"
+    description="Gigared Play: canales en vivo y contenido on demand para sumar a tu Internet de Sista."
+    openGraph={{
+        type: 'website',
+        images: [
+            {
+                url: 'https://sista.com.ar/images/tv/logo-gigared-meta.png',
+                width: 1200,
+                height: 630,
+                alt: 'Gigared Play'
+            }
+        ]
+    }}
+    twitter={{
+        cardType: 'summary_large_image',
+        image: 'https://sista.com.ar/images/tv/logo-gigared-meta.png',
+        imageAlt: 'Gigared Play'
+    }}
+/>
+
+<svelte:head>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet"
+    />
+</svelte:head>
+
 <section>
     <img class="logo" src="/images/tv/logo-gigared.png" alt="Logo de Gigared Play">
     <p>
-        Para más información sobre los canales disponibles y la programación de Gigared Play, consultanos por WhatsApp.
+        A continuación podés consultar la grilla de canales del plan <strong>Gigared Play Full</strong>.
     </p>
-    
-    <div class="grilla-container">
-        <img src="/images/tv/grilla-gigaplay.png" alt="Grilla de canales de Gigared Play" class="grilla-img">
-    </div>
-    
+
+    <ChannelGrid channels={gigaredplayChannels} accent="#b74d8d" />
+
     <div class="cta">
         <a href="https://wa.me/5492213541906?text=Hola!%20Quiero%20información%20sobre%20Gigared%20Play" target="_blank" class="btn-wsp">
             <span class="wsp-icon"></span>
@@ -105,17 +139,6 @@
         background-size: cover;
         width: 2em;
         height: 2em;
-    }
-    .grilla-container {
-        margin: 3em auto;
-        max-width: 60em;
-        overflow-x: auto;
-    }
-    .grilla-img {
-        width: 100%;
-        height: auto;
-        border-radius: var(--border-radius);
-        box-shadow: 0 0.5em 2em rgba(0, 0, 0, 0.2);
     }
     .dispositivos-section {
         margin-top: 4em;

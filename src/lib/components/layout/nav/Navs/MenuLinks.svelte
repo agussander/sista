@@ -3,7 +3,7 @@ import {scrollElement, setGlobalOptions } from 'svelte-scrolling'
 import {page} from '$app/stores'
 import { goto } from '$app/navigation';
 
-setGlobalOptions({offset:-100})
+setGlobalOptions({offset:-200})
 
 const clickHandler = (ref)=>{
     if($page.url.pathname == '/'){
@@ -15,7 +15,7 @@ const clickHandler = (ref)=>{
 </script>
 
 <span on:click={()=>clickHandler('planes')}>Planes</span>
-<span on:click={()=>clickHandler('cobertura')}>Cobertura</span>
+<!-- <span on:click={()=>clickHandler('cobertura')}>Cobertura</span> -->
 <span on:click={()=>clickHandler('contacto')}>Contacto</span>
 
 <style>

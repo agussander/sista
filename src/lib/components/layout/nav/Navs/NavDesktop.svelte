@@ -65,6 +65,7 @@ onMount(async () => {
         <img on:click={handleLogo} class="logo" class:show={showLogo} src="/images/Sista-logo-violeta.svg" alt="Sista logo">
         <div class="center">
             <MenuLinks></MenuLinks>
+            <a href="/tv">TV</a>
             <div class="mas-container" bind:this={masContainer}>
                 <button class="mas-button" on:click={toggleMasMenu} class:active={showMasMenu} aria-label="Abrir menú Más" aria-expanded={showMasMenu}>
                     Más
@@ -77,7 +78,6 @@ onMount(async () => {
                         <a href="/formasdepago" on:click={() => handleMasLink('/formasdepago')}>Formas de pago</a>
                         <a href="/acerca-de" on:click={() => handleMasLink('/acerca-de')}>Sobre nosotros</a>
                         <a href="/precios" on:click={() => handleMasLink('/precios')}>Precios</a>
-                        <a href="/tv" on:click={() => handleMasLink('/tv')}>TV</a>
                     </div>
                 {/if}
             </div>

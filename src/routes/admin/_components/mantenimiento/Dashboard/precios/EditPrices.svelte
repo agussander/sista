@@ -3,6 +3,8 @@ import { pb } from '$lib/pocketbase';
 import { onMount } from 'svelte';
 import Spinner from '$lib/components/ui/Spinner.svelte';
 
+// Etiquetas "lindas" para campos conocidos. Los campos que no estén acá
+// igual se muestran, generando la etiqueta a partir del nombre del campo.
 const labels = {
     home: 'Plan Home',
     fast: 'Plan Fast',
@@ -10,27 +12,71 @@ const labels = {
     gamer: 'Plan Gamer',
     worker: 'Plan Worker',
     max: 'Plan Max',
-    telefono: 'Telefonía',
-    instalacion: 'Instalación',
+    gigared: 'Gigared Play',
+    antina: 'Antina',
     dgo_basico: 'DGO Básico',
     dgo_full: 'DGO Full',
-    antina: 'Antina'
+    pack_futbol: 'Pack Fútbol',
+    antina_cine: 'Antina Cine',
+    telefono: 'Telefonía',
+    instalacion: 'Instalación'
 };
 
-// Inicializar precios con un objeto vacío que tenga todos los campos
-let precios = $state({
-    home: '',
-    fast: '',
-    power: '',
-    gamer: '',
-    worker: '',
-    max: '',
-    telefono: '',
-    instalacion: '',
-    dgo_basico: '',
-    dgo_full: '',
-    antina: ''
-});
+// Agrupación lógica del panel: primero Internet, después TV, y por último
+// Telefonía. Los planes de Internet se ordenan por precio (ver buildSections).
+// Cualquier campo que no caiga en estos grupos se muestra al final en "Otros",
+// así nunca se pierde un precio (p. ej. instalación o campos nuevos).
+const GROUP_DEFS = [
+    { title: 'Internet', keys: ['home', 'fast', 'power', 'gamer', 'worker', 'max'], sortByPrice: true },
+    { title: 'TV', keys: ['gigared', 'antina', 'dgo_basico', 'dgo_full', 'pack_futbol', 'antina_cine'] },
+    { title: 'Telefonía', keys: ['telefono'] }
+];
+
+// Construye las secciones ordenadas a partir de los campos del registro.
+// Se calcula una sola vez al cargar para que el orden quede fijo mientras se
+// edita (si ordenáramos por precio en vivo, los inputs saltarían de lugar).
+const buildSections = (data) => {
+    const allKeys = Object.keys(data);
+    const used = new Set();
+    const result = [];
+
+    for (const def of GROUP_DEFS) {
+        let keys = def.keys.filter((k) => k in data);
+        if (def.sortByPrice) {
+            keys = [...keys].sort((a, b) => (Number(data[a]) || 0) - (Number(data[b]) || 0));
+        }
+        keys.forEach((k) => used.add(k));
+        if (keys.length) result.push({ title: def.title, keys });
+    }
+
+    const otros = allKeys.filter((k) => !used.has(k));
+    if (otros.length) result.push({ title: 'Otros', keys: otros });
+
+    return result;
+};
+
+// Campos internos de PocketBase y archivos que no son precios editables.
+const EXCLUDED_FIELDS = new Set([
+    'id',
+    'collectionId',
+    'collectionName',
+    'created',
+    'updated',
+    'expand',
+    'precios_completos'
+]);
+
+// Genera una etiqueta legible a partir del nombre del campo.
+const labelFor = (key) =>
+    labels[key] ??
+    key
+        .replace(/_/g, ' ')
+        .replace(/\b\w/g, (c) => c.toUpperCase());
+
+// Los precios se cargan dinámicamente desde el registro de PocketBase.
+let precios = $state({});
+// Secciones ordenadas (Internet/TV/Telefonía/Otros) calculadas al cargar.
+let sections = $state([]);
 
 let loading = $state(false);
 let initialLoading = $state(true);
@@ -57,12 +103,16 @@ const loadPrecios = async () => {
         const record = await pb.collection('precios').getFirstListItem('');
         if (record) {
             recordId = record.id;
-            // Solo actualizar los campos que existen en nuestro objeto precios
-            Object.keys(precios).forEach(key => {
-                if (record[key] !== undefined) {
-                    precios[key] = record[key];
+            // Tomar dinámicamente todos los campos de precios del registro,
+            // excluyendo los campos internos de PocketBase y el archivo de imagen.
+            const nextPrecios = {};
+            Object.keys(record).forEach(key => {
+                if (!EXCLUDED_FIELDS.has(key)) {
+                    nextPrecios[key] = record[key];
                 }
             });
+            precios = nextPrecios;
+            sections = buildSections(nextPrecios);
             // Cargar la imagen actual si existe
             if (record.precios_completos) {
                 currentImageUrl = pb.files.getURL(record, record.precios_completos);
@@ -159,22 +209,25 @@ onMount(async() => {
 {:else}
     <div class="edit-prices">
         <form onsubmit={savePrecios}>
-            <div class="inputs-grid">
-                {#each Object.entries(precios) as [key, value]}
-                    {#if labels[key]}
-                        <label for={key}>
-                            {labels[key]}
-                            <input 
-                                type="text" 
-                                id={key} 
-                                value={formatNumber(value)}
-                                oninput={(e) => precios[key] = parseNumber(e.target.value)}
-                            >
-                        </label>
-                    {/if}
-                {/each}
-            </div>
-                
+            {#each sections as section}
+                <fieldset class="price-section">
+                    <legend>{section.title}</legend>
+                    <div class="inputs-grid">
+                        {#each section.keys as key}
+                            <label for={key}>
+                                {labelFor(key)}
+                                <input
+                                    type="text"
+                                    id={key}
+                                    value={formatNumber(precios[key])}
+                                    oninput={(e) => precios[key] = parseNumber(e.target.value)}
+                                >
+                            </label>
+                        {/each}
+                    </div>
+                </fieldset>
+            {/each}
+
                 <div 
                     class="image-dropzone" 
                     class:has-image={currentImageUrl}
@@ -255,11 +308,30 @@ onMount(async() => {
     box-shadow: 0 2px 8px rgba(0,0,0,0.05);
 }
 
+.price-section {
+    border: none;
+    margin: 0 0 2em;
+    padding: 0;
+    min-width: 0;
+}
+
+.price-section legend {
+    display: block;
+    width: 100%;
+    padding: 0 0 0.5em;
+    margin-bottom: 1.2em;
+    border-bottom: 1px solid #eee;
+    font-size: 0.8em;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--violeta2);
+}
+
 .inputs-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 1.5em;
-    margin-bottom: 2em;
 }
 
 label {
@@ -340,37 +412,6 @@ input:focus {
 
 .btn-save svg {
     flex-shrink: 0;
-}
-
-.image-upload-container {
-    margin: 2em 0;
-    padding: 1.5em;
-    background: #fafafa;
-    border-radius: 0.8em;
-    border: 1px solid #e0e0e0;
-}
-
-.image-label {
-    font-weight: 600;
-    color: #333;
-    font-size: 1em;
-    display: block;
-    margin-bottom: 0.3em;
-}
-
-.image-hint {
-    font-size: 0.85em;
-    color: #666;
-    margin-bottom: 1em;
-}
-
-.image-hint a {
-    color: var(--violeta2);
-    text-decoration: none;
-}
-
-.image-hint a:hover {
-    text-decoration: underline;
 }
 
 .image-dropzone {

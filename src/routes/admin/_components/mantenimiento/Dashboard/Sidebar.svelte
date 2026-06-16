@@ -150,6 +150,7 @@ const handleMainItemClick = (item) => {
     padding: 0.7em 1em;
     display: flex;
     align-items: center;
+    justify-content: flex-start;
     gap: 0.8em;
     border-radius: 1.2em;
     font-size: 1.08em;
@@ -197,6 +198,7 @@ const handleMainItemClick = (item) => {
     padding: 0.7em 1em;
     display: flex;
     align-items: center;
+    justify-content: flex-start;
     gap: .7em;
     border-radius: 1.2em;
     font-size: 1.08em;
@@ -229,6 +231,7 @@ const handleMainItemClick = (item) => {
 .child {
     display: flex;
     align-items: center;
+    justify-content: flex-start;
     padding: .5em 1.2em;
     border-radius: 1.2em;
     margin: .2em 0;

@@ -6,10 +6,14 @@
 	// `cardsId`: id del contenedor de tarjetas al que scrollea "Ver servicios"
 	// (en elegirtv = 'cards', en el wizard = 'tv-cards').
 	import InfoModal from './InfoModal.svelte';
+	import { WHATSAPP_PHONE } from '$lib/components/elegirplan/data.js';
 
 	let { cardsId = 'cards' } = $props();
 
-	const TV_BOX_URL = 'https://tiendasista.mitiendanube.com/productos/bvs-android-tv-caja-adaptadora/';
+	// "Necesito un TV Box" → abre WhatsApp con el mensaje pre-escrito.
+	const TV_BOX_WSP = `https://api.whatsapp.com/send?phone=${WHATSAPP_PHONE}&text=${encodeURIComponent(
+		'Necesito un TV Box'
+	)}`;
 
 	let info = $state(null); // 'nosmart' | 'compat' | null
 
@@ -38,9 +42,9 @@
 			No hay problema. Podés usar un <strong>TV Box</strong>: un aparatito que se enchufa a tu TV por
 			HDMI y la convierte en smart, lista para descargar las apps.
 		</p>
-		<p>Es compatible con los 3 servicios. Lo conseguís en nuestra tienda online.</p>
-		<a class="btn-primary btn-full" href={TV_BOX_URL} target="_blank" rel="noopener noreferrer">
-			Ver TV Box en la tienda
+		<p>Es compatible con los 3 servicios. Escribinos y te ayudamos a conseguir uno.</p>
+		<a class="btn-whatsapp btn-full" href={TV_BOX_WSP} target="_blank" rel="noopener noreferrer">
+			Necesito un TV Box
 		</a>
 	</InfoModal>
 {:else if info === 'compat'}

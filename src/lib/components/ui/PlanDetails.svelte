@@ -14,26 +14,26 @@
 
     // Descripciones genéricas para home, fast y max
     const genericDescriptions = {
-        home: 'Plan ideal para uso doméstico básico. Conexión estable y confiable para navegar, trabajar desde casa y disfrutar de tus contenidos favoritos.',
-        fast: 'Mayor velocidad para una experiencia más fluida. Perfecto para hogares con múltiples usuarios conectados simultáneamente.',
+        home: 'Uso básico. Ideal para redes sociales y pocos dispositivos',
+        fast: 'Mayor velocidad para una experiencia más fluida',
         max: 'La máxima velocidad y estabilidad para hogares exigentes. Ideal para múltiples dispositivos, streaming en alta calidad, gaming y trabajo remoto sin interrupciones.'
     };
 
     // Beneficios detallados para cada item de los planes con beneficios
     const planBenefits = {
         power: {
-            'Wi-fi Dual Band': 'Disfrutá de dos bandas de frecuencia (2.4GHz y 5GHz) para optimizar la conexión según el dispositivo y la distancia.',
+            'Ilimitado': 'Navegación sin límites de datos: usá Internet todo lo que quieras, sin topes ni reducciones de velocidad.',
             'Mayor velocidad': 'Velocidad superior para descargas rápidas, streaming en alta calidad y videollamadas sin interrupciones.',
             'Más dispositivos': 'Conectá más dispositivos simultáneamente sin perder rendimiento. Ideal para hogares con muchas conexiones.'
         },
         gamer: {
             'Tráfico simétrico': 'Misma velocidad de subida y bajada. Perfecto para gaming competitivo y streaming en vivo.',
-            'Wifi Dual Band': 'Dos bandas de frecuencia para separar dispositivos gaming de otros usos y reducir latencia.',
+            'Ilimitado': 'Navegación sin límites de datos: jugá y descargá todo lo que quieras, sin topes ni reducciones de velocidad.',
             'Cableado a tu dispositivo': 'Instalación directa con cable ethernet a tu consola o PC para la menor latencia posible.'
         },
         worker: {
             'Tráfico simétrico': 'Velocidad simétrica ideal para videollamadas, subida de archivos grandes y trabajo remoto profesional.',
-            'Wi-fi Dual Band': 'Dos bandas de frecuencia para separar tu trabajo del uso doméstico y garantizar estabilidad.',
+            'Ilimitado': 'Navegación sin límites de datos: trabajá y subí archivos todo lo que quieras, sin topes ni reducciones de velocidad.',
             'Cableado a tu puesto de trabajo': 'Conexión cableada directa a tu escritorio para máxima estabilidad y velocidad garantizada.'
         }
     };

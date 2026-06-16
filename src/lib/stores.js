@@ -1,4 +1,5 @@
 import { readable, writable } from "svelte/store";
+import { INTERNET_PLANS, isSymmetricPlan } from "$lib/plans.js";
 
 export const modal=writable(false);
 export const selectedPlan=writable(null);
@@ -13,45 +14,18 @@ export const onSelect=writable(false);
 export const datosBaja=writable({});
 
 
-export const priceInfo = readable([{
-    plan: 'home',
-    mb: '75',
-    desc: 'Uso básico',
-    items: ['Wi-Fi', 'Navegación sin fronteras'],
-},
-{
-    plan: 'fast',
-    mb: '150',
-    desc: 'Ideal para streaming y trabajo',
-    items: ['Ilimitado', 'Alta velocidad'],
-},
-{
-    plan: 'power',
-    mb: '300',
-    desc: 'Mayor velocidad, más dispositivos',
-    items: ['Ilimitado', 'Mayor velocidad', 'Más dispositivos'],
-},
-{
-    plan: 'gamer',
-    mb: '300',
-    desc: 'Tráfico simétrico para gaming',
-    symmetric: true,
-    items: ['Tráfico simétrico', 'Ilimitado', 'Cableado a tu dispositivo'],
-},
-{
-    plan: 'worker',
-    mb: '200',
-    desc: 'Simétrico para trabajo remoto',
-    symmetric: true,
-    items: ['Tráfico simétrico', 'Ilimitado', 'Cableado a tu puesto de trabajo'],
-},
-{
-    plan: 'max',
-    mb: '1000',
-    desc: 'El máximo rendimiento disponible',
-    items: ['Tráfico simétrico', 'Ilimitado', 'Máximo rendimiento'],
-},
-]);
+// priceInfo se deriva de la fuente única de planes ($lib/plans.js). La forma
+// { plan, mb, desc, symmetric, items } es la que esperan home/Price.svelte y
+// home/PlanDetails.svelte.
+export const priceInfo = readable(
+    INTERNET_PLANS.map((p) => ({
+        plan: p.key,
+        mb: String(p.mb),
+        desc: p.desc,
+        symmetric: isSymmetricPlan(p),
+        items: p.features,
+    }))
+);
 
 export const noticias = writable([
     {

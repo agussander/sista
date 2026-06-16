@@ -1,5 +1,5 @@
 <script>
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import { fly } from 'svelte/transition';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
@@ -7,7 +7,6 @@
 	import { pb } from '$lib/pocketbase';
 
 	import ProgressBar from './ProgressBar.svelte';
-	import TvCheckModal from './TvCheckModal.svelte';
 	import Step1Tipo from './steps/Step1Tipo.svelte';
 	import Step2Promo from './steps/Step2Promo.svelte';
 	import Step3Internet from './steps/Step3Internet.svelte';
@@ -15,19 +14,12 @@
 	import Step5Adicionales from './steps/Step5Adicionales.svelte';
 	import Step6Resumen from './steps/Step6Resumen.svelte';
 
-	import { STEP_TITLES, getFlow, computeTotal, formatPrice, tvByKey } from './data.js';
-	import {
-		wizard,
-		prev,
-		confirmTv,
-		cancelTvCheck,
-		hydrateFromParams,
-		toSearchString
-	} from './wizardState.svelte.js';
+	import { STEP_TITLES, getFlow, computeTotal, formatPrice } from './data.js';
+	import { wizard, prev, hydrateFromParams, toSearchString } from './wizardState.svelte.js';
 
 	let flow = $derived(getFlow(wizard));
 	let currentIndex = $derived(flow.indexOf(wizard.step));
-	let showBack = $derived(currentIndex > 0 && !wizard.showRecom && !wizard.tvCheck);
+	let showBack = $derived(currentIndex > 0 && !wizard.showRecom);
 
 	// Total parcial visible desde que hay un plan elegido (transparencia de precio)
 	let runningTotal = $derived(computeTotal(wizard));
@@ -55,9 +47,13 @@
 	// URL → estado: cubre paste, Back y Forward. Guard: si la URL ya coincide con
 	// el estado serializado, no hace nada (corta el loop URL→estado→URL).
 	$effect(() => {
-		const incoming = $page.url.searchParams; // dependencia reactiva
+		const incoming = $page.url.searchParams; // única dependencia reactiva
 		if (!browser) return;
-		if (incoming.toString() === toSearchString()) return;
+		// toSearchString() lee el estado del wizard; lo des-trackeamos para que
+		// este efecto NO reaccione a cambios de selección. Si fuera dependencia, al
+		// elegir una opción (estado nuevo, URL aún vieja) re-hidrataríamos desde la
+		// URL vieja y descartaríamos la selección recién hecha.
+		if (incoming.toString() === untrack(() => toSearchString())) return;
 		hydrateFromParams(incoming);
 	});
 
@@ -126,14 +122,6 @@
 		{/if}
 	</div>
 </section>
-
-{#if wizard.tvCheck}
-	<TvCheckModal
-		platform={tvByKey(wizard.tvCheck)}
-		onconfirm={() => confirmTv()}
-		oncancel={() => cancelTvCheck()}
-	/>
-{/if}
 
 <style>
 	.wizard-section {

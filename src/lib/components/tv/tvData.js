@@ -11,6 +11,8 @@
 //   'neutral' → • (dato informativo)
 // =============================================================================
 
+import gigaredplayChannels from '$lib/data/gigaredplay-channels.json';
+
 // Adicionales reutilizables. `field` es el campo de la colección `precios`;
 // si vale 0 o no existe, la UI cae a "Consultar".
 export const ADDON_PACK_FUTBOL = {
@@ -36,14 +38,14 @@ export const TV_SERVICES = [
 		warnMagisXuper: true,
 		intro:
 			'La opción más económica para tener TV en casa. Buena variedad de canales y todos los partidos de Argentina.',
+		badge: 'Todos los partidos de Argentina',
 		features: [
 			{ type: 'neutral', text: '86 canales' },
 			{ type: 'neg', text: 'No tiene El 13 y TN' },
 			{ type: 'neg', text: 'No tiene HD' },
-			{ type: 'neutral', text: 'Hasta 2 TV' },
-			{ type: 'pos', text: 'Todos los partidos de Argentina' }
+			{ type: 'neutral', text: 'Hasta 2 TV' }
 		],
-		grilla: { type: 'image', src: '/images/tv/grilla-gigaplay.png', alt: 'Grilla de canales de Gigared Play' },
+		grilla: { type: 'channelgrid', channels: gigaredplayChannels, accent: '#b74d8d' },
 		addons: [ADDON_PACK_FUTBOL]
 	},
 	{
@@ -54,11 +56,11 @@ export const TV_SERVICES = [
 		warnMagisXuper: true,
 		intro:
 			'Más canales y algunos en HD, con contenido en vivo y on demand. Todos los partidos de Argentina incluidos.',
+		badge: 'Todos los partidos de Argentina',
 		features: [
 			{ type: 'neutral', text: '79 canales' },
 			{ type: 'neutral', text: 'Algunos canales HD' },
-			{ type: 'neutral', text: 'Hasta 2 TV' },
-			{ type: 'pos', text: 'Todos los partidos de Argentina' }
+			{ type: 'neutral', text: 'Hasta 2 TV' }
 		],
 		grilla: { type: 'image', src: '/images/tv/grilla antina play.png', alt: 'Grilla de canales de Antina Play' },
 		addons: [ADDON_PACK_FUTBOL, ADDON_CINE]
@@ -71,11 +73,12 @@ export const TV_SERVICES = [
 		warnMagisXuper: false,
 		intro:
 			'El servicio de streaming de DirecTV: todo en Full HD, hasta 4 TV y el Mundial completo de forma exclusiva.',
+		badge: 'Mundial completo (exclusivo)',
+		badgeIcon: '/images/tv/fifa-26.png',
 		features: [
 			{ type: 'neutral', text: '123 canales' },
 			{ type: 'neutral', text: 'Full HD' },
-			{ type: 'neutral', text: 'Hasta 4 TV' },
-			{ type: 'pos', text: 'Mundial completo, todos los partidos (exclusivo)' }
+			{ type: 'neutral', text: 'Hasta 4 TV' }
 		],
 		grilla: { type: 'channelgrid' },
 		addons: [ADDON_PACK_FUTBOL]

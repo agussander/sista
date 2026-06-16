@@ -14,7 +14,15 @@
 		onConfirm,
 		initialSelected = {},
 		ctaLabel = 'Lo quiero',
-		ctaClass = 'btn-whatsapp'
+		ctaClass = 'btn-whatsapp',
+		// Cuando se usa dentro del wizard (Step4TV), se pasa el precio e
+		// internet ya elegido para mostrar el total combinado en el resumen.
+		// null = contexto standalone (sin internet seleccionado).
+		internetPrice = null,
+		internetLabel = 'Internet',
+		// Contexto promo (Step2Promo): meses gratis del servicio. > 0 muestra el
+		// precio de lista + un chip "Gratis N meses" y una nota en el resumen.
+		promoMonths = 0
 	} = $props();
 
 	// Selección de adicionales (estado local, sembrado desde initialSelected; se
@@ -48,18 +56,31 @@
 
 	let chosenAddons = $derived(service.addons.filter((a) => selected[a.key]));
 
+	// Dentro del wizard (Step4TV y promo) ya hay un Internet elegido y un resumen
+	// final propio (Step6Resumen), así que "Continuar" salta el resumen intermedio
+	// del modal y va directo al chequeo de instalación. En contexto standalone
+	// (elegirtv, sin Internet) la vista 'total' es el único resumen → se mantiene.
+	let hasInternetContext = $derived(internetPrice !== null);
+
 	// Ítems del resumen (servicio + adicionales elegidos) con su valor numérico.
-	let items = $derived([
+	let tvItems = $derived([
 		{ label: service.label, value: Number(precios[service.priceField]) || 0 },
 		...chosenAddons.map((a) => ({ label: a.label, value: Number(precios[a.field]) || 0 }))
 	]);
+	// En contexto de wizard, antepone la línea de internet para mostrar el total combinado.
+	let items = $derived(
+		hasInternetContext
+			? [{ label: internetLabel, value: internetPrice ?? 0 }, ...tvItems]
+			: tvItems
+	);
 	let total = $derived(items.reduce((s, it) => s + it.value, 0));
 	// ¿Algún ítem sin precio cargado (0)? → el total es parcial / a confirmar.
 	let hasConsultar = $derived(items.some((it) => it.value <= 0));
 
-	// "+$X/mes" para el resumen (todo se SUMA a internet); "Consultar" si no hay precio.
-	function plusLabel(value) {
-		return value > 0 ? `+${formatPrice(value)}/mes` : 'Consultar';
+	// Con contexto de internet muestra precio absoluto; sin él muestra el delta con "+".
+	function itemLabel(value) {
+		if (value <= 0) return 'Consultar';
+		return hasInternetContext ? `${formatPrice(value)}/mes` : `+${formatPrice(value)}/mes`;
 	}
 </script>
 
@@ -87,10 +108,24 @@
 						<strong>{price}</strong><span class="per">/mes</span>
 					{/if}
 				</div>
+				{#if promoMonths > 0}
+					<span class="promo-chip">Gratis {promoMonths} meses</span>
+				{/if}
 			</div>
 		</header>
 
 		{#if view === 'detalle'}
+		{#if service.badge}
+			<div class="badge-row">
+				<span class="badge">
+					{#if service.badgeIcon}
+						<img class="badge-icon" src={service.badgeIcon} alt="FIFA 26" />
+					{/if}
+					<span class="badge-text">{service.badge}</span>
+				</span>
+			</div>
+		{/if}
+
 		<p class="intro">{service.intro}</p>
 
 		<ul class="features">
@@ -164,7 +199,7 @@
 			</div>
 		{/if}
 
-		<button class="btn-primary btn-full" onclick={() => (view = 'total')}>Continuar</button>
+		<button class="btn-primary btn-full" onclick={() => (hasInternetContext ? (showInstall = true) : (view = 'total'))}>Continuar</button>
 		{:else}
 		<!-- Paso total: resumen del servicio + adicionales elegidos -->
 		<div class="summary">
@@ -172,15 +207,26 @@
 				{#each items as it}
 					<li>
 						<span class="summary-label">{it.label}</span>
-						<span class="summary-value" class:consultar={it.value <= 0}>{plusLabel(it.value)}</span>
+						<span class="summary-value" class:consultar={it.value <= 0}>{itemLabel(it.value)}</span>
 					</li>
 				{/each}
 			</ul>
 			<div class="summary-total">
 				<span>Total</span>
-				<strong class:consultar={total <= 0}>{total > 0 ? `+${formatPrice(total)}/mes` : 'A consultar'}</strong>
+				<strong class:consultar={total <= 0}>
+					{#if total > 0}
+						{hasInternetContext ? `${formatPrice(total)}/mes` : `+${formatPrice(total)}/mes`}
+					{:else}
+						A consultar
+					{/if}
+				</strong>
 			</div>
-			<p class="summary-internet">Esto se suma a lo que ya pagás de internet.</p>
+			{#if promoMonths > 0}
+				<p class="summary-promo">{service.label} gratis los primeros {promoMonths} meses. Después, a precio de lista.</p>
+			{/if}
+			{#if !hasInternetContext}
+				<p class="summary-internet">Esto se suma a lo que ya pagás de internet.</p>
+			{/if}
 			{#if hasConsultar}
 				<p class="summary-note">Algún ítem todavía no tiene precio cargado: lo confirmamos por WhatsApp.</p>
 			{/if}
@@ -272,6 +318,43 @@
 		font-style: italic;
 		font-size: 0.95rem;
 	}
+	.promo-chip {
+		display: inline-block;
+		margin-top: 0.35rem;
+		padding: 0.2rem 0.6rem;
+		background: var(--magenta);
+		color: #fff;
+		font-size: 0.7rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.03em;
+		border-radius: 999px;
+	}
+
+	.badge-row {
+		margin: 0 0 0.85rem;
+	}
+	/* Destacado (partidos / mundial): mismo chip celeste que la tarjeta. */
+	.badge {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.45rem;
+		padding: 0.4rem 0.8rem;
+		background: var(--celeste);
+		color: #fff;
+		font-size: 0.78rem;
+		font-weight: 500;
+		line-height: 1.2;
+		border-radius: 0.8rem;
+		box-shadow: 0 4px 12px rgba(32, 94, 150, 0.3);
+	}
+	.badge-icon {
+		flex-shrink: 0;
+		width: 1.5rem;
+		height: 1.5rem;
+		object-fit: contain;
+		border-radius: 0.25rem;
+	}
 
 	.intro {
 		font-size: 0.92rem;
@@ -301,7 +384,7 @@
 		font-weight: 600;
 	}
 	.features li.neg .txt {
-		color: #9a9a9a;
+		color: #6f6f6f;
 	}
 	.ico {
 		flex-shrink: 0;
@@ -315,14 +398,13 @@
 		color: #1ba37a;
 	}
 	.neg .ico {
-		color: #c9c9c9;
+		color: #9a9a9a;
 	}
 	.dot {
 		width: 0.4rem;
 		height: 0.4rem;
 		border-radius: 999px;
 		background: var(--violeta1);
-		opacity: 0.5;
 	}
 
 	.grilla-btn {
@@ -548,6 +630,14 @@
 		color: #8a8a8a;
 		font-weight: 300;
 		line-height: 1.35;
+	}
+	.summary-promo {
+		margin: 0.85rem 0 0;
+		font-size: 0.82rem;
+		line-height: 1.35;
+		color: var(--magenta);
+		font-weight: 700;
+		text-align: left;
 	}
 	.back-step {
 		display: block;

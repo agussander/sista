@@ -1,7 +1,7 @@
 <script>
     import defaultChannels from '$lib/data/dgo-channels.json';
 
-    let { channels = defaultChannels } = $props();
+    let { channels = defaultChannels, accent = '#ff6b00' } = $props();
 
     // Orden de categorías (no vacías) tal como aparecen por primera vez.
     const categorias = [
@@ -39,7 +39,7 @@
     }
 </script>
 
-<div class="channel-grid">
+<div class="channel-grid" style="--dgo-accent: {accent}">
     {#if tieneCategorias}
         <div class="filtros" role="tablist" aria-label="Categorías de canales">
             {#each filtros as filtro}

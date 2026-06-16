@@ -27,9 +27,7 @@ export const wizard = $state({
 	error: false,
 
 	// overlays
-	showRecom: false, // recomendador (paso 3b)
-	tvCheck: null, // key de la TV en chequeo (TvCheckModal) | null
-	pendingPromo: false // se está confirmando la promo (chequeo de GigaredPlay)
+	showRecom: false // recomendador (paso 3b)
 });
 
 // --- Navegación -------------------------------------------------------------
@@ -67,14 +65,6 @@ export function setTipo(tipo) {
 	}
 }
 
-// Paso 2 — "Elegir la promo": primero dispara el chequeo de GigaredPlay
-// (aviso Magis/Xuper + instalación). Recién al confirmar (confirmTv) se aplica
-// la promo y avanza a adicionales.
-export function choosePromo() {
-	wizard.pendingPromo = true;
-	wizard.tvCheck = PROMO.tvGratis; // 'gigared' → abre TvCheckModal
-}
-
 // Paso 2 — "Armar a medida": continúa al armado libre
 export function chooseArmar() {
 	wizard.promo = false;
@@ -82,32 +72,20 @@ export function chooseArmar() {
 	next(); // → 'internet'
 }
 
-export function setInternetPlan(key) {
-	wizard.internetPlan = key;
+// Paso 2 — confirmó la promo desde el modal completo de Gigared (TvServiceModal,
+// con su chequeo de instalación embebido): aplica Power + GigaredPlay gratis,
+// sincroniza los addons elegidos en el modal y avanza a adicionales.
+export function confirmPromo(chosenAddonKeys = []) {
+	wizard.promo = true;
+	wizard.internetPlan = PROMO.plan; // 'power'
+	wizard.tvPlatform = PROMO.tvGratis; // 'gigared'
+	wizard.addons.pack_futbol = chosenAddonKeys.includes('pack_futbol');
+	wizard.addons.cine = chosenAddonKeys.includes('cine');
+	goTo('adicionales');
 }
 
-// Selección de TV: dispara el chequeo (modal); la confirmación fija la TV
-export function requestTv(key) {
-	wizard.tvCheck = key;
-}
-export function confirmTv() {
-	if (wizard.tvCheck) wizard.tvPlatform = wizard.tvCheck;
-	wizard.tvCheck = null;
-	if (wizard.pendingPromo) {
-		// Confirmó el chequeo de la promo → aplica Power + GigaredPlay gratis
-		wizard.promo = true;
-		wizard.internetPlan = PROMO.plan; // 'power'
-		wizard.pendingPromo = false;
-		goTo('adicionales');
-	}
-}
-export function cancelTvCheck() {
-	wizard.tvCheck = null;
-	if (wizard.pendingPromo) {
-		// Canceló el chequeo → no aplica la promo, queda en el paso de promo
-		wizard.pendingPromo = false;
-		wizard.tvPlatform = null;
-	}
+export function setInternetPlan(key) {
+	wizard.internetPlan = key;
 }
 
 // Commit de la TV desde el modal del paso de TV (Step4TV): fija la plataforma,
@@ -151,8 +129,6 @@ export function resetWizard() {
 	wizard.recom.usos = [];
 	wizard.recom.personas = null;
 	wizard.showRecom = false;
-	wizard.tvCheck = null;
-	wizard.pendingPromo = false;
 	// `precios` y `loading` se conservan (ya cargados desde PB)
 }
 
@@ -184,8 +160,6 @@ export function hydrateFromParams(searchParams) {
 	wizard.addons.telefono = p.addons.telefono;
 	// overlays efímeros (no viven en la URL)
 	wizard.showRecom = false;
-	wizard.tvCheck = null;
-	wizard.pendingPromo = false;
 	wizard.recom.usos = [];
 	wizard.recom.personas = null;
 	// el paso, clampeado contra el estado ya aplicado

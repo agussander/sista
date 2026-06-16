@@ -1,6 +1,6 @@
 <script>
 	import StepHeader from '$lib/components/elegirplan/StepHeader.svelte';
-	import { STEP_TITLES } from '$lib/components/elegirplan/data.js';
+	import { STEP_TITLES, planByKey, speedLabel } from '$lib/components/elegirplan/data.js';
 	import { wizard, chooseTvService, next } from '$lib/components/elegirplan/wizardState.svelte.js';
 
 	import { TV_SERVICES, serviceByKey } from '$lib/components/tv/tvData.js';
@@ -9,6 +9,11 @@
 	import GrillaViewer from '$lib/components/tv/GrillaViewer.svelte';
 	import TvCompatInfo from '$lib/components/tv/TvCompatInfo.svelte';
 	import AyudameElegirTv from '$lib/components/tv/AyudameElegirTv.svelte';
+
+	// Plan de internet ya elegido — para mostrar el total combinado en el modal de TV.
+	let internetPlan = $derived(planByKey(wizard.internetPlan));
+	let internetLabel = $derived(internetPlan ? `Internet ${internetPlan.label} ${speedLabel(internetPlan.mb)}` : 'Internet');
+	let internetPrice = $derived(wizard.internetPlan ? Number(wizard.precios?.[wizard.internetPlan]) || 0 : null);
 
 	let openKey = $state(null); // servicio con modal abierto
 	let grillaKey = $state(null); // servicio con grilla abierta
@@ -34,6 +39,10 @@
 
 <TvCompatInfo cardsId="tv-cards" />
 
+<div class="ayuda">
+	<AyudameElegirTv precios={wizard.precios} onPick={(key) => (openKey = key)} />
+</div>
+
 <div id="tv-cards" class="cards">
 	{#each TV_SERVICES as service (service.key)}
 		<TvServiceCard
@@ -44,10 +53,6 @@
 			onGrilla={() => (grillaKey = service.key)}
 		/>
 	{/each}
-</div>
-
-<div class="ayuda">
-	<AyudameElegirTv precios={wizard.precios} onPick={(key) => (openKey = key)} />
 </div>
 
 {#if wizard.tvPlatform}
@@ -61,6 +66,8 @@
 		{initialSelected}
 		ctaLabel="Elegir y continuar"
 		ctaClass="btn-primary"
+		{internetLabel}
+		{internetPrice}
 		onGrilla={() => (grillaKey = openService.key)}
 		onConfirm={confirmTv}
 		onclose={() => (openKey = null)}

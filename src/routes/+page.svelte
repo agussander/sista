@@ -4,7 +4,7 @@
 	import What from "$lib/components/home/What.svelte";
 	import Price from "$lib/components/home/Price.svelte";
 	import Form1 from "$lib/components/forms/Form1.svelte";
-	import Cobertura from "$lib/components/home/Cobertura.svelte";
+	// import Cobertura from "$lib/components/home/Cobertura.svelte";
 	import Novedades from "$lib/components/home/Novedades.svelte";
 	import ContactButtons from "$lib/components/ui/ContactButtons.svelte";
 	import { MetaTags } from "svelte-meta-tags";
@@ -29,9 +29,9 @@
 <div class="section-container">
     <Price></Price>
 </div>
-<div class="section-container">
+<!-- <div class="section-container">
     <Cobertura></Cobertura>
-</div>
+</div> -->
     <Novedades></Novedades>
 <div class="section-container form-cont">
     <h2 id="contacto" class="contactanos">Contactanos</h2>

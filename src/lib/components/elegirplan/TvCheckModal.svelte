@@ -58,11 +58,11 @@
 			<li><span class="n">3</span> <span class="txt">Si abre bien, es compatible</span></li>
 		</ol>
 
-		<p class="note">Si ya la bajaste, no te crees una cuenta: nosotros te pasamos todo.</p>
+		<p class="note"><span class="n n-empty" aria-hidden="true"></span> <span class="txt">Si ya la bajaste, no te crees una cuenta: nosotros te pasamos todo.</span></p>
 
 		<div class="actions">
 			<button class="btn-primary btn-full" onclick={() => onconfirm?.()}>La instalé, funciona</button>
-			<a class="btn-text" href="/tv" target="_blank" rel="noopener">Ver TVs compatibles</a>
+			<button class="btn-text" onclick={() => onconfirm?.()}>Continuar sin verificar</button>
 		</div>
 	</div>
 </div>
@@ -159,13 +159,22 @@
 		justify-content: center;
 	}
 	.note {
-		font-size: 0.82rem;
-		color: #6b6b6b;
+		display: flex;
+		align-items: flex-start;
+		gap: 0.6rem;
+		font-size: 0.92rem;
+		color: var(--violeta1);
 		font-weight: 300;
-		background: #faf8fb;
-		border-radius: 0.6rem;
-		padding: 0.7rem 0.85rem;
 		margin: 0 0 1.25rem;
+	}
+	.note .txt {
+		line-height: 1.5rem;
+	}
+	.note .n-empty {
+		flex-shrink: 0;
+		width: 1.5rem;
+		height: 1.5rem;
+		background: none;
 	}
 	.warn {
 		display: flex;

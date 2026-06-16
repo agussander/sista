@@ -1,3 +1,28 @@
+<script>
+    import { MetaTags } from 'svelte-meta-tags';
+</script>
+
+<MetaTags
+    title="Antina Play · Sista"
+    description="Antina Play: canales en vivo y contenido on demand para sumar a tu Internet de Sista."
+    openGraph={{
+        type: 'website',
+        images: [
+            {
+                url: 'https://sista.com.ar/images/tv/logo-antina-meta.png',
+                width: 1200,
+                height: 630,
+                alt: 'Antina Play'
+            }
+        ]
+    }}
+    twitter={{
+        cardType: 'summary_large_image',
+        image: 'https://sista.com.ar/images/tv/logo-antina-meta.png',
+        imageAlt: 'Antina Play'
+    }}
+/>
+
 <section>
     <img class="logo" src="/images/tv/logo-antina.png" alt="Logo de Antina Play">
     <p>

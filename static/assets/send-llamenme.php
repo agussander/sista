@@ -30,15 +30,10 @@ if (!$captcha['ok']) {
 }
 
 // 3. Validación de campos
-$nombre = isset($_POST['nombre']) ? trim($_POST['nombre']) : '';
 $numero = isset($_POST['numero']) ? trim($_POST['numero']) : '';
-if ($nombre === '') {
-    json_out(['success' => false, 'message' => 'incompleto', 'field' => 'nombre']);
-}
 if ($numero === '') {
     json_out(['success' => false, 'message' => 'incompleto', 'field' => 'numero']);
 }
-$nombre = mb_substr($nombre, 0, 80);
 $numero = mb_substr($numero, 0, 40);
 
 // 4. Write a PocketBase (fuente de verdad)
@@ -49,7 +44,7 @@ $ch = curl_init();
 curl_setopt($ch, CURLOPT_URL, $pbEndpoint);
 curl_setopt($ch, CURLOPT_POST, true);
 curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['nombre' => $nombre, 'numero' => $numero]));
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['numero' => $numero]));
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_TIMEOUT, 10);
 curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
@@ -70,7 +65,6 @@ try {
     $templatePath = __DIR__ . '/correo_template.html';
     $mailResult = $mailHandler->send('Quiero que me llamen', [
         'title'  => 'Quiero que me llamen',
-        'Nombre' => $nombre,
         'Numero' => $numero,
     ], $templatePath);
     if (empty($mailResult['success'])) {
