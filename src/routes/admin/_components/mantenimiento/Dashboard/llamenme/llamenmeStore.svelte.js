@@ -131,6 +131,9 @@ async function loadOverride() {
 }
 
 // Asignación optimista del override, con rollback ante error (mismo patrón que assign).
+// El switch es un único valor global (a diferencia de assign, que corrige una fila
+// puntual), así que sólo revertimos si nadie cambió el valor mientras esta llamada
+// estaba en curso: evita que un fallo tardío pise una selección más nueva ya exitosa.
 async function setOverride(value) {
 	const prev = override;
 	override = value;
@@ -138,7 +141,7 @@ async function setOverride(value) {
 		await saveOverride(pb, value);
 	} catch (e) {
 		console.error(e);
-		override = prev;
+		if (override === value) override = prev;
 		error = 'No se pudo guardar el estado del formulario.';
 		setTimeout(() => (error = ''), 3000);
 	}
