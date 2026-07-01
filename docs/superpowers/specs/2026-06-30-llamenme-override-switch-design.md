@@ -27,8 +27,10 @@ viendo ahora y por qué).
    - `cerrado` → form siempre oculto (aunque sea dentro de horario).
 2. **Propagación: próxima carga.** Hero lee el estado en `onMount`; el visitante
    ve el cambio al entrar/recargar. Sin realtime en la web pública.
-3. **Persistencia: nueva colección singleton** `llamenme_config` en PocketBase
-   (la crea el usuario en PocketHost, no se puede crear por código desde acá).
+3. **Persistencia: colección genérica `config`** en PocketBase (ya creada por el
+   usuario en PocketHost). Cada config es un registro `key` (texto) + `values`
+   (JSON). El registro de este feature es `key: "llamenme"`, `values: { state: "auto" }`.
+   Modelo escalable: futuras configs son otros registros `key`/`values`.
 
 ## Arquitectura
 
@@ -54,23 +56,32 @@ Constante exportada con los valores válidos para reutilizar en UI y validación
 
 ### 2. Acceso a config — `src/lib/llamenme/config.js`
 
-Lee/escribe el override en la colección singleton. No importa `pb` directamente;
-lo recibe por parámetro para poder testear con un `pb` mockeado.
+Lee/escribe el override en el registro `key="llamenme"` de la colección `config`.
+El valor vive en `record.values.state`. No importa `pb` directamente; lo recibe por
+parámetro para poder testear con un `pb` mockeado.
 
 ```js
-const COLLECTION = 'llamenme_config';
+const COLLECTION = 'config';
+const KEY = 'llamenme';
 
 // Devuelve 'auto'|'abierto'|'cerrado'. Fail-open: ante cualquier error
 // devuelve 'auto' para que la web caiga al horario automático.
-export async function fetchOverride(pb) { /* getFirstListItem('') */ }
+export async function fetchOverride(pb) {
+    // getFirstListItem(`key="llamenme"`) → normalizar record.values?.state
+}
 
-// Actualiza el registro singleton (o lo crea si no existe). Devuelve el valor
-// guardado. Lanza el error para que el llamador (admin) pueda hacer rollback.
-export async function saveOverride(pb, value) { /* update/create */ }
+// Actualiza values.state del registro llamenme, preservando las demás claves de
+// values (merge). Devuelve el valor guardado. Lanza el error para que el llamador
+// (admin) pueda hacer rollback.
+export async function saveOverride(pb, value) {
+    // getFirstListItem → update(id, { values: { ...record.values, state: value } })
+}
 ```
 
-`fetchOverride` devuelve el `override` del registro, normalizado contra
-`OVERRIDE_VALUES` (si viniera vacío/raro → `'auto'`).
+`fetchOverride` normaliza `record.values.state` contra `OVERRIDE_VALUES`
+(si viniera vacío/raro → `'auto'`). `saveOverride` hace merge sobre `values` para
+no pisar otras claves que la colección `config` pudiera tener a futuro en ese
+registro.
 
 ### 3. Admin — `Llamenme.svelte` + `llamenmeStore.svelte.js`
 
@@ -107,17 +118,20 @@ En `Llamenme.svelte`, en el header del panel:
 - `fetchOverride` ya es fail-open (devuelve `'auto'` ante error), así que si
   PocketBase no responde, el form cae al comportamiento por horario actual.
 
-### 5. Schema PocketBase (manual — lo hace el usuario en PocketHost)
+### 5. Schema PocketBase (ya creado por el usuario en PocketHost)
 
-Colección **`llamenme_config`**:
-- Campo `override`: tipo **select**, single, valores `auto`, `abierto`, `cerrado`,
-  default `auto`, requerido.
-- Crear **un** registro inicial con `override = auto`.
+Colección **`config`** (genérica):
+- Campo `key`: tipo **texto** (identifica cada config; conviene único).
+- Campo `values`: tipo **JSON**.
+- Registro de este feature: `key = "llamenme"`, `values = { "state": "auto" }`.
 - Reglas API:
   - **List / View: públicas** (Hero las lee sin autenticación).
-  - **Update: solo autenticado** (admin). Create/Delete: solo admin (no se usan
-    desde la web pública en operación normal; `saveOverride` usa update sobre el
-    singleton existente).
+  - **Update: solo autenticado** (admin). Create/Delete: solo admin (`saveOverride`
+    sólo hace update sobre el registro `llamenme` existente).
+
+Nota: el código depende de que exista el registro `key="llamenme"`. Si no existe,
+`fetchOverride` cae a `'auto'` (fail-open) y `saveOverride` fallaría; el registro
+inicial ya fue creado.
 
 ## Testing
 
@@ -127,7 +141,8 @@ Colección **`llamenme_config`**:
   - `isWithinCallHours`: dentro de horario (mié 12:00 ART) → true; fuera de horario
     (mié 20:00 ART) → false; fin de semana → false; bordes 9:30 y 16:30.
 - (Opcional) `src/lib/llamenme/config.test.js` con `pb` mockeado: `fetchOverride`
-  normaliza y hace fail-open a `'auto'`; `saveOverride` propaga el error.
+  lee `values.state`, normaliza y hace fail-open a `'auto'`; `saveOverride` hace
+  merge sobre `values` y propaga el error.
 
 ## Fuera de alcance (YAGNI)
 
