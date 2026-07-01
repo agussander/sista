@@ -7,6 +7,9 @@
     import { scrollElement, setGlobalOptions,scrollTo } from 'svelte-scrolling';
     import { page } from '$app/stores';
     import { goto } from '$app/navigation';
+    import { pb } from '$lib/pocketbase';
+    import { computeFormVisible } from '$lib/llamenme/visibility.js';
+    import { fetchOverride } from '$lib/llamenme/config.js';
 
     setGlobalOptions({offset: -100});
 
@@ -17,33 +20,13 @@
         scrollElement('cobertura');
     };
 
-    // El form "quiero que me llamen" solo se muestra en horario de atención:
-    // lunes a viernes de 9:30 a 16:30 (hora de Buenos Aires, GMT-3).
-    // Se calcula la hora en la zona horaria de Argentina sin depender del reloj
-    // ni la zona horaria del dispositivo del visitante.
-    function isWithinCallHours(now = new Date()) {
-        const parts = new Intl.DateTimeFormat('en-US', {
-            timeZone: 'America/Argentina/Buenos_Aires',
-            weekday: 'short',
-            hour: '2-digit',
-            minute: '2-digit',
-            hourCycle: 'h23'
-        }).formatToParts(now);
-
-        const get = (type) => parts.find((p) => p.type === type)?.value;
-
-        const isWeekday = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].includes(get('weekday'));
-        const minutes = parseInt(get('hour'), 10) * 60 + parseInt(get('minute'), 10);
-
-        const start = 9 * 60 + 30;  // 9:30
-        const end = 16 * 60 + 30;   // 16:30
-
-        return isWeekday && minutes >= start && minutes <= end;
-    }
-
-    onMount(() => {
+    // El form "quiero que me llamen" se muestra según el horario de atención
+    // (lunes a viernes de 9:30 a 16:30 ART), salvo que un admin lo haya forzado
+    // abierto o cerrado desde el panel (ver src/lib/llamenme/visibility.js).
+    onMount(async () => {
         mounted = true;
-        showLlamenme = isWithinCallHours();
+        const override = await fetchOverride(pb);
+        showLlamenme = computeFormVisible(override);
     });
 </script>
 
