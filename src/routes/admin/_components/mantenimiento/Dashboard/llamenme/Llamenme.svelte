@@ -1,7 +1,8 @@
 <script>
-import { pb } from '$lib/pocketbase';
-import { onMount } from 'svelte';
 import Spinner from '$lib/components/ui/Spinner.svelte';
+import { llamenmeStore } from './llamenmeStore.svelte.js';
+import { paginate, totalPages as totalPagesOf, clampPage } from './llamenmeLogic.js';
+import { computeFormVisible, isWithinCallHours } from '$lib/llamenme/visibility.js';
 
 // Agentes disponibles para asignar. El "value" debe coincidir con el valor
 // guardado en el campo select "agente" de PocketBase (en minúscula).
@@ -11,41 +12,53 @@ const agentes = [
     { value: 'gustavo', label: 'Gustavo' }
 ];
 
-let leads = $state([]);
-let loading = $state(true);
-let error = $state('');
+// El store (arrancado por el Dashboard) es la fuente de verdad.
+const leads = $derived(llamenmeStore.leads);
+const loading = $derived(llamenmeStore.loading);
+const error = $derived(llamenmeStore.error);
+const newIds = $derived(llamenmeStore.newIds);
+const override = $derived(llamenmeStore.override);
+const setOverride = (value) => llamenmeStore.setOverride(value);
 
-onMount(load);
+const overrideOptions = [
+    { value: 'auto', label: 'Auto' },
+    { value: 'abierto', label: 'Abierto' },
+    { value: 'cerrado', label: 'Cerrado' }
+];
 
-async function load() {
-    loading = true;
-    error = '';
-    try {
-        const res = await pb.collection('quiero_que_me_llamen').getList(1, 200, { sort: '-created' });
-        leads = res.items;
-    } catch (e) {
-        console.error(e);
-        error = 'No se pudieron cargar los datos.';
-    } finally {
-        loading = false;
-    }
-}
+// Estado "ahora" del formulario público. Es informativo: se calcula al
+// renderizar el panel, no se actualiza en vivo mientras queda abierto.
+const now = new Date();
+const visibleNow = $derived(computeFormVisible(override, now));
+const reasonNow = $derived(
+    override === 'abierto'
+        ? 'forzado abierto'
+        : override === 'cerrado'
+            ? 'forzado cerrado'
+            : isWithinCallHours(now)
+                ? 'por horario de atención'
+                : 'fuera de horario'
+);
 
+let page = $state(1);
+const totalPages = $derived(totalPagesOf(leads.length));
+const visible = $derived(paginate(leads, page));
+
+// Acotar la página si la lista se achica (p. ej. tras borrados).
+$effect(() => {
+    const clamped = clampPage(page, leads.length);
+    if (clamped !== page) page = clamped;
+});
+
+// Cuando llega un lead nuevo (hay ids resaltados), saltar a la página 1 para
+// que sea visible. Sólo reacciona a arribos, no pisa la navegación manual.
+$effect(() => {
+    if (newIds.size > 0) page = 1;
+});
+
+const load = () => llamenmeStore.load();
 const isAssigned = (l) => !!l.agente;
-
-async function assign(lead, value) {
-    const agente = value || null;
-    const prev = lead.agente;
-    lead.agente = agente;
-    try {
-        await pb.collection('quiero_que_me_llamen').update(lead.id, { agente });
-    } catch (e) {
-        console.error(e);
-        lead.agente = prev;
-        error = 'No se pudo asignar el agente.';
-        setTimeout(() => (error = ''), 3000);
-    }
-}
+const assign = (lead, value) => llamenmeStore.assign(lead, value);
 
 // Devuelve un texto relativo del tipo "hace 3 minutos / 3 horas / 3 días / 1 mes".
 function timeAgo(d) {
@@ -82,6 +95,23 @@ function timeAgo(d) {
         </div>
     </div>
 
+    <div class="override-panel">
+        <div class="override-switch" role="group" aria-label="Habilitar formulario">
+            {#each overrideOptions as opt}
+                <button
+                    type="button"
+                    class="override-btn"
+                    class:active={override === opt.value}
+                    onclick={() => setOverride(opt.value)}
+                >{opt.label}</button>
+            {/each}
+        </div>
+        <p class="override-status">
+            El formulario está <strong>{visibleNow ? 'visible' : 'oculto'}</strong> ahora
+            ({reasonNow}).
+        </p>
+    </div>
+
     {#if loading}
         <div class="state"><Spinner size={40} color="var(--violeta1)" borderWidth={3} label="Cargando…" /></div>
     {:else if error}
@@ -95,8 +125,8 @@ function timeAgo(d) {
                     <tr><th>Asignar</th><th>Número</th><th>Recibido</th></tr>
                 </thead>
                 <tbody>
-                    {#each leads as l}
-                        <tr class:assigned={isAssigned(l)}>
+                    {#each visible as l (l.id)}
+                        <tr class:assigned={isAssigned(l)} class:is-new={newIds.has(l.id)}>
                             <td class="assign-cell">
                                 <span class="tick" class:visible={isAssigned(l)} aria-hidden="true">✓</span>
                                 <select
@@ -117,6 +147,14 @@ function timeAgo(d) {
                 </tbody>
             </table>
         </div>
+
+        {#if totalPages > 1}
+            <div class="pager">
+                <button class="pager-btn" onclick={() => (page = page - 1)} disabled={page <= 1}>« Anterior</button>
+                <span class="pager-info">Página {page} de {totalPages}</span>
+                <button class="pager-btn" onclick={() => (page = page + 1)} disabled={page >= totalPages}>Siguiente »</button>
+            </div>
+        {/if}
     {/if}
 </div>
 
@@ -224,13 +262,89 @@ td.date {
     outline: none;
     border-color: var(--violeta1);
 }
+/* Fila recién llegada por realtime: highlight temporal. */
+tr.is-new td {
+    animation: highlight-new 3s ease-out;
+}
+@keyframes highlight-new {
+    0% { background: #fdf3c4; }
+    100% { background: transparent; }
+}
 /* Filas ya asignadas: más apagadas / en gris. */
 tr.assigned td {
     color: #9a9a9a;
+}
+.pager {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1em;
+    margin-top: 1.2em;
+}
+.pager-info {
+    color: #666;
+    font-size: 0.9em;
+}
+.pager-btn {
+    background: #fff;
+    color: var(--violeta1);
+    border: 1.5px solid #e0d6f0;
+    border-radius: 0.4em;
+    padding: 0.45em 0.9em;
+    cursor: pointer;
+    font-size: 0.9em;
+    font-family: inherit;
+    transition: background 0.15s, border-color 0.15s;
+}
+.pager-btn:hover:not(:disabled) {
+    background: #f3eefb;
+    border-color: var(--violeta1);
+}
+.pager-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
 }
 tr.assigned .assign-select {
     color: #9a9a9a;
     background: #f6f6f6;
     border-color: #e6e6e6;
+}
+.override-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5em;
+    margin-bottom: 1.5em;
+    padding: 1em 1.2em;
+    background: #fff;
+    border-radius: 0.6em;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+.override-switch {
+    display: inline-flex;
+    gap: 0.4em;
+}
+.override-btn {
+    background: #fff;
+    color: var(--violeta1);
+    border: 1.5px solid #e0d6f0;
+    border-radius: 0.4em;
+    padding: 0.45em 0.9em;
+    cursor: pointer;
+    font-size: 0.9em;
+    font-family: inherit;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.override-btn:hover {
+    background: #f3eefb;
+}
+.override-btn.active {
+    background: var(--violeta1);
+    color: #fff;
+    border-color: var(--violeta1);
+}
+.override-status {
+    margin: 0;
+    color: #666;
+    font-size: 0.9em;
 }
 </style>
