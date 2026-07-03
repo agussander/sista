@@ -159,6 +159,21 @@ describe('canSubmit', () => {
 	it('true con solo los campos obligatorios de la rama simple', () => {
 		expect(canSubmit(baseValid())).toBe(true);
 	});
+
+	it('false cuando conformidad no está en el conjunto cerrado de opciones', () => {
+		expect(canSubmit({ ...baseValid(), conformidad: 'abc' })).toBe(false);
+	});
+
+	it('false cuando pagoInconvenientes no es "sí" ni "no"', () => {
+		expect(
+			canSubmit({
+				...baseValid(),
+				motivo: MOTIVO_PAGO,
+				pagoMedio: 'efectivo',
+				pagoInconvenientes: 'maybe'
+			})
+		).toBe(false);
+	});
 });
 
 describe('buildPayload', () => {

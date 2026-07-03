@@ -83,7 +83,7 @@ export function canSubmit(data) {
 	if (isMotivoPago(data.motivo)) {
 		if (!data.pagoMedio) return false;
 		if (isPagoMedioOtro(data.pagoMedio) && !data.pagoMedioOtro.trim()) return false;
-		if (!data.pagoInconvenientes) return false;
+		if (!SI_NO_OPTIONS.includes(data.pagoInconvenientes)) return false;
 	}
 
 	if (!data.contactoPrevio) return false;
@@ -92,7 +92,7 @@ export function canSubmit(data) {
 		if (isContactoNoMotivoOtro(data.contactoNoMotivo) && !data.contactoNoOtro.trim()) return false;
 	}
 
-	if (!data.conformidad) return false;
+	if (!CONFORMIDAD_OPTIONS.includes(data.conformidad)) return false;
 	if (!data.volveria) return false;
 
 	return true;
