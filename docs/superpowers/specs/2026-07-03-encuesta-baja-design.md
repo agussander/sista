@@ -16,9 +16,11 @@ La carpeta `_components` se mantiene autocontenida dentro de la ruta, siguiendo 
 
 ## Persistencia
 
-Nueva colección PocketBase: **`encuesta_baja`**.
+> **Actualizado (2026-07-03):** decisión final del usuario durante implementación — la colección se llama **`encuestadebaja`** (sin guión bajo) con un único campo JSON **`data`** que contiene el objeto completo de `buildPayload()`, en vez de una columna por campo como se describe abajo. Ver la nota equivalente en el plan de implementación. El campo `id_cliente` también se eliminó (ya no se pide número de cliente).
 
-Campos de la colección:
+Nueva colección PocketBase: ~~`encuesta_baja`~~ (ver nota arriba).
+
+Campos de la colección (diseño original, superado por la nota de arriba):
 
 | Campo | Tipo | Notas |
 |---|---|---|

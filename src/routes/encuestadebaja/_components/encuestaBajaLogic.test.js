@@ -32,7 +32,6 @@ describe('createEmptyData', () => {
 		expect(data.comentarios).toBe('');
 		expect(data.idNombre).toBe('');
 		expect(data.idTelefono).toBe('');
-		expect(data.idCliente).toBe('');
 	});
 });
 
@@ -53,9 +52,9 @@ describe('detectores de rama', () => {
 		expect(isPagoMedioOtro('efectivo')).toBe(false);
 	});
 
-	it('isContactoNo es true solo cuando la respuesta es "no"', () => {
-		expect(isContactoNo('no')).toBe(true);
-		expect(isContactoNo('sí')).toBe(false);
+	it('isContactoNo es true solo cuando la respuesta es "No"', () => {
+		expect(isContactoNo('No')).toBe(true);
+		expect(isContactoNo('Sí')).toBe(false);
 	});
 
 	it('isContactoNoMotivoOtro detecta el motivo "otro"', () => {
@@ -63,10 +62,10 @@ describe('detectores de rama', () => {
 		expect(isContactoNoMotivoOtro('no sabía que se podía')).toBe(false);
 	});
 
-	it('isVolveriaCondicionVisible es true para "sí" y "tal vez", false para "no"', () => {
-		expect(isVolveriaCondicionVisible('sí')).toBe(true);
-		expect(isVolveriaCondicionVisible('tal vez')).toBe(true);
-		expect(isVolveriaCondicionVisible('no')).toBe(false);
+	it('isVolveriaCondicionVisible es true para "Sí" y "Tal vez", false para "No"', () => {
+		expect(isVolveriaCondicionVisible('Sí')).toBe(true);
+		expect(isVolveriaCondicionVisible('Tal vez')).toBe(true);
+		expect(isVolveriaCondicionVisible('No')).toBe(false);
 	});
 });
 
@@ -74,9 +73,9 @@ describe('canSubmit', () => {
 	const baseValid = () => ({
 		...createEmptyData(),
 		motivo: 'Contraté otro proveedor',
-		contactoPrevio: 'sí',
+		contactoPrevio: 'Sí',
 		conformidad: '7',
-		volveria: 'no'
+		volveria: 'No'
 	});
 
 	it('false cuando falta el motivo', () => {
@@ -92,7 +91,7 @@ describe('canSubmit', () => {
 	});
 
 	it('false cuando el motivo es de pago y falta el medio de pago', () => {
-		expect(canSubmit({ ...baseValid(), motivo: MOTIVO_PAGO, pagoMedio: '', pagoInconvenientes: 'sí' })).toBe(false);
+		expect(canSubmit({ ...baseValid(), motivo: MOTIVO_PAGO, pagoMedio: '', pagoInconvenientes: 'Sí' })).toBe(false);
 	});
 
 	it('false cuando el medio de pago es "otro" sin especificar', () => {
@@ -102,7 +101,7 @@ describe('canSubmit', () => {
 				motivo: MOTIVO_PAGO,
 				pagoMedio: 'otro',
 				pagoMedioOtro: '',
-				pagoInconvenientes: 'sí'
+				pagoInconvenientes: 'Sí'
 			})
 		).toBe(false);
 	});
@@ -115,7 +114,7 @@ describe('canSubmit', () => {
 
 	it('true cuando la rama de pago está completa', () => {
 		expect(
-			canSubmit({ ...baseValid(), motivo: MOTIVO_PAGO, pagoMedio: 'efectivo', pagoInconvenientes: 'no' })
+			canSubmit({ ...baseValid(), motivo: MOTIVO_PAGO, pagoMedio: 'efectivo', pagoInconvenientes: 'No' })
 		).toBe(true);
 	});
 
@@ -123,15 +122,15 @@ describe('canSubmit', () => {
 		expect(canSubmit({ ...baseValid(), contactoPrevio: '' })).toBe(false);
 	});
 
-	it('false cuando contactoPrevio es "no" y falta el motivo de no-contacto', () => {
-		expect(canSubmit({ ...baseValid(), contactoPrevio: 'no', contactoNoMotivo: '' })).toBe(false);
+	it('false cuando contactoPrevio es "No" y falta el motivo de no-contacto', () => {
+		expect(canSubmit({ ...baseValid(), contactoPrevio: 'No', contactoNoMotivo: '' })).toBe(false);
 	});
 
 	it('false cuando el motivo de no-contacto es "otro" sin especificar', () => {
 		expect(
 			canSubmit({
 				...baseValid(),
-				contactoPrevio: 'no',
+				contactoPrevio: 'No',
 				contactoNoMotivo: 'otro',
 				contactoNoOtro: ''
 			})
@@ -142,7 +141,7 @@ describe('canSubmit', () => {
 		expect(
 			canSubmit({
 				...baseValid(),
-				contactoPrevio: 'no',
+				contactoPrevio: 'No',
 				contactoNoMotivo: 'no tenía tiempo'
 			})
 		).toBe(true);
@@ -164,7 +163,7 @@ describe('canSubmit', () => {
 		expect(canSubmit({ ...baseValid(), conformidad: 'abc' })).toBe(false);
 	});
 
-	it('false cuando pagoInconvenientes no es "sí" ni "no"', () => {
+	it('false cuando pagoInconvenientes no es "Sí" ni "No"', () => {
 		expect(
 			canSubmit({
 				...baseValid(),
@@ -181,10 +180,10 @@ describe('buildPayload', () => {
 		const data = {
 			...createEmptyData(),
 			motivo: 'Contraté otro proveedor',
-			contactoPrevio: 'sí',
+			contactoPrevio: 'Sí',
 			conformidad: '8',
 			queDiferente: '  algo  ',
-			volveria: 'no',
+			volveria: 'No',
 			comentarios: ' ',
 			idNombre: 'Juan'
 		};
@@ -200,7 +199,7 @@ describe('buildPayload', () => {
 		expect(payload.contacto_no_otro).toBe('');
 		expect(payload.conformidad).toBe(8);
 		expect(payload.que_diferente).toBe('algo');
-		expect(payload.volveria).toBe('no');
+		expect(payload.volveria).toBe('No');
 		expect(payload.volveria_condicion).toBe('');
 		expect(payload.comentarios).toBe('');
 		expect(payload.id_nombre).toBe('Juan');
@@ -211,9 +210,9 @@ describe('buildPayload', () => {
 			...createEmptyData(),
 			motivo: 'Contraté otro proveedor',
 			pagoMedio: 'efectivo',
-			contactoPrevio: 'sí',
+			contactoPrevio: 'Sí',
 			conformidad: '5',
-			volveria: 'no'
+			volveria: 'No'
 		};
 		expect(buildPayload(dataSinRama).pago_medio).toBe('');
 
@@ -222,11 +221,11 @@ describe('buildPayload', () => {
 			motivo: MOTIVO_PAGO,
 			pagoMedio: 'otro',
 			pagoMedioOtro: 'billetera virtual',
-			pagoInconvenientes: 'sí',
+			pagoInconvenientes: 'Sí',
 			pagoInconvenientesComentario: 'no me llegaba el aviso',
-			contactoPrevio: 'sí',
+			contactoPrevio: 'Sí',
 			conformidad: '5',
-			volveria: 'no'
+			volveria: 'No'
 		};
 		const payload = buildPayload(dataConRama);
 		expect(payload.pago_medio).toBe('otro');
@@ -235,25 +234,25 @@ describe('buildPayload', () => {
 		expect(payload.pago_inconvenientes_comentario).toBe('no me llegaba el aviso');
 	});
 
-	it('incluye contacto_no_motivo solo si contactoPrevio es "no"', () => {
+	it('incluye contacto_no_motivo solo si contactoPrevio es "No"', () => {
 		const data = {
 			...createEmptyData(),
 			motivo: 'Contraté otro proveedor',
-			contactoPrevio: 'no',
+			contactoPrevio: 'No',
 			contactoNoMotivo: 'no sabía que se podía',
 			conformidad: '5',
-			volveria: 'no'
+			volveria: 'No'
 		};
 		expect(buildPayload(data).contacto_no_motivo).toBe('no sabía que se podía');
 	});
 
-	it('incluye volveria_condicion solo si volveria no es "no"', () => {
+	it('incluye volveria_condicion solo si volveria no es "No"', () => {
 		const dataNo = {
 			...createEmptyData(),
 			motivo: 'Contraté otro proveedor',
-			contactoPrevio: 'sí',
+			contactoPrevio: 'Sí',
 			conformidad: '5',
-			volveria: 'no',
+			volveria: 'No',
 			volveriaCondicion: 'esto no debería viajar'
 		};
 		expect(buildPayload(dataNo).volveria_condicion).toBe('');
@@ -261,9 +260,9 @@ describe('buildPayload', () => {
 		const dataSi = {
 			...createEmptyData(),
 			motivo: 'Contraté otro proveedor',
-			contactoPrevio: 'sí',
+			contactoPrevio: 'Sí',
 			conformidad: '5',
-			volveria: 'sí',
+			volveria: 'Sí',
 			volveriaCondicion: 'mejor precio'
 		};
 		expect(buildPayload(dataSi).volveria_condicion).toBe('mejor precio');

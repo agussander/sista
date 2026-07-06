@@ -12,11 +12,11 @@
 
 ## Nota sobre la colección de PocketBase
 
-Antes de que el formulario funcione end-to-end contra el backend real, hay que crear manualmente en el admin de PocketBase (`https://sista.pockethost.io/_/`) una colección llamada **`encuesta_baja`** con estos campos (todos `text` excepto donde se indica), todos opcionales a nivel de esquema (la validación de obligatoriedad ocurre en el frontend, no en PocketBase):
+**Actualizado (2026-07-03):** decisión del usuario — la colección se llama **`encuestadebaja`** (sin guión bajo) y tiene un único campo **`data`** de tipo JSON, no una columna por campo. El componente envía `pb.collection('encuestadebaja').create({ data: buildPayload(data) })`, es decir todo el objeto que arma `buildPayload` (`motivo`, `motivo_otro`, `pago_medio`, `pago_medio_otro`, `pago_inconvenientes`, `pago_inconvenientes_comentario`, `contacto_previo`, `contacto_no_motivo`, `contacto_no_otro`, `conformidad`, `que_diferente`, `volveria`, `volveria_condicion`, `comentarios`, `id_nombre`, `id_telefono`) va anidado dentro de ese campo `data`.
 
-`motivo`, `motivo_otro`, `pago_medio`, `pago_medio_otro`, `pago_inconvenientes` (bool), `pago_inconvenientes_comentario`, `contacto_previo` (bool), `contacto_no_motivo`, `contacto_no_otro`, `conformidad` (number), `que_diferente`, `volveria`, `volveria_condicion`, `comentarios`, `id_nombre`, `id_telefono`, `id_cliente`.
+Antes de que el formulario funcione end-to-end contra el backend real, hay que crear manualmente en el admin de PocketBase (`https://sista.pockethost.io/_/`) la colección `encuestadebaja` con un campo `data` (JSON). Esto es un paso manual fuera del código; no bloquea escribir y testear la lógica ni la UI (los tests unitarios de Task 1 no dependen de la colección real, y la verificación manual de Task 4 puede hacerse contra la colección real una vez creada).
 
-Esto es un paso manual fuera del código; no bloquea escribir y testear la lógica ni la UI (los tests unitarios de Task 1 no dependen de la colección real, y la verificación manual de Task 4 puede hacerse contra la colección real una vez creada).
+Nota: el campo `id_cliente` (número de cliente) se eliminó del formulario y de `createEmptyData()`/`buildPayload()` — ya no se pide.
 
 ---
 

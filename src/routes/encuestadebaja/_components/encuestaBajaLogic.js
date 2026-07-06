@@ -15,20 +15,20 @@ export const MOTIVO_OPTIONS = [
 	MOTIVO_OTRO
 ];
 
-export const PAGO_MEDIO_OPTIONS = ['efectivo', 'transferencia', 'débito automático', MEDIO_OTRO];
+export const PAGO_MEDIO_OPTIONS = ['Efectivo', 'Transferencia', 'Débito automático', MEDIO_OTRO];
 
-export const SI_NO_OPTIONS = ['sí', 'no'];
+export const SI_NO_OPTIONS = ['Sí', 'No'];
 
 export const CONTACTO_NO_MOTIVO_OPTIONS = [
-	'no sabía que se podía',
-	'no tenía tiempo',
-	'no creí que hubiera solución',
+	'No sabía que se podía',
+	'No tenía tiempo',
+	'No creí que hubiera solución',
 	CONTACTO_NO_OTRO
 ];
 
 export const CONFORMIDAD_OPTIONS = Array.from({ length: 10 }, (_, i) => String(i + 1));
 
-export const VOLVERIA_OPTIONS = ['sí', 'tal vez', 'no'];
+export const VOLVERIA_OPTIONS = ['Sí', 'Tal vez', 'No'];
 
 export function createEmptyData() {
 	return {
@@ -48,7 +48,6 @@ export function createEmptyData() {
 		comentarios: '',
 		idNombre: '',
 		idTelefono: '',
-		idCliente: ''
 	};
 }
 
@@ -65,7 +64,7 @@ export function isPagoMedioOtro(pagoMedio) {
 }
 
 export function isContactoNo(contactoPrevio) {
-	return contactoPrevio === 'no';
+	return contactoPrevio === 'No';
 }
 
 export function isContactoNoMotivoOtro(contactoNoMotivo) {
@@ -73,7 +72,7 @@ export function isContactoNoMotivoOtro(contactoNoMotivo) {
 }
 
 export function isVolveriaCondicionVisible(volveria) {
-	return volveria === 'sí' || volveria === 'tal vez';
+	return volveria === 'Sí' || volveria === 'Tal vez';
 }
 
 export function canSubmit(data) {
@@ -106,7 +105,7 @@ export function buildPayload(data) {
 		pago_medio_otro: '',
 		pago_inconvenientes: null,
 		pago_inconvenientes_comentario: '',
-		contacto_previo: data.contactoPrevio === 'sí',
+		contacto_previo: data.contactoPrevio === 'Sí',
 		contacto_no_motivo: '',
 		contacto_no_otro: '',
 		conformidad: Number(data.conformidad),
@@ -116,13 +115,12 @@ export function buildPayload(data) {
 		comentarios: data.comentarios.trim(),
 		id_nombre: data.idNombre.trim(),
 		id_telefono: data.idTelefono.trim(),
-		id_cliente: data.idCliente.trim()
 	};
 
 	if (isMotivoPago(data.motivo)) {
 		payload.pago_medio = data.pagoMedio;
 		payload.pago_medio_otro = isPagoMedioOtro(data.pagoMedio) ? data.pagoMedioOtro.trim() : '';
-		payload.pago_inconvenientes = data.pagoInconvenientes === 'sí';
+		payload.pago_inconvenientes = data.pagoInconvenientes === 'Sí';
 		payload.pago_inconvenientes_comentario = data.pagoInconvenientesComentario.trim();
 	}
 
