@@ -7,6 +7,8 @@
 	import { wizard, setInternetPlan, openRecom, next } from '$lib/components/elegirplan/wizardState.svelte.js';
 
 	let showSimetrico = $state(false);
+	// Acordeón: solo un plan puede estar expandido a la vez.
+	let expandedPlan = $state(null);
 
 	// Planes simétricos: los que tienen "Tráfico simétrico" entre sus features
 	// (Gamer, Worker, MAX). Muestran el link "¿Qué es simétrico?" en el detalle.
@@ -39,6 +41,9 @@
 				showCheck={false}
 				onSymmetricInfo={isSymmetric(plan) ? () => (showSimetrico = true) : null}
 				selected={wizard.internetPlan === plan.key}
+				expanded={expandedPlan === plan.key}
+				onToggleExpand={() => (expandedPlan = expandedPlan === plan.key ? null : plan.key)}
+				ctaLabel="Elegir y continuar"
 				onclick={() => { setInternetPlan(plan.key); next(); }}
 			/>
 		{/each}
