@@ -2,8 +2,10 @@
 	// Tarjeta seleccionable reutilizable (pasos 1, 3, 4, 5).
 	// Soporta media (logo o icono), título, subtítulo, features, precio, tag y
 	// estado seleccionado. `multi` muestra indicador tipo checkbox (adicionales).
-	// `details` (array) habilita un botón "Más información" que expande la tarjeta
-	// sin disparar el onclick. `showCheck=false` oculta el indicador (radio/check).
+	// `details` (array) habilita expandir la tarjeta (click o botón "Más
+	// información") en vez de disparar el onclick; el onclick pasa a dispararse
+	// solo desde el botón "Elegir y continuar" dentro del expandible.
+	// `showCheck=false` oculta el indicador (radio/check).
 	import { slide } from 'svelte/transition';
 
 	let {
@@ -23,11 +25,28 @@
 		onclick,
 		// Si se pasa, dentro del expandible aparece un link "¿Qué es simétrico?"
 		// que dispara este callback (sin avanzar la tarjeta).
-		onSymmetricInfo = null
+		onSymmetricInfo = null,
+		// Modo de expansión controlado: si se pasan ambos, el padre maneja el
+		// estado de `expanded` (ej. acordeón entre varias tarjetas). Si se
+		// omiten, la tarjeta maneja su propio estado interno.
+		expanded: expandedProp = undefined,
+		onToggleExpand = null,
+		ctaLabel = 'Elegir y continuar'
 	} = $props();
 
 	let consultar = $derived(price === 'Consultar');
-	let expanded = $state(false);
+
+	let isControlled = $derived(onToggleExpand !== null);
+	let internalExpanded = $state(false);
+	let expanded = $derived(isControlled ? !!expandedProp : internalExpanded);
+
+	function toggleExpanded() {
+		if (isControlled) {
+			onToggleExpand();
+		} else {
+			internalExpanded = !internalExpanded;
+		}
+	}
 
 	function handleKey(e) {
 		if (disabled) return;
@@ -35,13 +54,8 @@
 		if (e.target !== e.currentTarget) return;
 		if (e.key === 'Enter' || e.key === ' ') {
 			e.preventDefault();
-			onclick?.();
+			details.length ? toggleExpanded() : onclick?.();
 		}
-	}
-
-	function toggleDetails(e) {
-		e.stopPropagation();
-		expanded = !expanded;
 	}
 </script>
 
@@ -53,7 +67,7 @@
 	tabindex={disabled ? -1 : 0}
 	aria-pressed={selected}
 	aria-disabled={disabled}
-	onclick={() => !disabled && onclick?.()}
+	onclick={() => { if (disabled) return; details.length ? toggleExpanded() : onclick?.(); }}
 	onkeydown={handleKey}
 >
 	<div class="row">
@@ -79,7 +93,7 @@
 					class="more-info"
 					type="button"
 					aria-expanded={expanded}
-					onclick={toggleDetails}
+					onclick={(e) => { e.stopPropagation(); toggleExpanded(); }}
 				>
 					{expanded ? 'Menos información' : 'Más información'}
 					<svg class="chev" class:open={expanded} viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -120,6 +134,13 @@
 					¿Qué es simétrico?
 				</button>
 			{/if}
+			<button
+				class="btn-primary btn-full cta-confirm"
+				type="button"
+				onclick={(e) => { e.stopPropagation(); onclick?.(); }}
+			>
+				{ctaLabel}
+			</button>
 		</div>
 	{/if}
 </div>
@@ -307,6 +328,10 @@
 	}
 	.sym-link:hover {
 		opacity: 0.8;
+	}
+
+	.cta-confirm {
+		margin-top: 0.75rem;
 	}
 
 	.price {
