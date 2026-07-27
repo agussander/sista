@@ -15,6 +15,14 @@
 	let activo = $derived(value.trim().length >= 2);
 
 	const logoDe = (key) => TV_SERVICES.find((s) => s.key === key)?.logo;
+
+	// Mismo fallback que <ChannelGrid>: si el logo no carga, se oculta y el
+	// contenedor muestra un 📺 en su lugar.
+	function onImgError(event) {
+		const img = event.currentTarget;
+		img.style.display = 'none';
+		img.parentElement?.classList.add('sin-logo');
+	}
 </script>
 
 <fieldset>
@@ -47,12 +55,27 @@
 					<span class="serv-body">
 						<span class="serv-top">
 							<span class="serv-name">{r.label}</span>
-							<span class="mark" aria-hidden="true">{r.disponible ? '✓' : '✗'}</span>
+							{#if !r.disponible}
+								<span class="mark" aria-hidden="true">✗</span>
+							{/if}
 							<span class="sr-only">{r.disponible ? 'disponible' : 'no disponible'}</span>
 						</span>
 						{#if r.disponible}
 							<span class="canales">
-								{r.matches.slice(0, TOPE_VISIBLE).map((m) => m.nombre).join(' · ')}
+								{#each r.matches.slice(0, TOPE_VISIBLE) as m (m.nombre)}
+									<span class="canal">
+										<span class="canal-logo" class:fondo-blanco={m.fondoBlanco}>
+											<img
+												src={m.url_logo}
+												alt=""
+												class:logo-invertido={m.logoBlanco}
+												decoding="async"
+												onerror={onImgError}
+											/>
+										</span>
+										<span class="canal-nombre">{m.nombre}</span>
+									</span>
+								{/each}
 								{#if r.matches.length > TOPE_VISIBLE}
 									<span class="mas">y {r.matches.length - TOPE_VISIBLE} más</span>
 								{/if}
@@ -146,16 +169,53 @@
 	.mark {
 		font-weight: 700;
 		font-size: 0.85rem;
-		color: #1ba37a;
-	}
-	.no .mark {
 		color: #b9b9b9;
 	}
 	.canales {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.25rem 0.55rem;
 		font-size: 0.76rem;
 		line-height: 1.3;
 		color: #6b6b6b;
 		font-weight: 300;
+	}
+	.canal {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.3rem;
+	}
+	/* Mismo tratamiento de logo que <ChannelGrid>: los blancos se invierten y
+	   los oscuros van sobre un recuadro blanco, si no no se leen. */
+	.canal-logo {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 1.4rem;
+		height: 1.1rem;
+		flex-shrink: 0;
+	}
+	.canal-logo img {
+		max-width: 100%;
+		max-height: 100%;
+		width: auto;
+		object-fit: contain;
+	}
+	.canal-logo img.logo-invertido {
+		filter: invert(1);
+	}
+	.canal-logo.fondo-blanco {
+		background: #fff;
+		border-radius: 0.2rem;
+	}
+	.canal-logo.sin-logo::before {
+		content: '📺';
+		font-size: 0.8rem;
+		opacity: 0.5;
+	}
+	.canal-nombre {
+		white-space: nowrap;
 	}
 	.mas {
 		color: #9a9a9a;

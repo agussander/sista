@@ -115,8 +115,6 @@
 					{/each}
 				</ul>
 			</div>
-		{:else}
-			<p class="hint">Respondé las 3 preguntas para ver tu recomendación.</p>
 		{/if}
 	</div>
 {/if}
@@ -341,11 +339,4 @@
 		font-weight: 700;
 	}
 
-	.hint {
-		font-size: 0.85rem;
-		color: #9a9a9a;
-		font-weight: 300;
-		text-align: center;
-		margin: 0.5rem 0 0;
-	}
 </style>

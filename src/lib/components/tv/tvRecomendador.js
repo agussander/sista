@@ -35,13 +35,35 @@ export function buscarCanales(termino) {
 	const t = normalizar((termino ?? '').trim());
 	const filtra = t.length >= MIN_TERMINO;
 
+	// Relevancia en 3 escalones: coincidencia exacta, después los que arrancan
+	// con el término, después el resto. Quien busca "tn" quiere TN primero, TNT
+	// después, y CGTN al final. Partición explícita en vez de sort para no
+	// depender de la estabilidad: dentro de cada escalón manda el orden de la grilla.
+	const porRelevancia = (canales) => {
+		const escalon = (canal) => {
+			const nombre = normalizar(canal.nombre);
+			if (nombre === t) return 0;
+			return nombre.startsWith(t) ? 1 : 2;
+		};
+		return [0, 1, 2].flatMap((n) => canales.filter((c) => escalon(c) === n));
+	};
+
 	return TV_SERVICES.map((service) => {
 		const matches = filtra
-			? (service.grilla?.channels ?? [])
-					.filter((canal) => normalizar(canal.nombre).includes(t))
+			? porRelevancia(
+					(service.grilla?.channels ?? []).filter((canal) =>
+						normalizar(canal.nombre).includes(t)
+					)
+				)
 					.map((canal) => ({
 						nombre: canal.nombre,
 						categoria: canal.categoria,
+						// Se copian tal cual las banderas de render de la grilla
+						// (logo blanco a invertir, fondo blanco) para que el logo
+						// se vea igual acá que en <ChannelGrid>.
+						url_logo: canal.url_logo,
+						logoBlanco: canal.logoBlanco,
+						fondoBlanco: canal.fondoBlanco,
 						addonLabel: addonLabelDe(service, canal.categoria)
 					}))
 			: [];

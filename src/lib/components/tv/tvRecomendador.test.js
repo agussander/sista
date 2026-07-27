@@ -34,6 +34,36 @@ describe('buscarCanales', () => {
 		expect(antina.matches[0].addonLabel).toBe(null);
 	});
 
+	it('lista primero los canales que empiezan con el término', () => {
+		// "tn" también matchea CGTN, pero quien busca "tn" quiere TN, no CGTN.
+		const nombres = porServicio(buscarCanales('tn'), 'dgo').matches.map((m) => m.nombre);
+
+		expect(nombres[0]).toBe('TN');
+		expect(nombres.indexOf('CGTN (China Global Television Network)')).toBeGreaterThan(
+			nombres.indexOf('TNT')
+		);
+	});
+
+	it('mantiene el orden de la grilla dentro de cada grupo', () => {
+		const nombres = porServicio(buscarCanales('espn'), 'dgo').matches.map((m) => m.nombre);
+
+		expect(nombres).toEqual(['ESPN', 'ESPN 2', 'ESPN 3', 'ESPN 4', 'ESPN EXTRA']);
+	});
+
+	it('cada coincidencia trae el logo del canal para poder mostrarlo', () => {
+		const [primero] = porServicio(buscarCanales('telefe'), 'gigared').matches;
+
+		expect(primero.url_logo).toBe('/images/gigaredplay/telefe.jpg');
+	});
+
+	it('conserva las banderas de logo que necesita el render', () => {
+		// CGTN viene con logoBlanco en la grilla de DGO: sin la bandera, el logo
+		// blanco queda invisible sobre fondo claro.
+		const [cgtn] = porServicio(buscarCanales('cgtn'), 'dgo').matches;
+
+		expect(cgtn.logoBlanco).toBe(true);
+	});
+
 	it('ignora los acentos: "publica" encuentra "TV Pública"', () => {
 		const gigared = porServicio(buscarCanales('publica'), 'gigared');
 
