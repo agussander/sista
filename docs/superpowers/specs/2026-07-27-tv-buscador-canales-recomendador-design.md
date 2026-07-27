@@ -139,7 +139,8 @@ módulo, como hoy viven en el componente.
 
 Props: `value` (bindable), `resultados`.
 
-- `<input type="search">` con placeholder `Ej: ESPN, Disney, HBO…`.
+- `<input type="search">` con placeholder `Ej: ESPN, Telefe, Discovery…` — los tres
+  existen en las tres grillas, para no sugerir de ejemplo algo que no se ofrece.
 - Debajo, mientras el término tenga ≥ 2 caracteres, una fila por servicio:
   logo + nombre + ✓/✗ + hasta **3** canales que matchearon, y `y N más` si hay resto.
 - Coincidencias de adicional pago → chip `con adicional Cine`.

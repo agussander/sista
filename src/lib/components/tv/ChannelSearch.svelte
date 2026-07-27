@@ -32,7 +32,7 @@
 		type="search"
 		class="input"
 		bind:value
-		placeholder="Ej: ESPN, Disney, HBO…"
+		placeholder="Ej: ESPN, Telefe, Discovery…"
 		aria-label="Buscar un canal"
 	/>
 
