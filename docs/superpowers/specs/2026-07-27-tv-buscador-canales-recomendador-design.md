@@ -125,7 +125,7 @@ Segunda función exportada. Concentra lo que hoy está disperso en el componente
   motivo: 'Es el más económico que tiene ESPN.',
   canalIgnorado: false,         // true = el término no existe en ninguna grilla (caso 1)
   alternativas: [               // solo cuando recoKey es null (caso 2)
-    { key: 'antina', tiene: 'tiene HBO', pero: 'llega a 2 TV' },
+    { key: 'antina', label: 'Antina Play', cumple: 'tiene «hbo»', falla: 'llega a 2 TV' },
     …
   ]
 }
@@ -197,7 +197,8 @@ Si la coincidencia es solo de un adicional pago, se aclara en la misma línea:
 
 En ambos textos se usa **el término tal cual lo escribió el usuario** (trimmeado), no el
 nombre del canal que matcheó: un término puede matchear varios canales a la vez y elegir
-uno para mostrar sería arbitrario.
+uno para mostrar sería arbitrario. Va entre comillas angulares —`tiene «hbo»`— porque al
+conservarse el tipeo original (minúsculas incluidas) sin comillas se lee como un error.
 
 ## Testing — `tvRecomendador.test.js`
 

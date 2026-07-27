@@ -21,10 +21,21 @@
 	let openService = $derived(openKey ? serviceByKey(openKey) : null);
 	let grillaService = $derived(grillaKey ? serviceByKey(grillaKey) : null);
 
-	// Siembra de adicionales del modal desde el estado del wizard (persiste la
-	// selección previa al reabrir).
+	// Switch "Con Pack Fútbol" de cada tarjeta (efímero, independiente por
+	// servicio). Arranca en lo ya confirmado para la plataforma elegida, así
+	// reabrir/cambiar de tarjeta no pierde la selección previa.
+	let futbolOn = $state({}); // { [serviceKey]: boolean }
+	function isFutbolOn(key) {
+		if (key in futbolOn) return futbolOn[key];
+		return wizard.tvPlatform === key && wizard.addons.pack_futbol;
+	}
+	function toggleFutbol(key) {
+		futbolOn[key] = !isFutbolOn(key);
+	}
+
+	// Siembra de adicionales del modal desde el estado local de la tarjeta.
 	let initialSelected = $derived({
-		pack_futbol: wizard.addons.pack_futbol,
+		pack_futbol: openKey ? isFutbolOn(openKey) : false,
 		cine: wizard.addons.cine
 	});
 
@@ -40,7 +51,11 @@
 <TvCompatInfo cardsId="tv-cards" />
 
 <div class="ayuda">
-	<AyudameElegirTv precios={wizard.precios} onPick={(key) => (openKey = key)} />
+	<AyudameElegirTv
+		precios={wizard.precios}
+		onPick={(key) => (openKey = key)}
+		onGrilla={(key) => (grillaKey = key)}
+	/>
 </div>
 
 <div id="tv-cards" class="cards">
@@ -49,6 +64,8 @@
 			{service}
 			precios={wizard.precios}
 			selected={wizard.tvPlatform === service.key}
+			futbolOn={isFutbolOn(service.key)}
+			onToggleFutbol={() => toggleFutbol(service.key)}
 			onOpen={() => (openKey = service.key)}
 			onGrilla={() => (grillaKey = service.key)}
 		/>
@@ -64,6 +81,9 @@
 		service={openService}
 		precios={wizard.precios}
 		{initialSelected}
+		onToggle={(key, value) => {
+			if (key === 'pack_futbol' && openKey) futbolOn[openKey] = value;
+		}}
 		ctaLabel="Elegir y continuar"
 		ctaClass="btn-primary"
 		{internetLabel}

@@ -137,7 +137,12 @@
             </Accordion>
             
             <Accordion title="¿En cuántos dispositivos puedo verlo?">
-                <p>Podés verlo en el cuadro de arriba en "dispositivos reproduciendo en simultáneo". Podés tener la app en todos los dispositivos que quieras, esto solo se refiere a reproducciones en simultáneo.</p>
+                <ul>
+                    <li><strong>Gigared Play:</strong> hasta 3 dispositivos.</li>
+                    <li><strong>Antina Play:</strong> hasta 2 TV + 3 celus o compus.</li>
+                    <li><strong>DGO:</strong> hasta 4 dispositivos.</li>
+                </ul>
+                <p>Podés tener la app instalada en todos los dispositivos que quieras: esto solo se refiere a reproducciones en simultáneo.</p>
             </Accordion>
             
             <Accordion title="¿Incluye fútbol?">

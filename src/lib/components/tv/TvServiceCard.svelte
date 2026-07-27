@@ -2,11 +2,23 @@
 	// Tarjeta grande de un servicio de TV (full-width en mobile, columna en desktop).
 	// Tocar el cuerpo abre el modal explicativo; "Ver canales" abre la grilla.
 	import { formatPrice } from '$lib/components/elegirplan/data.js';
+	import { futbolAddonFor } from './tvData.js';
 
-	let { service, precios = {}, selected = false, onOpen, onGrilla } = $props();
+	let {
+		service,
+		precios = {},
+		selected = false,
+		futbolOn = false,
+		onOpen,
+		onGrilla,
+		onToggleFutbol
+	} = $props();
 
-	let price = $derived(formatPrice(precios[service.priceField]));
-	let consultar = $derived(price === 'Consultar');
+	let futbolAddon = $derived(futbolAddonFor(service));
+	let basePrice = $derived(Number(precios[service.priceField]) || 0);
+	let futbolPrice = $derived(futbolAddon ? Number(precios[futbolAddon.field]) || 0 : 0);
+	let consultar = $derived(basePrice <= 0);
+	let price = $derived(formatPrice(basePrice + (futbolOn ? futbolPrice : 0)));
 
 	function handleKey(e) {
 		if (e.key === 'Enter' || e.key === ' ') {
@@ -19,6 +31,11 @@
 	function grilla(e) {
 		e.stopPropagation();
 		onGrilla?.();
+	}
+
+	// El switch de Pack Fútbol no debe disparar la apertura del modal.
+	function stop(e) {
+		e.stopPropagation();
 	}
 </script>
 
@@ -33,7 +50,7 @@
 	{#if service.badge}
 		<span class="badge">
 			{#if service.badgeIcon}
-				<img class="badge-icon" src={service.badgeIcon} alt="FIFA 26" />
+				<img class="badge-icon" src={service.badgeIcon} alt={service.label} />
 			{/if}
 			<span class="badge-text">{service.badge}</span>
 		</span>
@@ -50,6 +67,22 @@
 			<strong>{price}</strong><span class="per">/mes</span>
 		{/if}
 	</div>
+
+	{#if futbolAddon}
+		<label class="futbol-switch" onclick={stop} onkeydown={stop}>
+			<input
+				type="checkbox"
+				checked={futbolOn}
+				onclick={stop}
+				onchange={() => onToggleFutbol?.()}
+			/>
+			<span class="switch-track" aria-hidden="true"></span>
+			<span class="switch-label">
+				{futbolAddon.label}
+				<small>{futbolPrice > 0 ? `+${formatPrice(futbolPrice)}/mes` : '(a confirmar)'}</small>
+			</span>
+		</label>
+	{/if}
 
 	<button class="grilla-link" type="button" onclick={grilla}>
 		<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
@@ -96,7 +129,7 @@
 		text-align: center;
 	}
 
-	/* Destacado (partidos / mundial): chip celeste montado sobre el borde
+	/* Destacado: chip celeste montado sobre el borde
 	   superior derecho — mitad afuera, mitad adentro de la tarjeta. */
 	.badge {
 		position: absolute;
@@ -176,6 +209,66 @@
 		font-weight: 600;
 		font-style: italic;
 		font-size: 1.05rem;
+	}
+
+	.futbol-switch {
+		align-self: center;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.55rem;
+		cursor: pointer;
+		padding: 0.3rem 0.4rem;
+	}
+	.futbol-switch input {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		opacity: 0;
+	}
+	.switch-track {
+		flex-shrink: 0;
+		width: 2.15rem;
+		height: 1.25rem;
+		border-radius: 999px;
+		background: #dcdcdc;
+		position: relative;
+		transition: background 0.2s ease;
+	}
+	.switch-track::after {
+		content: '';
+		position: absolute;
+		top: 0.15rem;
+		left: 0.15rem;
+		width: 0.95rem;
+		height: 0.95rem;
+		border-radius: 50%;
+		background: #fff;
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+		transition: transform 0.2s ease;
+	}
+	.futbol-switch input:checked + .switch-track {
+		background: var(--violeta1);
+	}
+	.futbol-switch input:checked + .switch-track::after {
+		transform: translateX(0.9rem);
+	}
+	.futbol-switch input:focus-visible + .switch-track {
+		outline: 2px solid var(--violeta1);
+		outline-offset: 2px;
+	}
+	.switch-label {
+		font-size: 0.85rem;
+		font-weight: 600;
+		color: var(--violeta1);
+		display: flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		gap: 0.3rem;
+	}
+	.switch-label small {
+		font-size: 0.72rem;
+		font-weight: 400;
+		color: var(--magenta);
 	}
 
 	.grilla-link {

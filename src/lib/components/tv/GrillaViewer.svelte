@@ -1,6 +1,9 @@
 <script>
-	// Overlay full-screen scrolleable con la grilla de canales de un servicio.
-	// DGO / Gigared → componente interactivo <ChannelGrid/>. Antina → imagen.
+	// Overlay full-screen scrolleable que muestra la grilla de un servicio.
+	// La grilla (<ChannelGrid/>) ya es una tarjeta autocontenida (fondo, borde,
+	// sombra y radio propios), así que se despliega directamente sobre el
+	// backdrop, sin panel/header extra, con una sola X flotante arriba a la
+	// derecha. DGO / Gigared / Antina → <ChannelGrid/>. Otros → imagen.
 	import { fade, fly } from 'svelte/transition';
 	import ChannelGrid from '$lib/components/features/ChannelGrid.svelte';
 
@@ -15,28 +18,24 @@
 
 <div class="backdrop" transition:fade={{ duration: 150 }} onclick={() => onclose?.()} role="presentation">
 	<div
-		class="panel"
+		class="viewer"
 		role="dialog"
 		aria-modal="true"
 		aria-label={`Canales de ${service.label}`}
 		transition:fly={{ y: 24, duration: 220 }}
 		onclick={(e) => e.stopPropagation()}
 	>
-		<header class="head">
-			<div class="title">
-				<img class="logo" src={service.logo} alt={service.label} />
-				<span>Canales de {service.label}</span>
-			</div>
-			<button class="close" onclick={() => onclose?.()} aria-label="Cerrar">✕</button>
-		</header>
+		<button class="close" onclick={() => onclose?.()} aria-label="Cerrar">✕</button>
 
-		<div class="content">
-			{#if service.grilla.type === 'channelgrid'}
-				<ChannelGrid channels={service.grilla.channels} accent={service.grilla.accent} />
-			{:else}
-				<img class="grilla-img" src={service.grilla.src} alt={service.grilla.alt} />
-			{/if}
-		</div>
+		{#if service.grilla.type === 'channelgrid'}
+			<ChannelGrid
+				channels={service.grilla.channels}
+				accent={service.grilla.accent}
+				categoryPrices={service.grilla.categoryPrices ?? {}}
+			/>
+		{:else}
+			<img class="grilla-img" src={service.grilla.src} alt={service.grilla.alt} />
+		{/if}
 	</div>
 </div>
 
@@ -52,64 +51,46 @@
 		z-index: 1100;
 		overflow-y: auto;
 	}
-	.panel {
+	.viewer {
 		position: relative;
-		background: #fff;
-		border-radius: 1.2rem;
 		width: 100%;
-		max-width: 60rem;
+		max-width: 72em;
 		margin: auto;
-		box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
-		overflow: hidden;
 	}
-	.head {
-		position: sticky;
-		top: 0;
-		z-index: 1;
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 1rem;
-		padding: 1rem 1.25rem;
-		background: #fff;
-		border-bottom: 1px solid #ececec;
-	}
-	.title {
-		display: flex;
-		align-items: center;
-		gap: 0.6rem;
-		font-weight: 700;
-		color: var(--violeta1);
-	}
-	.logo {
-		height: 1.8rem;
-		max-width: 6rem;
-		object-fit: contain;
+	/* La grilla ya trae margen superior pensado para las páginas; dentro del
+	   modal lo anulamos y le dejamos espacio arriba para la X flotante. */
+	.viewer :global(.channel-grid) {
+		margin: 0;
+		padding-top: 3.5em;
 	}
 	.close {
-		flex-shrink: 0;
-		background: #f1f1f1;
-		border: none;
-		border-radius: 999px;
-		width: 2rem;
-		height: 2rem;
-		font-size: 0.9rem;
-		color: #6b6b6b;
-		cursor: pointer;
+		position: absolute;
+		top: 0.9rem;
+		right: 0.9rem;
+		z-index: 2;
 		display: flex;
 		align-items: center;
 		justify-content: center;
+		width: 2.4rem;
+		height: 2.4rem;
+		font-size: 1rem;
+		color: #4a4a52;
+		background: #fff;
+		border: 1px solid rgba(0, 0, 0, 0.08);
+		border-radius: 999px;
+		cursor: pointer;
+		box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.18);
+		transition: background 0.15s ease, transform 0.15s ease;
 	}
 	.close:hover {
-		background: #e6e6e6;
-	}
-	.content {
-		padding: 1.25rem;
+		background: #f1f1f1;
+		transform: scale(1.05);
 	}
 	.grilla-img {
 		display: block;
 		width: 100%;
 		height: auto;
-		border-radius: 0.6rem;
+		border-radius: 0.8rem;
+		box-shadow: 0 0.75em 2.5em rgba(0, 0, 0, 0.25);
 	}
 </style>

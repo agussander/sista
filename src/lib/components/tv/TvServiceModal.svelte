@@ -13,6 +13,9 @@
 		onclose,
 		onConfirm,
 		initialSelected = {},
+		// Notifica cada toggle de un adicional en vivo (no solo al confirmar), para
+		// que el padre mantenga sincronizado el switch de la tarjeta cerrada.
+		onToggle,
 		ctaLabel = 'Lo quiero',
 		ctaClass = 'btn-whatsapp',
 		// Cuando se usa dentro del wizard (Step4TV), se pasa el precio e
@@ -52,6 +55,7 @@
 
 	function toggle(key) {
 		selected[key] = !selected[key];
+		onToggle?.(key, selected[key]);
 	}
 
 	let chosenAddons = $derived(service.addons.filter((a) => selected[a.key]));
@@ -119,7 +123,7 @@
 			<div class="badge-row">
 				<span class="badge">
 					{#if service.badgeIcon}
-						<img class="badge-icon" src={service.badgeIcon} alt="FIFA 26" />
+						<img class="badge-icon" src={service.badgeIcon} alt={service.label} />
 					{/if}
 					<span class="badge-text">{service.badge}</span>
 				</span>
@@ -151,7 +155,6 @@
 
 		{#if service.warnMagisXuper}
 			<div class="warn">
-				<span class="warn-ico" aria-hidden="true">!</span>
 				<p>No va a funcionar si tuviste <strong>Magis</strong> o <strong>Xuper</strong> en esa TV/dispositivo.</p>
 			</div>
 			<div class="inc-logos">
@@ -334,7 +337,7 @@
 	.badge-row {
 		margin: 0 0 0.85rem;
 	}
-	/* Destacado (partidos / mundial): mismo chip celeste que la tarjeta. */
+	/* Destacado: mismo chip celeste que la tarjeta. */
 	.badge {
 		display: inline-flex;
 		align-items: center;
@@ -421,19 +424,6 @@
 		border-radius: 0.7rem;
 		padding: 0.85rem;
 		margin-bottom: 0.75rem;
-	}
-	.warn-ico {
-		flex-shrink: 0;
-		width: 1.5rem;
-		height: 1.5rem;
-		border-radius: 999px;
-		background: var(--magenta);
-		color: #fff;
-		font-weight: 800;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		font-size: 0.9rem;
 	}
 	.warn p {
 		margin: 0;
@@ -543,13 +533,6 @@
 		line-height: 1.25;
 		color: #8a8a8a;
 		font-weight: 300;
-	}
-	.addon-notes li::before {
-		content: 'ⓘ';
-		flex-shrink: 0;
-		color: var(--violeta1);
-		opacity: 0.55;
-		font-size: 0.72rem;
 	}
 	.addon-price {
 		flex-shrink: 0;

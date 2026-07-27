@@ -1,72 +1,31 @@
 <script>
 	// AyudameElegirTv.svelte — Recomendador inline para /tv/elegirtv.
-	// Espejo del patrón de /elegirplan (ayuda-card → recomendador): 4 preguntas en
-	// chips y recomienda el servicio más barato que cumple lo pedido.
-	import { TV_SERVICES } from './tvData.js';
+	// Espejo del patrón de /elegirplan (ayuda-card → recomendador): preguntas en
+	// chips + búsqueda de canal, y recomienda el servicio más barato que cumple.
+	//
+	// Componente de presentación: recolecta las respuestas y muestra lo que
+	// decide `tvRecomendador.js`. La lógica (y sus tests) vive allá.
+	import { serviceByKey } from './tvData.js';
+	import { buscarCanales, elegirServicio } from './tvRecomendador.js';
+	import ChannelSearch from './ChannelSearch.svelte';
 
-	let { precios = {}, onPick = () => {} } = $props();
-
-	// Capacidades de cada servicio para el match (no viven en tvData: son la
-	// traducción de sus features a condiciones booleanas del recomendador).
-	const CAPS = {
-		gigared: { maxTv: 2, tn13: false, fullHd: false, mundialCompleto: false },
-		antina: { maxTv: 2, tn13: true, fullHd: false, mundialCompleto: false },
-		dgo: { maxTv: 4, tn13: true, fullHd: true, mundialCompleto: true }
-	};
-	// Orden de preferencia: del más barato al premium.
-	const ORDER = ['gigared', 'antina', 'dgo'];
+	// `onGrilla(key)` abre la grilla completa de un servicio; lo usa el aviso de
+	// "no encontramos ese canal".
+	let { precios = {}, onPick = () => {}, onGrilla = () => {} } = $props();
 
 	let expanded = $state(false);
-	let a = $state({ tv: null, tn13: null, fullhd: null, mundial: null }); // mundial: 'arg' | 'full'
+	let a = $state({ tv: null, tn13: null, fullhd: null });
+	let canal = $state('');
 
-	let answered = $derived(
-		a.tv !== null && a.tn13 !== null && a.fullhd !== null && a.mundial !== null
-	);
+	let answered = $derived(a.tv !== null && a.tn13 !== null && a.fullhd !== null);
 
-	let recoKey = $derived.by(() => {
-		if (!answered) return null;
-		const need = {
-			maxTv: a.tv,
-			tn13: a.tn13 === true,
-			fullHd: a.fullhd === true,
-			mundialCompleto: a.mundial === 'full'
-		};
-		const ok = (key) => {
-			const c = CAPS[key];
-			return (
-				c.maxTv >= need.maxTv &&
-				(!need.tn13 || c.tn13) &&
-				(!need.fullHd || c.fullHd) &&
-				(!need.mundialCompleto || c.mundialCompleto)
-			);
-		};
-		return ORDER.find(ok) ?? 'dgo'; // DGO siempre califica
-	});
+	// Disponibilidad del canal por servicio: se muestra en vivo mientras escribe,
+	// sin esperar a que estén respondidas las 3 preguntas.
+	let resultados = $derived(buscarCanales(canal));
+	let sinCoincidencias = $derived(resultados.every((r) => !r.disponible));
 
-	let recoService = $derived(recoKey ? TV_SERVICES.find((s) => s.key === recoKey) : null);
-
-	// Motivo dinámico según qué condición mandó la recomendación.
-	let recoReason = $derived.by(() => {
-		if (!recoKey) return '';
-		if (recoKey === 'dgo') {
-			const drivers = [];
-			if (a.tv >= 3) drivers.push('hasta 4 TV');
-			if (a.fullhd === true) drivers.push('Full HD');
-			if (a.mundial === 'full') drivers.push('el Mundial completo (104 partidos)');
-			return drivers.length
-				? `Es el único con ${joinEs(drivers)}.`
-				: 'Es el servicio más completo para lo que buscás.';
-		}
-		if (recoKey === 'antina') {
-			return 'Incluye el 13 y TN y te alcanza para lo que buscás, sin pagar de más.';
-		}
-		return 'La opción más económica que cumple con todo lo que buscás.';
-	});
-
-	function joinEs(arr) {
-		if (arr.length <= 1) return arr[0] ?? '';
-		return arr.slice(0, -1).join(', ') + ' y ' + arr[arr.length - 1];
-	}
+	let reco = $derived(answered ? elegirServicio({ ...a, canal }) : null);
+	let recoService = $derived(reco?.recoKey ? serviceByKey(reco.recoKey) : null);
 
 	function priceFor(service) {
 		const v = precios?.[service.priceField];
@@ -74,7 +33,8 @@
 	}
 
 	function reset() {
-		a = { tv: null, tn13: null, fullhd: null, mundial: null };
+		a = { tv: null, tn13: null, fullhd: null };
+		canal = '';
 	}
 </script>
 
@@ -83,7 +43,7 @@
 		<span class="ayuda-ico" aria-hidden="true">✨</span>
 		<span class="ayuda-text">
 			<strong>¿Te ayudamos a elegir?</strong>
-			<small>Respondé 4 preguntas y te recomendamos el servicio ideal</small>
+			<small>Respondé 3 preguntas y te recomendamos el servicio ideal</small>
 		</span>
 		<span class="ayuda-arrow" aria-hidden="true">→</span>
 	</button>
@@ -119,17 +79,7 @@
 			</div>
 		</fieldset>
 
-		<fieldset>
-			<legend>¿Querés ver todos los partidos del Mundial?</legend>
-			<div class="chips">
-				<button class="chip" class:active={a.mundial === 'arg'} onclick={() => (a.mundial = 'arg')}>
-					Solo Argentina y algunos
-				</button>
-				<button class="chip" class:active={a.mundial === 'full'} onclick={() => (a.mundial = 'full')}>
-					Mundial completo (104 partidos)
-				</button>
-			</div>
-		</fieldset>
+		<ChannelSearch bind:value={canal} {resultados} {sinCoincidencias} {onGrilla} />
 
 		{#if answered && recoService}
 			<div class="reco-card">
@@ -141,13 +91,32 @@
 					</div>
 					<span class="reco-price">{priceFor(recoService)}<small>/mes</small></span>
 				</div>
-				<p class="reco-reason">{recoReason}</p>
+				<p class="reco-reason">{reco.motivo}</p>
+				<p class="reco-devices">{recoService.devices.label} en simultáneo</p>
 				<button class="btn-primary btn-sm btn-full" onclick={() => onPick(recoService.key)}>
 					Ver {recoService.label}
 				</button>
 			</div>
+		{:else if answered && reco?.alternativas.length}
+			<!-- Ningún servicio cumple con todo: en vez de recomendar algo que no
+			     cumple, se muestran las opciones parciales para que elija. -->
+			<div class="sin-match">
+				<strong class="sin-match-title">Ningún servicio cumple con todo</strong>
+				<ul class="alts">
+					{#each reco.alternativas as alt (alt.key)}
+						<li>
+							<span class="alt-text">
+								<strong>{alt.label}</strong> — {alt.cumple}, pero {alt.falla}
+							</span>
+							<button class="btn-secondary btn-sm" onclick={() => onPick(alt.key)}>
+								Ver {alt.label}
+							</button>
+						</li>
+					{/each}
+				</ul>
+			</div>
 		{:else}
-			<p class="hint">Respondé las 4 preguntas para ver tu recomendación.</p>
+			<p class="hint">Respondé las 3 preguntas para ver tu recomendación.</p>
 		{/if}
 	</div>
 {/if}
@@ -329,6 +298,49 @@
 		color: #6b6b6b;
 		font-weight: 300;
 	}
+	.reco-devices {
+		margin: -0.25rem 0 0;
+		font-size: 0.78rem;
+		color: var(--violeta1);
+		font-weight: 600;
+	}
+	.sin-match {
+		border: 2px solid #e8d5ef;
+		border-radius: 0.9rem;
+		padding: 0.9rem 1rem;
+		background: #fff;
+		margin-top: 0.5rem;
+	}
+	.sin-match-title {
+		display: block;
+		color: var(--violeta1);
+		font-size: 0.95rem;
+		margin-bottom: 0.6rem;
+	}
+	.alts {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 0.7rem;
+	}
+	.alts li {
+		display: flex;
+		flex-direction: column;
+		gap: 0.4rem;
+	}
+	.alt-text {
+		font-size: 0.82rem;
+		line-height: 1.35;
+		color: #6b6b6b;
+		font-weight: 300;
+	}
+	.alt-text strong {
+		color: var(--violeta1);
+		font-weight: 700;
+	}
+
 	.hint {
 		font-size: 0.85rem;
 		color: #9a9a9a;
