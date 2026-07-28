@@ -7,7 +7,9 @@
 		"build": "vite build",
 		"preview": "vite preview",
 		"test": "vitest run",
-		"test:watch": "vitest"
+		"test:watch": "vitest",
+		"check": "svelte-check --tsconfig ./jsconfig.json",
+		"check:watch": "svelte-check --tsconfig ./jsconfig.json --watch"
 	},
 	"devDependencies": {
 		"@sveltejs/adapter-auto": "^3.0.0",
@@ -15,6 +17,8 @@
 		"@sveltejs/vite-plugin-svelte": "^5.0.0",
 		"playwright-core": "^1.60.0",
 		"svelte": "^5.0.0",
+		"svelte-check": "^4.7.1",
+		"typescript": "^6.0.3",
 		"vite": "^6.0.0",
 		"vitest": "^4.1.8"
 	},
