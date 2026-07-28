@@ -4,7 +4,9 @@
 
 **Goal:** Que el mismo repo pueda buildear tanto el sitio estático actual como una app Node desplegable en Hostinger, sin filtrar los handlers PHP y sin que el subdominio de pruebas se indexe.
 
-**Architecture:** `svelte.config.js` elige adapter según `process.env.ADAPTER`. El build Node sale a `build-node/` para no pisar el `build/` que consume `deploy.sh`. Un script post-build borra los `.php` del output y reescribe `robots.txt`; un `hooks.server.js` agrega `X-Robots-Tag: noindex` fuera de producción.
+**Architecture:** `svelte.config.js` elige adapter según `process.env.ADAPTER`. El build Node sale a `build-node/` para no pisar el `build/` que consume `deploy.sh`. Un script post-build borra los `.php` del output y reescribe `robots.txt`; un entry propio `server.js` agrega `X-Robots-Tag: noindex` fuera de producción.
+
+> **Corrección aplicada durante la implementación.** El plan original ponía el header en `hooks.server.js`. No alcanza: adapter-node sirve lo prerenderizado desde un middleware de estáticos que corre antes del handler de SvelteKit, y con todo el sitio en `prerender = true`, ninguna página real llevaba el header. Se agregó `server.js`, que envuelve el `handler` de adapter-node. El start command en hPanel es **`node server.js`**.
 
 **Tech Stack:** SvelteKit 2.68, `@sveltejs/adapter-node` 5.5.7, Vite 6, Vitest 4, Node 22.
 
@@ -31,7 +33,8 @@ Este plan **no debe modificar** `deploy.sh`, `static/`, ni ningún componente de
 | `scripts/prepare-node-build.js` (crear) | CLI fino: aplica las funciones sobre `build-node/client`. |
 | `src/lib/server/robotsHeader.js` (crear) | `shouldBlockIndexing(siteEnv)`. Pura y testeable, sin módulos virtuales de SvelteKit. |
 | `src/lib/server/robotsHeader.test.js` (crear) | Tests de la función. |
-| `src/hooks.server.js` (crear) | Glue: lee `SITE_ENV` y setea el header. Se verifica por integración, no por unit test. |
+| `src/hooks.server.js` (crear) | Red de contención: cubre solo respuestas dinámicas. Se verifica por integración, no por unit test. |
+| `server.js` (crear) | Entry real en producción. Envuelve el `handler` de adapter-node y setea el header antes de delegar, cubriendo prerenderizadas, assets y dinámicas. |
 
 ---
 
@@ -638,7 +641,7 @@ Sin cambios de código. Es el criterio de aceptación del spec, corrido contra e
 
 ```bash
 npm run build:node
-node build-node/index.js
+node server.js
 ```
 
 Expected: queda escuchando (por defecto en `http://localhost:3000`). Dejarlo corriendo en una terminal aparte para los pasos siguientes.
@@ -681,7 +684,7 @@ Expected: `User-agent: *` + `Disallow: /`.
 Cortar el server y relanzarlo con la variable:
 
 ```bash
-SITE_ENV=production node build-node/index.js
+SITE_ENV=production node server.js
 ```
 
 En otra terminal:
@@ -694,7 +697,7 @@ Expected: no aparece el header. Cortar el server después de verificar.
 
 - [ ] **Step 7: Revisión visual del sitio**
 
-Levantar `node build-node/index.js` y recorrer en el navegador: `/`, `/precios/`, `/elegirplan/`, `/dgo/`, `/tv/`.
+Levantar `node server.js` y recorrer en el navegador: `/`, `/precios/`, `/elegirplan/`, `/dgo/`, `/tv/`.
 
 Expected: renderizan igual que producción. Los precios y las grillas de canales cargan (vienen de PocketBase, que es una llamada de cliente y no depende del adapter).
 
@@ -730,8 +733,10 @@ En hPanel → Websites → Add Website → Deploy Web App → conectar el reposi
 | Campo | Valor |
 |---|---|
 | Build command | `npm run build:node` |
-| Start command | `node build-node/index.js` |
+| Start command | `node server.js` |
 | Node version | 22 |
+
+**El start command es `node server.js`, NO `node build-node/index.js`.** Ese entry propio es el que aplica `X-Robots-Tag` a las páginas prerenderizadas; con el `index.js` de adapter-node, el sitio se sirve sin el header y queda indexable.
 
 **Hostinger autodetecta y suele proponer `npm run build`.** Si queda así, produce el build **estático** y después `node build-node/index.js` falla porque ese directorio no existe. Hay que sobrescribirlo a mano.
 

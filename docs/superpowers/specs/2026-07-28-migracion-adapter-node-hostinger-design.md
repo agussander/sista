@@ -87,7 +87,11 @@ Es un script y no una reestructuración de `static/` a propósito: no toca el fl
 Dos capas, porque `robots.txt` solo evita el crawl — una URL enlazada puede indexarse igual:
 
 1. El mismo script escribe `robots.txt` con `Disallow: /` cuando `SITE_ENV !== 'production'`.
-2. `src/hooks.server.js` agrega `X-Robots-Tag: noindex, nofollow` bajo la misma condición. Esta es la capa que realmente garantiza no indexación.
+2. Un entry propio, `server.js`, agrega `X-Robots-Tag: noindex, nofollow` bajo la misma condición. Esta es la capa que realmente garantiza no indexación.
+
+**Por qué un entry propio y no solo `hooks.server.js`** (corregido durante la implementación): adapter-node sirve las páginas prerenderizadas desde un middleware de archivos estáticos que corre **antes** del handler de SvelteKit, así que el hook nunca se ejecuta para ellas. Con todo el sitio en `prerender = true`, ninguna página real llevaba el header — verificado empíricamente: `/` y `/precios/` salían sin él, y solo las rutas dinámicas lo tenían.
+
+`server.js` envuelve el `handler` de adapter-node y setea el header antes de delegar, cubriendo prerenderizadas, assets estáticos y respuestas dinámicas. `hooks.server.js` se conserva como red de contención por si alguien arranca `build-node/index.js` directamente.
 
 ### `.htaccess` deja de aplicar
 
@@ -98,7 +102,7 @@ Dos capas, porque `robots.txt` solo evita el crawl — una URL enlazada puede in
 
 ### Configuración en hPanel
 
-- Web App desde GitHub. Build: `ADAPTER=node npm run build`. Start: `node build-node/index.js`.
+- Web App desde GitHub. Build: `npm run build:node`. Start: **`node server.js`** (no `build-node/index.js`, que no aplica el header de noindex).
 - Node 20. Se agrega `engines` a `package.json` (`.npmrc` tiene `engine-strict=true`).
 - `SITE_ENV=beta`. Los secrets no hacen falta todavía.
 
