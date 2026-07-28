@@ -24,7 +24,21 @@ const select = (gi, oi) => {
         {#each g.opciones as o, oi}
             <button class="btn-secondary"
                 on:click={()=>select(gi, oi)}>
-                <div class="img" style="background-image:url(/images/pago/{o.pic})"></div>
+                <div class="icons">
+                    <div class="img"
+                        class:mono={o.mono}
+                        class:rounded={o.rounded}
+                        style={o.mono
+                            ? `-webkit-mask-image:url(/images/pago/${o.pic});mask-image:url(/images/pago/${o.pic})`
+                            : `background-image:url(/images/pago/${o.pic})`}
+                    ></div>
+                    {#if o.pic2}
+                        <div class="img"
+                            class:rounded={o.rounded}
+                            style="background-image:url(/images/pago/{o.pic2})"
+                        ></div>
+                    {/if}
+                </div>
                 {o.title}
                 {#if o.bold}
                     <span>
@@ -39,6 +53,13 @@ const select = (gi, oi) => {
 
 
 <style>
+.icons{
+    display:flex;
+    align-items:center;
+    gap:.4em;
+    margin:0 .8em 0 0;
+    flex-shrink:0;
+}
 .img{
     width:1.5em;
     height:1.5em;
@@ -46,7 +67,23 @@ const select = (gi, oi) => {
     background-size: contain;
     background-position: center;
     background-repeat: no-repeat;
-    margin-right:.8em;
+    flex-shrink:0;
+}
+.img.rounded{
+    border-radius: .3em;
+}
+.img.mono{
+    background-image: none;
+    background-color: var(--violeta1);
+    -webkit-mask-size: contain;
+    mask-size: contain;
+    -webkit-mask-position: center;
+    mask-position: center;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+}
+button:hover .img.mono{
+    background-color: white;
 }
 .ahead{
     position:absolute;
@@ -65,6 +102,8 @@ button {
     margin-bottom: .5em;
     text-align: left;
     width: 100%;
+    border-radius: 1rem;
+    border-width: 1px;
 }
 
 h3 {

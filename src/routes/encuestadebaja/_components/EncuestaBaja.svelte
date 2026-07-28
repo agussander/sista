@@ -5,12 +5,15 @@ import { pb } from '$lib/pocketbase';
 import {
 	MOTIVO_OPTIONS,
 	PAGO_MEDIO_OPTIONS,
+	PROVEEDOR_OFERTA_OPTIONS,
 	SI_NO_OPTIONS,
 	CONTACTO_NO_MOTIVO_OPTIONS,
 	CONFORMIDAD_OPTIONS,
 	VOLVERIA_OPTIONS,
 	createEmptyData,
 	isMotivoPago,
+	isMotivoProveedor,
+	isProveedorOfertaOtro,
 	isMotivoOtro,
 	isPagoMedioOtro,
 	isContactoNo,
@@ -82,6 +85,15 @@ const submit = async () => {
 					bind:res={data.pagoInconvenientes}
 				/>
 				<textarea placeholder="Comentario (opcional)" bind:value={data.pagoInconvenientesComentario}></textarea>
+			</div>
+		{/if}
+
+		{#if isMotivoProveedor(data.motivo)}
+			<div in:slide>
+				<Options title="¿Qué ofrecía el nuevo proveedor?" data={PROVEEDOR_OFERTA_OPTIONS} bind:res={data.proveedorOferta} />
+				{#if isProveedorOfertaOtro(data.proveedorOferta)}
+					<textarea in:slide placeholder="¿Qué ofrecía? (opcional)" bind:value={data.proveedorOfertaOtro}></textarea>
+				{/if}
 			</div>
 		{/if}
 

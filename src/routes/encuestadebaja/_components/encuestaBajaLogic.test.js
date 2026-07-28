@@ -1,9 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import {
 	MOTIVO_PAGO,
+	MOTIVO_PROVEEDOR,
 	MOTIVO_OTRO,
 	createEmptyData,
 	isMotivoPago,
+	isMotivoProveedor,
+	isProveedorOfertaOtro,
 	isMotivoOtro,
 	isPagoMedioOtro,
 	isContactoNo,
@@ -18,6 +21,8 @@ describe('createEmptyData', () => {
 		const data = createEmptyData();
 		expect(data.motivo).toBe('');
 		expect(data.motivoOtro).toBe('');
+		expect(data.proveedorOferta).toBe('');
+		expect(data.proveedorOfertaOtro).toBe('');
 		expect(data.pagoMedio).toBe('');
 		expect(data.pagoMedioOtro).toBe('');
 		expect(data.pagoInconvenientes).toBe('');
@@ -47,6 +52,17 @@ describe('detectores de rama', () => {
 		expect(isMotivoOtro(MOTIVO_PAGO)).toBe(false);
 	});
 
+	it('isMotivoProveedor detecta el motivo "Contraté otro proveedor"', () => {
+		expect(isMotivoProveedor(MOTIVO_PROVEEDOR)).toBe(true);
+		expect(isMotivoProveedor(MOTIVO_PAGO)).toBe(false);
+		expect(isMotivoProveedor('')).toBe(false);
+	});
+
+	it('isProveedorOfertaOtro detecta la oferta "Otro"', () => {
+		expect(isProveedorOfertaOtro('Otro')).toBe(true);
+		expect(isProveedorOfertaOtro('Mejor precio')).toBe(false);
+	});
+
 	it('isPagoMedioOtro detecta el medio "otro"', () => {
 		expect(isPagoMedioOtro('otro')).toBe(true);
 		expect(isPagoMedioOtro('efectivo')).toBe(false);
@@ -73,6 +89,7 @@ describe('canSubmit', () => {
 	const baseValid = () => ({
 		...createEmptyData(),
 		motivo: 'Contraté otro proveedor',
+		proveedorOferta: 'Mejor precio',
 		contactoPrevio: 'Sí',
 		conformidad: '7',
 		volveria: 'No'
@@ -115,6 +132,22 @@ describe('canSubmit', () => {
 	it('true cuando la rama de pago está completa', () => {
 		expect(
 			canSubmit({ ...baseValid(), motivo: MOTIVO_PAGO, pagoMedio: 'efectivo', pagoInconvenientes: 'No' })
+		).toBe(true);
+	});
+
+	it('false cuando el motivo es "Contraté otro proveedor" y falta la oferta', () => {
+		expect(canSubmit({ ...baseValid(), proveedorOferta: '' })).toBe(false);
+	});
+
+	it('true cuando la oferta es "Otro" aunque el detalle quede vacío (opcional)', () => {
+		expect(
+			canSubmit({ ...baseValid(), proveedorOferta: 'Otro', proveedorOfertaOtro: '' })
+		).toBe(true);
+	});
+
+	it('la oferta no es obligatoria si el motivo no es de proveedor', () => {
+		expect(
+			canSubmit({ ...baseValid(), motivo: MOTIVO_OTRO, motivoOtro: 'razón X', proveedorOferta: '' })
 		).toBe(true);
 	});
 
@@ -232,6 +265,48 @@ describe('buildPayload', () => {
 		expect(payload.pago_medio_otro).toBe('billetera virtual');
 		expect(payload.pago_inconvenientes).toBe(true);
 		expect(payload.pago_inconvenientes_comentario).toBe('no me llegaba el aviso');
+	});
+
+	it('incluye los campos de proveedor solo si el motivo es de proveedor', () => {
+		const dataSinRama = {
+			...createEmptyData(),
+			motivo: MOTIVO_PAGO,
+			proveedorOferta: 'Mejor precio',
+			pagoMedio: 'efectivo',
+			pagoInconvenientes: 'No',
+			contactoPrevio: 'Sí',
+			conformidad: '5',
+			volveria: 'No'
+		};
+		expect(buildPayload(dataSinRama).proveedor_oferta).toBe('');
+
+		const dataConRama = {
+			...createEmptyData(),
+			motivo: MOTIVO_PROVEEDOR,
+			proveedorOferta: 'Otro',
+			proveedorOfertaOtro: '  fibra simétrica  ',
+			contactoPrevio: 'Sí',
+			conformidad: '5',
+			volveria: 'No'
+		};
+		const payload = buildPayload(dataConRama);
+		expect(payload.proveedor_oferta).toBe('Otro');
+		expect(payload.proveedor_oferta_otro).toBe('fibra simétrica');
+	});
+
+	it('deja proveedor_oferta_otro vacío cuando la oferta no es "Otro"', () => {
+		const data = {
+			...createEmptyData(),
+			motivo: MOTIVO_PROVEEDOR,
+			proveedorOferta: 'Mejor servicio de internet',
+			proveedorOfertaOtro: 'no debería viajar',
+			contactoPrevio: 'Sí',
+			conformidad: '5',
+			volveria: 'No'
+		};
+		const payload = buildPayload(data);
+		expect(payload.proveedor_oferta).toBe('Mejor servicio de internet');
+		expect(payload.proveedor_oferta_otro).toBe('');
 	});
 
 	it('incluye contacto_no_motivo solo si contactoPrevio es "No"', () => {

@@ -1,4 +1,5 @@
 :root{
+	color-scheme: light;
 	font-family: 'nexa', sans-serif;
 	--violeta1: rgb(102,37,124);
 	--violeta2: var(--violeta1);
@@ -20,6 +21,9 @@ html, body {
 	padding: 0;
 	width: 100%;
 	height: 100%;
+	/* Evita el rebote elástico (overscroll) que en iOS deja ver el fondo de
+	   <body> más allá de la punta superior/inferior de la página. */
+	overscroll-behavior-y: none;
 }
 body {
 	background: var(--background);

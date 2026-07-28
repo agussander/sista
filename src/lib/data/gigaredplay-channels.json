@@ -77,22 +77,22 @@
   {
     "categoria": "Deportes",
     "nombre": "ESPN",
-    "url_logo": "/images/gigaredplay/espn2.jpg"
+    "url_logo": "/images/gigaredplay/espn.png"
   },
   {
     "categoria": "Deportes",
     "nombre": "ESPN 2",
-    "url_logo": "/images/gigaredplay/espn.jpg"
+    "url_logo": "/images/gigaredplay/espn2.png"
   },
   {
     "categoria": "Deportes",
     "nombre": "ESPN 3",
-    "url_logo": "/images/gigaredplay/espn3.jpg"
+    "url_logo": "/images/gigaredplay/espn3.png"
   },
   {
     "categoria": "Deportes",
     "nombre": "ESPN 4",
-    "url_logo": "/images/gigaredplay/espn-plus.png"
+    "url_logo": "/images/gigaredplay/espn4.png"
   },
   {
     "categoria": "Deportes",

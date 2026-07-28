@@ -19,6 +19,7 @@ export const wizard = $state({
 	tvPlatform: null, // 'dgo'|'antina'|'gigared'
 	addons: { pack_futbol: false, cine: false, telefono: false },
 	promo: false,
+	noPromo: false, // ?sinpromo=1: oculta la promo (solo nuevos clientes) → arma a medida
 	recom: { usos: [], personas: null }, // usos: multi-select
 
 	// datos / carga
@@ -142,6 +143,7 @@ export function toSearchString() {
 		internetPlan: wizard.internetPlan,
 		tvPlatform: wizard.tvPlatform,
 		promo: wizard.promo,
+		noPromo: wizard.noPromo,
 		addons: wizard.addons
 	}).toString();
 }
@@ -154,7 +156,10 @@ export function hydrateFromParams(searchParams) {
 	wizard.tipo = p.tipo;
 	wizard.internetPlan = p.internetPlan;
 	wizard.tvPlatform = p.tvPlatform;
-	wizard.promo = p.promo;
+	wizard.noPromo = p.noPromo;
+	// Con ?sinpromo=1 la promo no existe como opción: forzamos promo=false aunque
+	// venga en la URL (link viejo o manipulado).
+	wizard.promo = p.noPromo ? false : p.promo;
 	wizard.addons.pack_futbol = p.addons.pack_futbol;
 	wizard.addons.cine = p.addons.cine;
 	wizard.addons.telefono = p.addons.telefono;

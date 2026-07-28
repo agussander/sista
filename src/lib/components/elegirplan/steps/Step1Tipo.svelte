@@ -17,7 +17,7 @@
 	/>
 	<OptionCard
 		title="Internet + TV"
-		subtitle="El combo completo · hay promo"
+		subtitle={wizard.noPromo ? 'El combo completo' : 'El combo completo · hay promo'}
 		showCheck={false}
 		selected={wizard.tipo === 'tv'}
 		onclick={() => { setTipo('tv'); next(); }}

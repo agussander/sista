@@ -1,21 +1,9 @@
 
 <script>
-import {pasoCompleto, datosBaja} from './bajaStore.js'
+import { datosBaja } from './bajaStore.js';
 import StepButtons from './StepButtons.svelte';
 
-let rehacer=[];
-
-const check=()=>{
-    if(
-    $datosBaja.servicio!=='seleccionar' &&
-    $datosBaja.motivo!=='seleccionar'){
-        $pasoCompleto=2;
-    } else{
-        $pasoCompleto=1;
-    }
-}
-
-
+let rehacer = [];
 </script>
 
 <!--Select Servicio-->
@@ -25,7 +13,7 @@ const check=()=>{
     <select
     class:rehacer={rehacer.includes('servicio')}
     bind:value={$datosBaja.servicio}
-    on:change={()=>check()}>
+    >
         <option value="seleccionar" disabled selected>Seleccionar</option>
         <option value="Sista TV">TV</option>
         <option value="Telefonía">Telefonía</option>
@@ -38,7 +26,6 @@ const check=()=>{
     Motivo de la baja
     <!-- svelte-ignore a11y-no-onchange -->
     <select bind:value={$datosBaja.motivo}
-    on:change={()=>check()}
     class:rehacer={rehacer.includes('motivo')}>
         <option value="seleccionar" disabled selected>Seleccionar</option>
         <option value="Mudanza">Mudanza</option>

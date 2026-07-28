@@ -7,12 +7,14 @@
   {
     "categoria": "",
     "nombre": "RCN Notícias",
-    "url_logo": "/images/dgo/r_c_rcnnoticiasbgcolor.png"
+    "url_logo": "/images/dgo/r_c_rcnnoticiasbgcolor.png",
+    "logoBlanco": true
   },
   {
     "categoria": "",
     "nombre": "CGTN (China Global Television Network)",
-    "url_logo": "/images/dgo/c_g_cgtn.png"
+    "url_logo": "/images/dgo/c_g_cgtn.png",
+    "logoBlanco": true
   },
   {
     "categoria": "",
@@ -52,22 +54,26 @@
   {
     "categoria": "",
     "nombre": "DSPORTS",
-    "url_logo": "/images/dgo/l_o_logo-directv-sports_4x3_final.png"
+    "url_logo": "/images/dgo/l_o_logo-directv-sports_4x3_final.png",
+    "logoBlanco": true
   },
   {
     "categoria": "",
     "nombre": "DSPORTS +",
-    "url_logo": "/images/dgo/6_1_613_blanco2.png"
+    "url_logo": "/images/dgo/6_1_613_blanco2.png",
+    "logoBlanco": true
   },
   {
     "categoria": "",
     "nombre": "DSPORTS 2",
-    "url_logo": "/images/dgo/d_i_directv_sports2.png"
+    "url_logo": "/images/dgo/d_i_directv_sports2.png",
+    "logoBlanco": true
   },
   {
     "categoria": "",
     "nombre": "Dsports Radio",
-    "url_logo": "/images/dgo/d_s_dsports_radio_2.png"
+    "url_logo": "/images/dgo/d_s_dsports_radio_2.png",
+    "logoBlanco": true
   },
   {
     "categoria": "",

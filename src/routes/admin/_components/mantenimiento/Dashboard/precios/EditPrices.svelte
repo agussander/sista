@@ -16,7 +16,9 @@ const labels = {
     antina: 'Antina',
     dgo_basico: 'DGO Básico',
     dgo_full: 'DGO Full',
-    pack_futbol: 'Pack Fútbol',
+    gigared_futbol: 'Pack Fútbol · Gigared',
+    antina_futbol: 'Pack Fútbol · Antina',
+    dgo_futbol: 'Pack Fútbol · DGO',
     antina_cine: 'Antina Cine',
     telefono: 'Telefonía',
     instalacion: 'Instalación'
@@ -27,26 +29,21 @@ const labels = {
 // Cualquier campo que no caiga en estos grupos se muestra al final en "Otros",
 // así nunca se pierde un precio (p. ej. instalación o campos nuevos).
 const GROUP_DEFS = [
-    { title: 'Internet', keys: ['home', 'fast', 'power', 'gamer', 'worker', 'max'], sortByPrice: true },
-    { title: 'TV', keys: ['gigared', 'antina', 'dgo_basico', 'dgo_full', 'pack_futbol', 'antina_cine'] },
+    { title: 'Internet', keys: ['home', 'fast', 'power', 'gamer', 'worker', 'max'], columns: 3 },
+    { title: 'TV', keys: ['gigared', 'antina', 'antina_cine', 'dgo_full', 'gigared_futbol', 'antina_futbol', 'dgo_futbol'] },
     { title: 'Telefonía', keys: ['telefono'] }
 ];
 
 // Construye las secciones ordenadas a partir de los campos del registro.
-// Se calcula una sola vez al cargar para que el orden quede fijo mientras se
-// edita (si ordenáramos por precio en vivo, los inputs saltarían de lugar).
 const buildSections = (data) => {
     const allKeys = Object.keys(data);
     const used = new Set();
     const result = [];
 
     for (const def of GROUP_DEFS) {
-        let keys = def.keys.filter((k) => k in data);
-        if (def.sortByPrice) {
-            keys = [...keys].sort((a, b) => (Number(data[a]) || 0) - (Number(data[b]) || 0));
-        }
+        const keys = def.keys.filter((k) => k in data);
         keys.forEach((k) => used.add(k));
-        if (keys.length) result.push({ title: def.title, keys });
+        if (keys.length) result.push({ title: def.title, keys, columns: def.columns });
     }
 
     const otros = allKeys.filter((k) => !used.has(k));
@@ -212,7 +209,7 @@ onMount(async() => {
             {#each sections as section}
                 <fieldset class="price-section">
                     <legend>{section.title}</legend>
-                    <div class="inputs-grid">
+                    <div class="inputs-grid" style={section.columns ? `grid-template-columns: repeat(${section.columns}, 1fr)` : ''}>
                         {#each section.keys as key}
                             <label for={key}>
                                 {labelFor(key)}

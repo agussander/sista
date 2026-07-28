@@ -6,12 +6,12 @@ import { MetaTags } from "svelte-meta-tags";
 </script>
 
 <MetaTags
-    title='Sista - Formas de Pago'
-    description='Internet de fibra óptica y tv'
+    title='Formas de pago | Sista'
+    description='Conocé todos los medios de pago disponibles para tu servicio de Internet y TV de Sista: débito automático, transferencia, tarjetas y pago en efectivo.'
 ></MetaTags>
 
 <section>
-    <h1>Medios de pago</h1>
+    <h1>Formas de pago</h1>
     <Container></Container>
     <ContactButtons></ContactButtons>
 </section>

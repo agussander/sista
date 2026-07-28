@@ -1,8 +1,8 @@
 <script>
 import Spinner from '$lib/components/ui/Spinner.svelte';
 import { llamenmeStore } from './llamenmeStore.svelte.js';
-import { paginate, totalPages as totalPagesOf, clampPage } from './llamenmeLogic.js';
-import { computeFormVisible, isWithinCallHours } from '$lib/llamenme/visibility.js';
+import { paginate, totalPages as totalPagesOf, clampPage, formatExtra } from './llamenmeLogic.js';
+import { computeInCallWindow, isWithinCallHours } from '$lib/llamenme/visibility.js';
 
 // Agentes disponibles para asignar. El "value" debe coincidir con el valor
 // guardado en el campo select "agente" de PocketBase (en minúscula).
@@ -20,24 +20,33 @@ const newIds = $derived(llamenmeStore.newIds);
 const override = $derived(llamenmeStore.override);
 const setOverride = (value) => llamenmeStore.setOverride(value);
 
+// Modelo de presencia: como el panel lo administra una sola persona, los
+// botones hablan de "estoy / no estoy" en vez de mostrar/ocultar el form.
+// El valor interno guardado en PocketBase sigue siendo auto/abierto/cerrado
+// (ver $lib/llamenme/config.js); acá sólo cambia la etiqueta visible.
+//   Automático → sigue el horario real (respeta que vie tarde/sáb esté cerrado)
+//   En línea   → fuerza el form visible (estás atendiendo)
+//   No estoy   → fuerza el estado fuera de horario (form oculto)
 const overrideOptions = [
-    { value: 'auto', label: 'Auto' },
-    { value: 'abierto', label: 'Abierto' },
-    { value: 'cerrado', label: 'Cerrado' }
+    { value: 'auto', label: 'Automático' },
+    { value: 'abierto', label: 'En línea' },
+    { value: 'cerrado', label: 'No estoy' }
 ];
 
-// Estado "ahora" del formulario público. Es informativo: se calcula al
-// renderizar el panel, no se actualiza en vivo mientras queda abierto.
+// Estado "ahora" del formulario público. El form está siempre visible; esto
+// indica si, al enviar, se llama en el momento (en horario) o se le pide al
+// visitante una preferencia de horario en un modal (fuera de horario). Es
+// informativo: se calcula al renderizar, no se actualiza en vivo.
 const now = new Date();
-const visibleNow = $derived(computeFormVisible(override, now));
+const enHorarioNow = $derived(computeInCallWindow(override, now));
 const reasonNow = $derived(
     override === 'abierto'
-        ? 'forzado abierto'
+        ? 'marcaste que estás en línea'
         : override === 'cerrado'
-            ? 'forzado cerrado'
+            ? 'marcaste que no estás'
             : isWithinCallHours(now)
-                ? 'por horario de atención'
-                : 'fuera de horario'
+                ? 'automático · en horario de atención'
+                : 'automático · fuera de horario'
 );
 
 let page = $state(1);
@@ -96,7 +105,7 @@ function timeAgo(d) {
     </div>
 
     <div class="override-panel">
-        <div class="override-switch" role="group" aria-label="Habilitar formulario">
+        <div class="override-switch" role="group" aria-label="Horario de atención">
             {#each overrideOptions as opt}
                 <button
                     type="button"
@@ -107,7 +116,7 @@ function timeAgo(d) {
             {/each}
         </div>
         <p class="override-status">
-            El formulario está <strong>{visibleNow ? 'visible' : 'oculto'}</strong> ahora
+            Al enviar, ahora se <strong>{enHorarioNow ? 'llama en el momento' : 'pide preferencia de horario'}</strong>
             ({reasonNow}).
         </p>
     </div>
@@ -122,7 +131,7 @@ function timeAgo(d) {
         <div class="table-wrap">
             <table>
                 <thead>
-                    <tr><th>Asignar</th><th>Número</th><th>Recibido</th></tr>
+                    <tr><th>Asignar</th><th>Número</th><th>Prefiere</th><th>Recibido</th></tr>
                 </thead>
                 <tbody>
                     {#each visible as l (l.id)}
@@ -141,6 +150,11 @@ function timeAgo(d) {
                                 </select>
                             </td>
                             <td>{l.numero}</td>
+                            <td class="extra">
+                                <span class="pref" class:pref-wa={l.extra === 'whatsapp'} class:pref-none={!l.extra}>
+                                    {formatExtra(l.extra)}
+                                </span>
+                            </td>
                             <td class="date">{timeAgo(l.created)}</td>
                         </tr>
                     {/each}
@@ -230,6 +244,33 @@ th {
 td.date {
     color: #666;
     white-space: nowrap;
+}
+td.extra {
+    white-space: nowrap;
+}
+.pref {
+    display: inline-block;
+    padding: 0.2em 0.6em;
+    border-radius: 1000px;
+    background: #f3eefb;
+    color: var(--violeta1);
+    font-size: 0.85em;
+    font-weight: 600;
+}
+.pref-wa {
+    background: #eafaf5;
+    color: #128c7e;
+}
+.pref-none {
+    background: transparent;
+    color: #bbb;
+    font-weight: 400;
+    padding-left: 0;
+}
+/* En filas ya asignadas el chip también se apaga. */
+tr.assigned .pref {
+    background: #f3f3f3;
+    color: #9a9a9a;
 }
 .assign-cell {
     display: flex;

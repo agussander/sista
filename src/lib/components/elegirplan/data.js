@@ -23,10 +23,21 @@ export { INTERNET_PLANS };
 // --- Adicionales ------------------------------------------------------------
 // `tvAddon: true` → se elige dentro del modal de TV (Pack Fútbol, Cine), no en
 // el paso de adicionales. Telefonía (tvAddon:false) sí vive en ese paso.
+//
+// Pack Fútbol no tiene un único campo de precio: cada servicio de TV tiene el
+// suyo (gigared_futbol, antina_futbol, dgo_futbol). `fieldFor(w)` resuelve el
+// campo correcto según la plataforma ya elegida en el wizard.
 export const ADDONS = [
-	{ key: 'pack_futbol', field: 'pack_futbol', label: 'Pack Fútbol',    subtitle: 'ESPN Premium · TNT Sports', tvAddon: true },
-	{ key: 'cine',        field: 'antina_cine', label: 'Cine',           subtitle: 'Canales HBO y Universal',   tvAddon: true },
-	{ key: 'telefono',    field: 'telefono',    label: 'Telefonía fija', subtitle: 'Portabilidad numérica',     tvAddon: false }
+	{
+		key: 'pack_futbol',
+		field: 'pack_futbol',
+		fieldFor: (w) => (w.tvPlatform ? `${w.tvPlatform}_futbol` : null),
+		label: 'Pack Fútbol',
+		subtitle: 'ESPN Premium · TNT Sports',
+		tvAddon: true
+	},
+	{ key: 'cine',     field: 'antina_cine', label: 'Cine',           subtitle: 'Canales HBO y Universal', tvAddon: true },
+	{ key: 'telefono', field: 'telefono',    label: 'Telefonía fija', subtitle: 'Portabilidad numérica',   tvAddon: false }
 ];
 
 // --- Claves válidas para los params de URL (orden canónico de serialización) ---
@@ -201,7 +212,8 @@ export function summaryItems(w) {
 
 	for (const addon of ADDONS) {
 		if (w.addons?.[addon.key]) {
-			const value = Number(p[addon.field]) || 0;
+			const field = addon.fieldFor ? addon.fieldFor(w) : addon.field;
+			const value = field ? Number(p[field]) || 0 : 0;
 			items.push({
 				step: addon.tvAddon ? 'tv' : 'adicionales',
 				label: addon.label,
@@ -230,12 +242,17 @@ export function hasConsultar(w) {
 }
 
 // Secuencia de pasos según el branching (tipo / promo)
+// `w.noPromo` (param ?sinpromo=1): oculta el paso de promo en Internet+TV y va
+// directo al armado a medida. La promo es solo para clientes/domicilios nuevos.
 export function getFlow(w) {
 	if (w.tipo === 'internet') return ['tipo', 'internet', 'adicionales', 'resumen'];
+	if (w.tipo === 'tv' && w.noPromo) return ['tipo', 'internet', 'tv', 'adicionales', 'resumen'];
 	if (w.tipo === 'tv' && w.promo) return ['tipo', 'promo', 'adicionales', 'resumen'];
 	if (w.tipo === 'tv') return ['tipo', 'promo', 'internet', 'tv', 'adicionales', 'resumen'];
 	// Estimación antes de elegir el tipo (para la barra de progreso)
-	return ['tipo', 'promo', 'internet', 'tv', 'adicionales', 'resumen'];
+	return w.noPromo
+		? ['tipo', 'internet', 'tv', 'adicionales', 'resumen']
+		: ['tipo', 'promo', 'internet', 'tv', 'adicionales', 'resumen'];
 }
 
 // URL de WhatsApp con el combo pre-escrito (mismo patrón que ContactButtons)
@@ -292,6 +309,7 @@ export function buildPlanParams(w) {
 	if (w.internetPlan) sp.set('plan', w.internetPlan);
 	if (w.tvPlatform) sp.set('tv', w.tvPlatform);
 	if (w.promo) sp.set('promo', '1');
+	if (w.noPromo) sp.set('sinpromo', '1');
 	const adds = ADDON_KEYS.filter((k) => w.addons?.[k]);
 	if (adds.length) sp.set('add', adds.join(','));
 	return sp;
@@ -308,6 +326,7 @@ export function parsePlanParams(sp) {
 		internetPlan: oneOf(sp.get('plan'), PLAN_KEYS),
 		tvPlatform: oneOf(sp.get('tv'), TV_KEYS),
 		promo: sp.get('promo') === '1',
+		noPromo: sp.get('sinpromo') === '1',
 		addons: {
 			pack_futbol: addRaw.includes('pack_futbol'),
 			cine: addRaw.includes('cine'),

@@ -3,7 +3,9 @@ import { slide } from 'svelte/transition';
 let {
     record,
     logout,
-    selected = $bindable(null)
+    selected = $bindable(null),
+    collapsed = false,
+    llamenmeUnread = 0
 } = $props();
 
 const mainItems = [
@@ -80,21 +82,26 @@ const handleMainItemClick = (item) => {
 };
 </script>
 
-<div class="wrap sidebar-content">
+<div class="wrap sidebar-content" class:collapsed>
     <div>
         <div class="folders">
             {#each mainItems as item}
                 <button class='main-item'
                 class:selected={selected==item.content}
                 onclick={() => handleMainItemClick(item)}
+                title={collapsed ? item.title : null}
                 >
-                <svg class="item-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    {@html item.icon}
-                </svg>
-                <span>{item.title}</span>
+                <span class="icon-wrap">
+                    <span class="item-icon">{@html `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${item.icon}</svg>`}</span>
+                    {#if item.content === 'llamenme' && llamenmeUnread > 0 && selected !== 'llamenme'}
+                        <span class="notif-dot" aria-label="Nuevas solicitudes"></span>
+                    {/if}
+                </span>
+                <span class="item-label">{item.title}</span>
                 </button>
             {/each}
 
+            {#if !collapsed}
             <div class="separator"></div>
 
             {#each expandableContent as c}
@@ -121,11 +128,12 @@ const handleMainItemClick = (item) => {
                     </div>
                 {/if}
             {/each}
+            {/if}
         </div>
     </div>
-    <button class="btn logout-btn" onclick={logout}>
+    <button class="btn logout-btn" onclick={logout} title={collapsed ? 'Cerrar sesión' : null}>
         <svg class="logout-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-        Cerrar sesión
+        <span>Cerrar sesión</span>
     </button>
 </div>
 
@@ -177,17 +185,46 @@ const handleMainItemClick = (item) => {
     color: white;
 }
 .main-item.selected .item-icon {
-    stroke: white;
+    color: white;
+}
+.icon-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+.notif-dot {
+    position: absolute;
+    top: -0.15em;
+    right: -0.25em;
+    width: 0.6em;
+    height: 0.6em;
+    border-radius: 50%;
+    background: var(--magenta, #e6007e);
+    box-shadow: 0 0 0 2px #f7f6fb;
+    animation: notif-pulse 1.6s ease-in-out infinite;
+}
+@keyframes notif-pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.25); opacity: 0.75; }
 }
 .item-icon {
     width: 1.3em;
     height: 1.3em;
-    stroke: var(--violeta2);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--violeta2);
     flex-shrink: 0;
-    transition: stroke 0.18s;
+    transition: color 0.18s;
+}
+.item-icon :global(svg) {
+    width: 100%;
+    height: 100%;
+    display: block;
 }
 .main-item:hover .item-icon {
-    stroke: #5a1e7a;
+    color: #5a1e7a;
 }
 .separator {
     height: 1px;
@@ -286,5 +323,32 @@ const handleMainItemClick = (item) => {
     height: 1.3em;
     stroke: var(--violeta2);
     flex-shrink: 0;
+}
+
+/* Estado colapsado: solo iconos */
+.wrap.collapsed {
+    padding: 1.2em 0.4em;
+    align-items: center;
+}
+.wrap.collapsed .folders {
+    align-items: center;
+}
+.wrap.collapsed .main-item {
+    justify-content: center;
+    gap: 0;
+    padding: 0.7em 0;
+    width: 2.6em;
+}
+.wrap.collapsed .main-item .item-label {
+    display: none;
+}
+.wrap.collapsed .logout-btn {
+    justify-content: center;
+    gap: 0;
+    padding: 0.7em;
+    width: 2.6em;
+}
+.wrap.collapsed .logout-btn span {
+    display: none;
 }
 </style>

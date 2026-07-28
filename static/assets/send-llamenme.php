@@ -36,6 +36,14 @@ if ($numero === '') {
 }
 $numero = mb_substr($numero, 0, 40);
 
+// Preferencia de horario elegida en el modal (fuera de horario) o marcador de
+// contexto. Se valida contra una allowlist; cualquier otra cosa se guarda vacía.
+$allowedExtra = ['en_horario', 'manana', 'tarde', 'whatsapp', 'sin_preferencia'];
+$extra = isset($_POST['extra']) ? trim($_POST['extra']) : '';
+if (!in_array($extra, $allowedExtra, true)) {
+    $extra = '';
+}
+
 // 4. Write a PocketBase (fuente de verdad)
 $pbUrl = rtrim(getenv('VITE_POCKETBASE_URL') ?: 'https://sista.pockethost.io', '/');
 $pbEndpoint = $pbUrl . '/api/collections/quiero_que_me_llamen/records';
@@ -44,7 +52,7 @@ $ch = curl_init();
 curl_setopt($ch, CURLOPT_URL, $pbEndpoint);
 curl_setopt($ch, CURLOPT_POST, true);
 curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['numero' => $numero]));
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['numero' => $numero, 'extra' => $extra]));
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_TIMEOUT, 10);
 curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
@@ -66,6 +74,7 @@ try {
     $mailResult = $mailHandler->send('Quiero que me llamen', [
         'title'  => 'Quiero que me llamen',
         'Numero' => $numero,
+        'Preferencia' => $extra !== '' ? $extra : '—',
     ], $templatePath);
     if (empty($mailResult['success'])) {
         error_log('send-llamenme email falló: ' . ($mailResult['error'] ?? 'desconocido'));

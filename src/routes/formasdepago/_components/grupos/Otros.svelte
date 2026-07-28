@@ -1,5 +1,4 @@
 <script>
-import Advertise from '../Advertise.svelte'
 import {show} from '$lib/stores'
 import {mediosDePago} from '../index'
 $: h=$show[1].title
@@ -8,13 +7,14 @@ const go=(x,y)=>{
 }
 </script>
 
-{#if h=='Tarjeta de Crédito'}
+{#if h=='Tarjetas'}
     <p>Pago mediante tarjetas VISA (Credito y Debito) y MasterCard (Credito)</p>
     <ol>
         <li>Por <b class="link" on:click={()=>go(0,0)}>Mercado Pago</b></li>
         <li>En nuestra <b class="link" on:click={()=>go(4,3)}>Oficina Comercial</b></li>
+        <li>Adherite al <b class="link" on:click={()=>go(4,0)}>débito automático</b></li>
     </ol>
-{:else if h=='Rapipago'}
+{:else if h=='Rapipago / Pagofacil'}
 <p>Se puede abonar con número de cliente, número de DNI o factura.</p>
 <small>
     Este pago ingresa en forma automática con un tiempo de demora mínimo de 24 horas hábiles, 
@@ -31,8 +31,7 @@ const go=(x,y)=>{
         <li>Cheques Propios del cliente</li>
         <li>Fecha de pago maximo dia de vencimiento de la factura.</li>
     </ul>
-{:else if h=='Pago en nuestra oficina'}
-    <Advertise text='La oficina de SISTA, esta abierta UNICAMENTE para COBRANZAS'></Advertise>
+{:else if h=='Efectivo'}
     <h6>Ubicación</h6>
     <a class="link" target="_blank" href="https://www.google.com/maps/place/Sista/@-34.8228441,-57.9641418,15z/data=!4m5!3m4!1s0x0:0x8bb5e7d89d0ca379!8m2!3d-34.8228441!4d-57.9641418">Alte Brown 3064 e/54 y 56, Punta Lara (pdo Ensenada)</a>
     <h6>Horario:</h6>

@@ -1,11 +1,10 @@
 <script>
-import { onMount } from 'svelte';
-import {datosBaja, pasoCompleto} from './bajaStore'
-import {getNextWeekDays} from './utils.js'
+import { datosBaja } from './bajaStore';
+import { getNextWeekDays } from './utils.js';
 import StepButtons from './StepButtons.svelte';
-import {feriados} from './feriados'
+import { feriados } from './feriados';
 
-let compromiso=[false,false,false];
+let compromiso = [false, false, false];
 
 
 const dias='Lunes,Martes,Miércoles,Jueves,Viernes,Sábado'.split(',');
@@ -18,39 +17,7 @@ const proxDias= ()=>{
     return res;
 };
 
-const times=['9-13','13-17'];
-
-
-let selectedDays=
-    {
-        dia:'Día',
-        hora:'Horario'
-    };
-
-const check=()=>{
-    let t=Object.values(selectedDays);
-    if($datosBaja.dia!=='Día' && $datosBaja.hora!=='Horario'){
-        if(compromiso[0] && compromiso[1]){
-            // $datosBaja.dia=selectedDays['dia'];
-            // $datosBaja.hora=selectedDays['hora'];
-            $pasoCompleto=4;
-        } else if(compromiso[2]){
-            // $datosBaja.dia=selectedDays['dia'];
-            // $datosBaja.hora=selectedDays['hora'];
-            $pasoCompleto=4
-        } else{
-            $pasoCompleto=3
-        }
-    }
-}
-
-onMount (async()=>{
-    check();
-})
-
-
-
-
+const times = ['9-13', '13-17'];
 </script>
 
 <h2>
@@ -63,13 +30,13 @@ onMount (async()=>{
         <input type="radio"
         value="sucursal"
         bind:group={$datosBaja.devolucion}
-        on:click={()=>{compromiso=[false,false,false]; check()}}>
+        on:click={() => { compromiso = [false, false, false]; }}>
         Devolución en sucursal
     </label>
     <label class:disabled={$datosBaja.devolucion=='sucursal'}>
         <input type="radio"
         value="domicilio"
-        on:click={()=>{compromiso=[false,false,false]; check()}}
+        on:click={() => { compromiso = [false, false, false]; }}
         bind:group={$datosBaja.devolucion}>
         Solicitar retiro a domicilio de instalación
     </label>
@@ -83,10 +50,8 @@ onMount (async()=>{
         <p class="info-sucursal">Sábados: de 9 a 12hs</p>
         <div class="compromiso">
             <!-- svelte-ignore a11y-click-events-have-key-events -->
-            <label for="ok" on:click={()=>{compromiso[2]=!compromiso[2];check()}}>
-                <input type="checkbox" name="compromiso" checked={compromiso[2]}
-                on:change={()=>check()}
-                >
+            <label for="ok" on:click={() => { compromiso[2] = !compromiso[2]; }}>
+                <input type="checkbox" name="compromiso" checked={compromiso[2]}>
                 Leí y acepto que devolveré los equipos en la sucursal en el plazo establecido
             </label>
         </div>
@@ -100,7 +65,6 @@ onMount (async()=>{
             <!-- svelte-ignore a11y-no-onchange -->
             <select name="día" class="dia"
             bind:value={$datosBaja.dia}
-            on:change={()=>check()}
             >
                 <option value="Día" selected disabled>Día</option>
                 {#each proxDias() as d,i}
@@ -113,7 +77,6 @@ onMount (async()=>{
             <!-- svelte-ignore a11y-no-onchange -->
             <select name="hora"
             bind:value={$datosBaja.hora}
-            on:change={()=>check()}
             >
                 <option value='Horario' selected disabled>Horario</option>
                 {#each times as time}
@@ -129,17 +92,13 @@ onMount (async()=>{
 
         <div class="compromiso">
             <!-- svelte-ignore a11y-click-events-have-key-events -->
-            <label for="ok" on:click={()=>{compromiso[0]=!compromiso[0];check()}}>
-                <input type="checkbox" name="compromiso" checked={compromiso[0]}
-                on:change={()=>check()}
-                >
+            <label for="ok" on:click={() => { compromiso[0] = !compromiso[0]; }}>
+                <input type="checkbox" name="compromiso" checked={compromiso[0]}>
                 Me comprometo a estar presente en mi domicilio el día y horario pautado (puede estar el titular u otra persona).
             </label>
             <!-- svelte-ignore a11y-click-events-have-key-events -->
-            <label for="ok" on:click={()=>{compromiso[1]=!compromiso[1];check()}}>
-                <input type="checkbox" name="compromiso" checked={compromiso[1]}
-                on:change={()=>check()}
-                >
+            <label for="ok" on:click={() => { compromiso[1] = !compromiso[1]; }}>
+                <input type="checkbox" name="compromiso" checked={compromiso[1]}>
                 En caso de ser necesario, me comunicaré para recoordinar la visita; caso contrario, acepto que se puedan generar cargos.
             </label>
         </div>

@@ -1,11 +1,33 @@
 <script>
+    import { onMount } from 'svelte';
     import { MetaTags } from 'svelte-meta-tags';
+    import { pb } from '$lib/pocketbase';
     import ChannelGrid from '$lib/components/features/ChannelGrid.svelte';
     import gigaredplayChannels from '$lib/data/gigaredplay-channels.json';
+    import { serviceByKey } from '$lib/components/tv/tvData.js';
+    import TvPriceSummary from '$lib/components/tv/TvPriceSummary.svelte';
+    import TvAvailability from '$lib/components/tv/TvAvailability.svelte';
+    import TvServicesSection from '$lib/components/tv/TvServicesSection.svelte';
+
+    const service = serviceByKey('gigared');
+
+    let precios = $state({});
+    let loading = $state(true);
+
+    onMount(async () => {
+        try {
+            const record = await pb.collection('precios').getFirstListItem('');
+            if (record) precios = record;
+        } catch (e) {
+            console.error('Error cargando precios desde PocketBase:', e);
+        } finally {
+            loading = false;
+        }
+    });
 </script>
 
 <MetaTags
-    title="Gigared Play · Sista"
+    title="Gigared Play · TV en vivo y on demand | Sista"
     description="Gigared Play: canales en vivo y contenido on demand para sumar a tu Internet de Sista."
     openGraph={{
         type: 'website',
@@ -36,9 +58,8 @@
 
 <section>
     <img class="logo" src="/images/tv/logo-gigared.png" alt="Logo de Gigared Play">
-    <p>
-        A continuación podés consultar la grilla de canales del plan <strong>Gigared Play Full</strong>.
-    </p>
+
+    <TvPriceSummary {service} {precios} />
 
     <ChannelGrid channels={gigaredplayChannels} accent="#b74d8d" />
 
@@ -49,46 +70,11 @@
         </a>
     </div>
 
-    <div id="dispositivos-compatibles" class="dispositivos-section">
-        <h2>Dispositivos compatibles</h2>
-        <div class="dispositivos-grid">
-            <div class="dispositivo-item">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-                    <line x1="8" y1="21" x2="16" y2="21"></line>
-                    <line x1="12" y1="17" x2="12" y2="21"></line>
-                </svg>
-                <h3>Smart TVs</h3>
-                <p>Samsung y LG (desde 2017 en adelante)</p>
-            </div>
-            <div class="dispositivo-item">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-                    <line x1="8" y1="21" x2="16" y2="21"></line>
-                    <line x1="12" y1="17" x2="12" y2="21"></line>
-                    <path d="M7 8l5 5 5-5"></path>
-                </svg>
-                <h3>Android TV / Roku</h3>
-                <p>Televisores con sistema operativo integrado</p>
-            </div>
-            <div class="dispositivo-item">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-                    <circle cx="8" cy="10" r="1"></circle>
-                    <circle cx="16" cy="10" r="1"></circle>
-                </svg>
-                <h3>Dispositivos de streaming</h3>
-                <p>Chromecast, Roku y TV Box</p>
-            </div>
-            <div class="dispositivo-item">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
-                    <line x1="12" y1="18" x2="12" y2="18.01"></line>
-                </svg>
-                <h3>Celulares y tablets</h3>
-                <p>Android e iOS</p>
-            </div>
-        </div>
+    <TvAvailability stores={['googleplay']} warnMagisXuper={true} />
+
+    <div class="otras-opciones">
+        <h2>Ver otras opciones</h2>
+        <TvServicesSection {precios} {loading} cardsId="otras-cards" />
     </div>
 </section>
 
@@ -102,10 +88,6 @@
         display: flex;
         justify-content: center;
         margin-top: 3em;
-    }
-    p{
-        max-width: 50em;
-        margin: 0 auto;
     }
     .logo{
         width: 100%;
@@ -140,56 +122,16 @@
         width: 2em;
         height: 2em;
     }
-    .dispositivos-section {
-        margin-top: 4em;
-        padding: 3em 1em;
-        max-width: 60em;
-        margin-left: auto;
-        margin-right: auto;
+    .otras-opciones {
+        max-width: 64rem;
+        margin: 5em auto 0;
     }
-    .dispositivos-section h2 {
+    .otras-opciones h2 {
         text-align: center;
         color: var(--violeta1);
         font-size: 2em;
-        margin-bottom: 2em;
+        margin-bottom: 1.5em;
         text-transform: uppercase;
-    }
-    .dispositivos-grid {
-        display: grid;
-        grid-template-columns: 1fr;
-        gap: 2em;
-    }
-    .dispositivo-item {
-        background: white;
-        border-radius: var(--border-radius);
-        padding: 2em;
-        text-align: center;
-        box-shadow: 0 0.3em 1em rgba(0, 0, 0, 0.1);
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-    }
-    .dispositivo-item:hover {
-        transform: translateY(-0.3em);
-        box-shadow: 0 0.5em 1.5em rgba(0, 0, 0, 0.15);
-    }
-    .dispositivo-item svg {
-        color: var(--violeta2);
-        margin-bottom: 1em;
-    }
-    .dispositivo-item h3 {
-        color: var(--violeta1);
-        font-size: 1.3em;
-        margin: 0.5em 0;
-        font-weight: 600;
-    }
-    .dispositivo-item p {
-        color: var(--text);
-        margin: 0;
-        font-size: 1em;
-    }
-    @media (min-width: 768px) {
-        .dispositivos-grid {
-            grid-template-columns: repeat(3, 1fr);
-        }
     }
 </style>
 

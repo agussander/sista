@@ -1,6 +1,5 @@
 <script>
-import { onMount } from 'svelte';
-import {datosBaja, pasoCompleto, paso} from './bajaStore'
+import { datosBaja, paso } from './bajaStore';
 import StepButtons from './StepButtons.svelte';
 
 const data=Object.keys($datosBaja).filter(objKey =>
@@ -137,10 +136,6 @@ const submitBaja=async()=>{
     // Siempre avanzar al siguiente paso
     $paso++;
 }
-
-onMount(async()=>{
-    $pasoCompleto=4
-})
 </script>
 
 <h4>

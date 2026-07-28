@@ -58,11 +58,12 @@
 		<strong>{promoPrice}</strong><span class="per">/mes</span>
 	</div>
 	<button class="btn-primary btn-full" onclick={() => (showGigared = true)}>Elegir la promo</button>
+	<p class="promo-note">Solo para nuevos clientes/nuevos domicilios</p>
 </div>
 
 <div class="or"><span>o armalo a tu medida</span></div>
 
-<button class="btn-primary btn-full" onclick={() => chooseArmar()}>Armar a medida</button>
+<button class="btn-primary btn-full" onclick={() => chooseArmar()}>Ver otras opciones</button>
 
 {#if showGigared}
 	<TvServiceModal
@@ -153,6 +154,12 @@
 	}
 	.promo .btn-primary {
 		margin-top: 0.4rem;
+	}
+	.promo-note {
+		margin: 0;
+		font-size: 0.72rem;
+		color: #9a9a9a;
+		font-weight: 300;
 	}
 	.or {
 		display: flex;

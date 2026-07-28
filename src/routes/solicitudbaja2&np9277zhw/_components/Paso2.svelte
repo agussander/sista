@@ -1,16 +1,13 @@
 <script>
-import {datosBaja, pasoCompleto, paso} from './bajaStore'
+import { datosBaja, paso } from './bajaStore';
 import StepButtons from './StepButtons.svelte';
-let isChecked;
 
-const handleCheck=()=>{
-    $datosBaja.consentimientoEntrega=!$datosBaja.consentimientoEntrega;
-    if($datosBaja.consentimientoEntrega){
-        $datosBaja.consentimientoEntrega;
-        $pasoCompleto=3;
-    } else{
-        $pasoCompleto=2;
-    }
+const handleContainerClick = (e) => {
+    // El input y el label ya togglean el checkbox nativamente (por el atributo "for");
+    // si dejamos que este handler también actúe, el click sobre esos elementos
+    // burbujea al div y se togglea dos veces, anulando el cambio.
+    if(e.target.closest('input, label')) return;
+    $datosBaja.consentimientoEntrega = !$datosBaja.consentimientoEntrega;
 }
 </script>
 
@@ -21,8 +18,8 @@ const handleCheck=()=>{
     la deuda, en caso de corresponder.
 </p>
 
-<div class="checkbox-container" role="button" tabindex="0" on:click={()=>handleCheck()} on:keydown={(e) => e.key === 'Enter' && handleCheck()}>
-    <input type="checkbox" name="ok" checked={$datosBaja.consentimientoEntrega} id="consentimiento">
+<div class="checkbox-container" role="button" tabindex="0" on:click={handleContainerClick} on:keydown={(e) => { if(e.key === 'Enter' && !e.target.closest('input, label')){ $datosBaja.consentimientoEntrega = !$datosBaja.consentimientoEntrega; } }}>
+    <input type="checkbox" name="ok" bind:checked={$datosBaja.consentimientoEntrega} id="consentimiento">
     <label for="consentimiento">Estoy de acuerdo</label>
 </div>
 

@@ -5,7 +5,7 @@ import {show} from '$lib/stores'
 
 </script>
 
-<Advertise text='Al efectuar el pago por transferencia o deposito, debe enviar captura o Nro de Operacion por WhatsApp (2213541906) o por mail a clientes@sista.com.ar indicando su nombre o razon social. De lo contrario, no se registra el pago al sistema.'></Advertise>
+<Advertise text='Los pagos demoran hasta 48hs en entrar y recibirás un recibo a tu mail cuando haya ingresado. Si no lo recibiste vencido el plazo, comunicate con el área administrativa.'></Advertise>
 <p>Encontrá el cbu y alias para realizar la transferencia en tu boleta</p>
 <img src="/images/factura-muestra.png" alt="factura">
 <p>También podés consultarlo a nuestro Whatsapp</p>

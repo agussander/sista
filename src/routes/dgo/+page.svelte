@@ -1,10 +1,31 @@
 <script>
+    import { onMount } from 'svelte';
     import { MetaTags } from 'svelte-meta-tags';
+    import { pb } from '$lib/pocketbase';
     import ChannelGrid from '$lib/components/features/ChannelGrid.svelte';
+    import { serviceByKey } from '$lib/components/tv/tvData.js';
+    import TvPriceSummary from '$lib/components/tv/TvPriceSummary.svelte';
+    import TvServicesSection from '$lib/components/tv/TvServicesSection.svelte';
+
+    const service = serviceByKey('dgo');
+
+    let precios = $state({});
+    let loading = $state(true);
+
+    onMount(async () => {
+        try {
+            const record = await pb.collection('precios').getFirstListItem('');
+            if (record) precios = record;
+        } catch (e) {
+            console.error('Error cargando precios desde PocketBase:', e);
+        } finally {
+            loading = false;
+        }
+    });
 </script>
 
 <MetaTags
-    title="DGO · Sista"
+    title="DGO (DIRECTV GO) · TV en vivo y on demand | Sista"
     description="DGO, el servicio de streaming de DirecTV: canales en vivo, deportes y contenido on demand. Sumalo a tu Internet de Sista."
     openGraph={{
         type: 'website',
@@ -35,19 +56,10 @@
 
 <section>
     <img class="logo" src="/images/logo-dgo.svg" alt="Logo de DGO">
-    <p class='p1'>DGO es el <strong>servicio de streaming de DirecTV</strong> que ofrece una completa programación online con canales en vivo, transmisiones deportivas, catálogo de contenido on demand, packs de deportes y películas y accesos a otras aplicaciones como Universal y Paramount+. Podés contratarlo de manera individual o junto con tu servicio de Internet de SISTA
-        </p>
-        <p>
-        A continuación podés consultar la grilla de canales del plan FULL de DGO
-    </p>
-    <ChannelGrid />
 
-    <img
-        class="deportes-banner"
-        src="https://cdn-cms74.hub.directvgo.com/documents/91224/96298/DGO-deportes-nov2025.jpg/061e24d6-03b0-3028-6ae0-1b7d1c5d92b2?t=1761602835313"
-        alt="DGO Deportes: LaLiga, Copa Mundial FIFA 2026 y CONMEBOL Sudamericana en DSPORTS"
-        loading="lazy"
-    >
+    <TvPriceSummary {service} {precios} />
+
+    <ChannelGrid />
 
     <div id="dispositivos-compatibles" class="dispositivos-section">
         <h2>Dispositivos compatibles</h2>
@@ -65,6 +77,11 @@
             Consultar por WhatsApp
         </a>
     </div>
+
+    <div class="otras-opciones">
+        <h2>Ver otras opciones</h2>
+        <TvServicesSection {precios} {loading} cardsId="otras-cards" />
+    </div>
 </section>
 
 <style>
@@ -73,13 +90,16 @@
         padding: 6em 1em 2em;
         justify-content: center;
     }
-    p{
-        max-width: 50em;
-        margin: 0 auto;
+    .otras-opciones {
+        max-width: 64rem;
+        margin: 5em auto 0;
     }
-    .p1{
-        font-size: 1.2em;
-        margin-bottom: 1em;
+    .otras-opciones h2 {
+        text-align: center;
+        color: var(--violeta1);
+        font-size: 2em;
+        margin-bottom: 1.5em;
+        text-transform: uppercase;
     }
     .logo{
         width: 100%;
@@ -90,11 +110,6 @@
     img{
         width: 100%;
         max-width: 30em;
-    }
-    .deportes-banner{
-        display: block;
-        max-width: 55em;
-        margin: 2em auto 0;
     }
     .cta{
         display: flex;

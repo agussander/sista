@@ -1,21 +1,12 @@
 <script>
 import StepButtons from "./StepButtons.svelte";
 
-import {datosBaja, paso} from './bajaStore'
-
-
-import Paso1 from "./Paso1.svelte";
+import { paso } from './bajaStore';
 import Paso1B from "./Paso1B.svelte";
 import Paso2 from "./Paso2.svelte";
 import Paso3 from "./Paso3.svelte";
 import Paso4 from "./Paso4.svelte";
 import Paso5 from "./Paso5.svelte";
-
-
-
-const siguiente=()=>{
-    $paso++;
-}
 
 </script>
 
@@ -39,10 +30,6 @@ const siguiente=()=>{
 
         <Paso5></Paso5>
     {/if}
-    <button on:click={()=> console.log($paso)}>$Paso</button>
-    <button
-    on:click={()=>{$datosBaja={}; $paso=0}}
-    >borrar datos debug</button>
 </div>
 
 

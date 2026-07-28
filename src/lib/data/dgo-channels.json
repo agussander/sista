@@ -2,7 +2,8 @@
   {
     "categoria": "Internacionales",
     "nombre": "CGTN (China Global Television Network)",
-    "url_logo": "/images/dgo/c_g_cgtn.png"
+    "url_logo": "/images/dgo/c_g_cgtn.png",
+    "logoBlanco": true
   },
   {
     "categoria": "Internacionales",
@@ -97,27 +98,32 @@
   {
     "categoria": "Deportes",
     "nombre": "DSPORTS",
-    "url_logo": "/images/dgo/l_o_logo-directv-sports_4x3_final.png"
+    "url_logo": "/images/dgo/l_o_logo-directv-sports_4x3_final.png",
+    "logoBlanco": true
   },
   {
     "categoria": "Deportes",
     "nombre": "DSPORTS 2",
-    "url_logo": "/images/dgo/d_i_directv_sports2.png"
+    "url_logo": "/images/dgo/d_i_directv_sports2.png",
+    "logoBlanco": true
   },
   {
     "categoria": "Deportes",
     "nombre": "DSPORTS +",
-    "url_logo": "/images/dgo/6_1_613_blanco2.png"
+    "url_logo": "/images/dgo/6_1_613_blanco2.png",
+    "logoBlanco": true
   },
   {
     "categoria": "Deportes",
     "nombre": "Dsports Radio",
-    "url_logo": "/images/dgo/d_s_dsports_radio_2.png"
+    "url_logo": "/images/dgo/d_s_dsports_radio_2.png",
+    "logoBlanco": true
   },
   {
     "categoria": "Deportes",
     "nombre": "TYC SPORT INTER",
-    "url_logo": "/images/dgo/6_2_629_-_tyc_sports_blanco.png"
+    "url_logo": "/images/dgo/6_2_629_-_tyc_sports_blanco.png",
+    "logoBlanco": true
   },
   {
     "categoria": "Deportes",
@@ -142,12 +148,14 @@
   {
     "categoria": "Deportes",
     "nombre": "ESPN EXTRA",
-    "url_logo": "/images/dgo/e_s_espnextra.png"
+    "url_logo": "/images/dgo/e_s_espnextra.png",
+    "logoBlanco": true
   },
   {
     "categoria": "Deportes",
     "nombre": "FOX SPORTS",
-    "url_logo": "/images/dgo/f_o_fox-sports-logo_inst_blanco-png.png"
+    "url_logo": "/images/dgo/f_o_fox-sports-logo_inst_blanco-png.png",
+    "logoBlanco": true
   },
   {
     "categoria": "Deportes",
@@ -212,7 +220,8 @@
   {
     "categoria": "Variedades",
     "nombre": "TNT Novelas",
-    "url_logo": "/images/dgo/t_n_tnt_novelas_white.png"
+    "url_logo": "/images/dgo/t_n_tnt_novelas_white.png",
+    "logoBlanco": true
   },
   {
     "categoria": "Variedades",
@@ -227,12 +236,14 @@
   {
     "categoria": "Variedades",
     "nombre": "DISCOVERY TURBO",
-    "url_logo": "/images/dgo/d_i_discovery_turbo.png"
+    "url_logo": "/images/dgo/d_i_discovery_turbo.png",
+    "logoBlanco": true
   },
   {
     "categoria": "Variedades",
     "nombre": "COMEDY CENTRAL",
-    "url_logo": "/images/dgo/c_o_comedy_central_fundo_escuro.png"
+    "url_logo": "/images/dgo/c_o_comedy_central_fundo_escuro.png",
+    "logoBlanco": true
   },
   {
     "categoria": "Variedades",
@@ -242,7 +253,8 @@
   {
     "categoria": "Variedades",
     "nombre": "ADULT SWIM",
-    "url_logo": "/images/dgo/l_o_logo_as_white.png"
+    "url_logo": "/images/dgo/l_o_logo_as_white.png",
+    "logoBlanco": true
   },
   {
     "categoria": "Variedades",
@@ -257,7 +269,8 @@
   {
     "categoria": "Variedades",
     "nombre": "E! ENTERTAINMENT",
-    "url_logo": "/images/dgo/e___e_blanco_1_1.png"
+    "url_logo": "/images/dgo/e___e_blanco_1_1.png",
+    "logoBlanco": true
   },
   {
     "categoria": "Variedades",
@@ -267,7 +280,8 @@
   {
     "categoria": "Variedades",
     "nombre": "A&E",
-    "url_logo": "/images/dgo/a___a_e_fundo_escuro.png"
+    "url_logo": "/images/dgo/a___a_e_fundo_escuro.png",
+    "logoBlanco": true
   },
   {
     "categoria": "Variedades",
@@ -332,17 +346,20 @@
   {
     "categoria": "Películas y Series",
     "nombre": "AMC",
-    "url_logo": "/images/dgo/a_m_amc_fundo_escuro.png"
+    "url_logo": "/images/dgo/a_m_amc_fundo_escuro.png",
+    "logoBlanco": true
   },
   {
     "categoria": "Películas y Series",
     "nombre": "WARNER CHANNEL",
-    "url_logo": "/images/dgo/0_0_0000_all_l_warner-logo_warner_2018_-_blanco_1.png"
+    "url_logo": "/images/dgo/0_0_0000_all_l_warner-logo_warner_2018_-_blanco_1.png",
+    "logoBlanco": true
   },
   {
     "categoria": "Películas y Series",
     "nombre": "AXN",
-    "url_logo": "/images/dgo/a_x_axn_fundo_escuro_1.png"
+    "url_logo": "/images/dgo/a_x_axn_fundo_escuro_1.png",
+    "logoBlanco": true
   },
   {
     "categoria": "Películas y Series",
@@ -352,7 +369,8 @@
   {
     "categoria": "Películas y Series",
     "nombre": "FX",
-    "url_logo": "/images/dgo/f_x_fx_fundo_escuro.png"
+    "url_logo": "/images/dgo/f_x_fx_fundo_escuro.png",
+    "logoBlanco": true
   },
   {
     "categoria": "Películas y Series",
@@ -372,27 +390,32 @@
   {
     "categoria": "Películas y Series",
     "nombre": "STAR CHANNEL",
-    "url_logo": "/images/dgo/s_t_star_channel.png"
+    "url_logo": "/images/dgo/s_t_star_channel.png",
+    "logoBlanco": true
   },
   {
     "categoria": "Películas y Series",
     "nombre": "CINECANAL",
-    "url_logo": "/images/dgo/5_0_507_para_fondo_negro_2_1.png"
+    "url_logo": "/images/dgo/5_0_507_para_fondo_negro_2_1.png",
+    "logoBlanco": true
   },
   {
     "categoria": "Películas y Series",
     "nombre": "STUDIO UNIVERSAL",
-    "url_logo": "/images/dgo/s_t_studio_universal.png"
+    "url_logo": "/images/dgo/s_t_studio_universal.png",
+    "logoBlanco": true
   },
   {
     "categoria": "Películas y Series",
     "nombre": "TNT",
-    "url_logo": "/images/dgo/t_n_tnt_fundo_escuro.png"
+    "url_logo": "/images/dgo/t_n_tnt_fundo_escuro.png",
+    "logoBlanco": true
   },
   {
     "categoria": "Películas y Series",
     "nombre": "TNT SERIES",
-    "url_logo": "/images/dgo/t_n_tnt_series.png"
+    "url_logo": "/images/dgo/t_n_tnt_series.png",
+    "logoBlanco": true
   },
   {
     "categoria": "Películas y Series",
@@ -432,7 +455,8 @@
   {
     "categoria": "Infantiles",
     "nombre": "BABY TV",
-    "url_logo": "/images/dgo/l_o_logo_babytv.png"
+    "url_logo": "/images/dgo/l_o_logo_babytv.png",
+    "logoBlanco": true
   },
   {
     "categoria": "Infantiles",
@@ -442,12 +466,14 @@
   {
     "categoria": "Infantiles",
     "nombre": "CARTOON NETWORK",
-    "url_logo": "/images/dgo/c_n_cn_brand_logo_1color_white_1_1.png"
+    "url_logo": "/images/dgo/c_n_cn_brand_logo_1color_white_1_1.png",
+    "logoBlanco": true
   },
   {
     "categoria": "Infantiles",
     "nombre": "DISNEY JUNIOR",
-    "url_logo": "/images/dgo/d_i_disney-junior.png"
+    "url_logo": "/images/dgo/d_i_disney-junior.png",
+    "logoBlanco": true
   },
   {
     "categoria": "Infantiles",
@@ -482,7 +508,8 @@
   {
     "categoria": "Shows y Música",
     "nombre": "MTV",
-    "url_logo": "/images/dgo/m_t_mtv_blanco_1_1.png"
+    "url_logo": "/images/dgo/m_t_mtv_blanco_1_1.png",
+    "logoBlanco": true
   },
   {
     "categoria": "Noticias",
@@ -492,7 +519,8 @@
   {
     "categoria": "Noticias",
     "nombre": "RCN Notícias",
-    "url_logo": "/images/dgo/r_c_rcnnoticiasbgcolor.png"
+    "url_logo": "/images/dgo/r_c_rcnnoticiasbgcolor.png",
+    "logoBlanco": true
   },
   {
     "categoria": "Noticias",
@@ -587,7 +615,8 @@
   {
     "categoria": "Cultura y Documental",
     "nombre": "DISCOVERY ID",
-    "url_logo": "/images/dgo/d_i_discovery_id_fundo_escuro.png"
+    "url_logo": "/images/dgo/d_i_discovery_id_fundo_escuro.png",
+    "logoBlanco": true
   },
   {
     "categoria": "Cultura y Documental",
@@ -597,7 +626,8 @@
   {
     "categoria": "Cultura y Documental",
     "nombre": "DISCOVERY CHANNEL",
-    "url_logo": "/images/dgo/d_i_discovery_fundo_escuro.png"
+    "url_logo": "/images/dgo/d_i_discovery_fundo_escuro.png",
+    "logoBlanco": true
   },
   {
     "categoria": "Cultura y Documental",
@@ -607,7 +637,8 @@
   {
     "categoria": "Cultura y Documental",
     "nombre": "NATIONAL GEOGRAPHIC",
-    "url_logo": "/images/dgo/n_a_national_geo_fundo_escuro.png"
+    "url_logo": "/images/dgo/n_a_national_geo_fundo_escuro.png",
+    "logoBlanco": true
   },
   {
     "categoria": "Cultura y Documental",

@@ -19,10 +19,53 @@
 
 	let { children: _children } = $props();
 
+	// Datos estructurados (JSON-LD) para que Google entienda la marca, la zona de
+	// cobertura y los datos de contacto. Ayuda al SEO local y a que se muestre
+	// info de la empresa en los resultados de búsqueda.
+	const orgSchema = {
+		'@context': 'https://schema.org',
+		'@graph': [
+			{
+				'@type': 'Organization',
+				'@id': 'https://www.sista.com.ar/#organization',
+				name: 'Sista',
+				url: 'https://www.sista.com.ar/',
+				logo: 'https://www.sista.com.ar/images/Sista-logo-violeta.svg',
+				description:
+					'Internet por fibra óptica y TV en Ensenada, Punta Lara y Tolosa. Alta velocidad, instalación rápida y soporte local.',
+				telephone: '+5492213541906',
+				address: {
+					'@type': 'PostalAddress',
+					streetAddress: 'Av. Almirante Brown 3064',
+					addressLocality: 'Punta Lara',
+					addressRegion: 'Buenos Aires',
+					addressCountry: 'AR'
+				},
+				areaServed: [
+					{ '@type': 'City', name: 'Ensenada' },
+					{ '@type': 'City', name: 'Punta Lara' },
+					{ '@type': 'City', name: 'Tolosa' }
+				],
+				sameAs: [
+					'https://www.facebook.com/SISTA.internet/',
+					'https://www.instagram.com/sista.internet/'
+				]
+			},
+			{
+				'@type': 'WebSite',
+				'@id': 'https://www.sista.com.ar/#website',
+				url: 'https://www.sista.com.ar/',
+				name: 'Sista',
+				publisher: { '@id': 'https://www.sista.com.ar/#organization' }
+			}
+		]
+	};
+
 	const allowedPrefixes = [
 		'/',
 		'/tv',
 		'/precios',
+		'/telefonia',
 		'/formasdepago',
 		'/acerca-de',
 		'/dgo',
@@ -95,6 +138,9 @@
 
 <svelte:head>
 	{#if isAllowedPath}
+		<!-- Datos estructurados (Organización + WebSite) -->
+		{@html `<script type="application/ld+json">${JSON.stringify(orgSchema)}</script>`}
+
 		<!-- Google Tag Manager -->
 		<script>
 			(function (w, d, s, l, i) {

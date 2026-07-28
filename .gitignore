@@ -25,3 +25,11 @@ Thumbs.db
 # Vite
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# Scratch / debug
+repro_tmp.mjs
+
+# Documentos internos que NO deben servirse publicos desde static/
+static/Wireframes objetivos inversion.html
+static/assets/CertificadoAfiliacion*.pdf
+static/images/tv/FB 7-223274 05_06_26.pdf

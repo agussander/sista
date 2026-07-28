@@ -1,32 +1,30 @@
 <script>
-	import Precios from './../../../routes/admin/_components/mantenimiento/Dashboard/precios/Precios.svelte';
     import AnimatedLines from '$lib/components/features/AnimatedLines.svelte';
     import LlamenmeForm from './LlamenmeForm.svelte';
     import { fade, fly } from 'svelte/transition';
     import { onMount } from 'svelte';
-    import { scrollElement, setGlobalOptions,scrollTo } from 'svelte-scrolling';
-    import { page } from '$app/stores';
-    import { goto } from '$app/navigation';
+    import { scrollElement, setGlobalOptions } from 'svelte-scrolling';
     import { pb } from '$lib/pocketbase';
-    import { computeFormVisible } from '$lib/llamenme/visibility.js';
+    import { computeInCallWindow } from '$lib/llamenme/visibility.js';
     import { fetchOverride } from '$lib/llamenme/config.js';
 
     setGlobalOptions({offset: -100});
 
     let mounted = false;
-    let showLlamenme = false;
+    // El form "quiero que me llamen" se muestra siempre. inCallWindow decide si,
+    // al enviar, se avisa directo (dentro del horario 9–16:40 L–V ART, o forzado
+    // "abierto") o se abre el modal de preferencia (fuera de horario / "cerrado").
+    // Default con horario real hasta que llega el override del admin.
+    let inCallWindow = computeInCallWindow('auto');
 
     const handleChipClick = () => {
         scrollElement('cobertura');
     };
 
-    // El form "quiero que me llamen" se muestra según el horario de atención
-    // (lunes a viernes de 9:30 a 16:30 ART), salvo que un admin lo haya forzado
-    // abierto o cerrado desde el panel (ver src/lib/llamenme/visibility.js).
     onMount(async () => {
         mounted = true;
         const override = await fetchOverride(pb);
-        showLlamenme = computeFormVisible(override);
+        inCallWindow = computeInCallWindow(override);
     });
 </script>
 
@@ -34,7 +32,7 @@
     <div class="hero-content">
         <div class="text">
             {#if mounted}
-                <img class="logo-sista" src="/images/Sista-logo-violeta.svg" alt="logo-sista"
+                <img class="logo-sista" src="/images/logo-sista.svg" alt="logo-sista"
                      transition:fade={{ duration: 600, delay: 0 }}>
                 <h1 transition:fly={{ y: 30, duration: 700, delay: 200 }}>Internet por <br> Fibra Óptica</h1>
                 <div class="wifi-tv" transition:fly={{ y: 30, duration: 700, delay: 400 }}>
@@ -69,9 +67,9 @@
                 </div>
             {/if}
         </div>
-        {#if mounted && showLlamenme}
+        {#if mounted}
             <div class="form-col" transition:fly={{ y: 30, duration: 700, delay: 800 }}>
-                <LlamenmeForm />
+                <LlamenmeForm {inCallWindow} />
             </div>
         {/if}
     </div>
@@ -87,8 +85,17 @@
     .hero-section {
         position: relative;
         width: 100%;
-        height: 100vh;
-
+        height: 110dvh;
+        /* Violeta siempre, en CSS plano (no depende del tamaño del SVG interno,
+           que en mobile es más chico que el hero -- ver .lines-wrapper). */
+        background: var(--violeta1);
+        /* overflow-x: hidden; */
+        /* overflow-y visible: al scrollear, el relleno gris del SVG puede extenderse
+           un poco más allá del borde inferior del hero sin recortarse en línea recta. */
+        overflow-y: visible;
+        /* crea stacking context para que el wrapper de líneas (z-index:-10) se
+           pinte ENCIMA de este fondo blanco y no detrás de él. */
+        isolation: isolate;
     }
     .hero-content {
         position: relative;
@@ -105,29 +112,50 @@
     .logo-sista{
         max-width: 10em;
     }
+    /* El SVG de líneas cubre todo el hero para que el violeta llegue hasta arriba
+       y el límite violeta/blanco caiga exactamente sobre la línea de afuera. */
     .lines-wrapper {
         position: absolute;
-        width: 100%;
-        height: 100%;
+        inset: 0;
         z-index: -10;
-        overflow: hidden;
-        bottom: -25%;
     }
     .lines-cont {
-        scale: 1.1;
         position: absolute;
-        width: 100%;
-        height: 100%;
+        inset: 0;
         z-index: 10;
         overflow: hidden;
+        /* Sangría: el SVG se agranda un poco más allá del contenedor (que
+           recorta con overflow:hidden), así los extremos irregulares de las
+           líneas (donde no terminan parejas) quedan ocultos fuera de la vista
+           en vez de generar un borde recto feo en el límite del hero. */
+        scale: 1.1;
+    }
+    /* Cuando floatUpDown baja el fill-blanco, el fondo violeta del hero asoma
+       en el borde inferior del contenedor (franja fija en el bottom). Ancla
+       estática con el gris de página, detrás del SVG. */
+    .lines-cont::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 2rem;
+        background: var(--background);
+        z-index: 0;
+        pointer-events: none;
+    }
+    .lines-cont :global(.animated-lines) {
+        position: relative;
+        z-index: 1;
     }
     h1 {
         font-size: 3rem;
         text-transform: uppercase;
         font-weight: 900;
-        color: var(--magenta);
+        color: #fff;
         line-height: 1.2;
     }
+    .wifi-tv p { color: #fff; }
     .text {
         position: relative;
         top: 4em;
@@ -186,7 +214,7 @@
         }
         .hero-section {
             height: auto;
-            min-height: 100vh;
+            min-height: 130vh;
             padding-bottom: 3em;
             display: flex;
             flex-direction: column;
@@ -195,21 +223,42 @@
             flex: 1;
         }
         .form-col {
-            margin-top: auto;
-        }
-        .lines-wrapper {
-            bottom: -10%;
+            margin-top:6em;
+            margin-bottom: 10em;
         }
         .text {
-            top: 2em;
+            top: 4em;
+        }
+        /* En mobile el hero-section es angosto y muy alto (contenido apilado
+           + min-height:100vh), y el SVG estira con preserveAspectRatio="none"
+           de forma independiente en X e Y -> con un contenedor tan alto en
+           relación al ancho, la curva queda deforme (mucho más "parada" que
+           en desktop). Achicamos el alto del contenedor de líneas -acercando
+           su proporción ancho/alto a la de desktop- y lo anclamos abajo. El
+           fondo violeta es CSS aparte (arriba), no depende de este tamaño. */
+        .lines-wrapper{
+            overflow-x: hidden;
+        }
+        .lines-cont {
+            inset: auto 0 0 0;
+            height: 30em;
         }
     }
     @media (min-width: 768px) {
         .hero-section{
             padding-top: 2em;
         }
+        /* El SVG con relleno gris solo cubre la zona inferior del hero (como
+           antes con bottom:-40%). Si ocupa todo el alto, el fill-blanco tapa
+           el violeta CSS en la parte superior y se ve una franja clara. */
+        .lines-wrapper,
+        .lines-cont {
+            inset: auto 0 -4em 0;
+            height: calc(90% + 4em);
+            top: 6em;
+        }
         .text {
-            top: 4em;
+            top: 5em;
             left: 4em;
         }
         h1{
@@ -217,9 +266,6 @@
         }
         .logo-sista{
             width: 12em;
-        }
-        .lines-wrapper{
-            bottom: -40%;
         }
         .hero-content {
             flex-direction: row;
@@ -229,9 +275,7 @@
             flex: 1;
             display: flex;
             justify-content: center;
-            padding: 0;
+            margin-top: 10em;
         }
-
     }
 </style>
-

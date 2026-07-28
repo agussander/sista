@@ -4,8 +4,8 @@ import { MetaTags } from "svelte-meta-tags";
 </script>
 
 <MetaTags
-title = 'Sista - Acerca de'
-description = 'Conozca más sobre nuestra empresa'
+title = 'Acerca de Sista · Internet por fibra óptica en Ensenada'
+description = 'Conocé a Sista, proveedor de Internet por fibra óptica y TV en Ensenada, Punta Lara y Tolosa. Servicio local, instalación rápida y soporte cercano.'
 ></MetaTags>
 <section>
     <h1>Acerca de Sista</h1>

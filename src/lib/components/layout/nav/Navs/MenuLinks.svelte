@@ -20,7 +20,7 @@ const clickHandler = (ref)=>{
 
 <style>
 span {
-    color: var(--violeta1);
+    color: var(--nav-link-color, var(--violeta1));
     font-size: 1rem;
     margin-left: 1.5em;
     cursor:pointer;
@@ -32,7 +32,7 @@ span {
     span{
         margin-bottom: 1em;
         margin-left: 0;
-        color: var(--violeta1);
+        color: var(--nav-link-color, var(--violeta1));
     }
 }
 </style>

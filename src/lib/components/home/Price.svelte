@@ -250,13 +250,6 @@ function onKey(e) {
     <span class="ayuda-arrow" aria-hidden="true">→</span>
 </a>
 
-<a href="/elegirplan" class="ayuda-card">
-    <span class="ayuda-text">
-        <strong>Calculá tu plan</strong>
-    </span>
-    <span class="ayuda-arrow" aria-hidden="true">→</span>
-</a>
-
 <div class="cta-wrap">
     <a
         href="https://api.whatsapp.com/send?phone=5492213541906&text=Hola!%20Quisiera%20información%20sobre%20los%20planes"
@@ -270,6 +263,8 @@ function onKey(e) {
         Solicitar ahora
     </a>
 </div>
+
+<a href="/elegirplan" class="calcula-link">Calculá tu plan →</a>
 
 {#if showSimetrico}
     <SimetricoModal onclose={closeSimetrico} />
@@ -292,6 +287,8 @@ function onKey(e) {
     cursor: pointer;
     text-decoration: none;
     transition: transform ease 150ms, box-shadow ease 150ms;
+    -webkit-tap-highlight-color: transparent;
+    tap-highlight-color: transparent;
 }
 .ayuda-card:hover {
     transform: translateY(-2px);
@@ -312,6 +309,20 @@ function onKey(e) {
     color: var(--magenta);
     font-size: 1.4rem;
     font-weight: 700;
+}
+
+.calcula-link {
+    display: block;
+    width: fit-content;
+    margin: 1rem auto 0;
+    color: var(--violeta1);
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-align: center;
+    text-decoration: none;
+}
+.calcula-link:hover {
+    color: var(--magenta);
 }
 
 /* ── Contenedor ── */
@@ -356,6 +367,8 @@ function onKey(e) {
     color: inherit;
     text-align: left;
     cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    tap-highlight-color: transparent;
 }
 
 .eyebrow {

@@ -1,9 +1,9 @@
 <script>
-import {paso, pasoCompleto} from './bajaStore'
+import { paso } from './bajaStore';
 
 let { disabled = false, siguiente } = $props();
 
-let isAble = $derived(($pasoCompleto==$paso || $paso==0 || $paso==5) && !disabled);
+let isAble = $derived(!disabled);
 
 let siguienteText = $derived($paso==4 || $paso==5 ? 'Solicitar Baja' : 'Siguiente')
 
@@ -34,10 +34,6 @@ const handleSiguiente = ()=>{
         >Atrás</button>
     {/if}
 </div>
-<!-- <button
-onclick={()=>console.log('Debug - paso:', $paso, 'pasoCompleto:', $pasoCompleto, 'isAble:', isAble)}>
-    Debug
-</button> -->
 
 <style>
 .buttons{

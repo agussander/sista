@@ -61,7 +61,7 @@ onMount(async () => {
 <svelte:window bind:scrollY={scrollY} bind:innerHeight={h}></svelte:window>
 
 {#if mounted}
-    <nav class:down={navDown} transition:fly={{ y: -20, duration: 500 }}>
+    <nav class:down={navDown} class:on-hero={!navDown} transition:fly={{ y: -20, duration: 500 }}>
         <img on:click={handleLogo} class="logo" class:show={showLogo} src="/images/Sista-logo-violeta.svg" alt="Sista logo">
         <div class="center">
             <MenuLinks></MenuLinks>
@@ -75,9 +75,11 @@ onMount(async () => {
                 </button>
                 {#if showMasMenu}
                     <div class="mas-dropdown">
+                       
                         <a href="/formasdepago" on:click={() => handleMasLink('/formasdepago')}>Formas de pago</a>
                         <a href="/acerca-de" on:click={() => handleMasLink('/acerca-de')}>Sobre nosotros</a>
                         <a href="/precios" on:click={() => handleMasLink('/precios')}>Precios</a>
+                       <a href="/telefonia" on:click={() => handleMasLink('/telefonia')}>Telefonía</a>
                     </div>
                 {/if}
             </div>
@@ -109,6 +111,11 @@ nav {
 .down{
     background: white;
     box-shadow: 0 0.4em .5em rgba(0, 0, 0, 0.05);
+}
+/* Mientras el nav flota transparente sobre el hero (sin scroll, en el home),
+   el hero tiene fondo violeta -> los links pasan a blanco para ser legibles. */
+.on-hero{
+    --nav-link-color: #fff;
 }
 .center{
     display: flex;
@@ -158,7 +165,7 @@ nav {
 }
 
 a {
-    color: var(--violeta1);
+    color: var(--nav-link-color, var(--violeta1));
     font-size: 1rem;
     margin-left: 1.5em;
     cursor:pointer;
@@ -171,7 +178,7 @@ a {
 }
 
 .mas-button {
-    color: var(--violeta1);
+    color: var(--nav-link-color, var(--violeta1));
     font-size: 1rem;
     background: none;
     border: none;
@@ -186,7 +193,7 @@ a {
 }
 
 .mas-button:hover {
-    color: var(--violeta1);
+    color: var(--nav-link-color, var(--violeta1));
 }
 
 .dropdown-arrow {
@@ -239,7 +246,12 @@ a {
     width: 1.8em;
     height: 1.8em;
     margin-right: 0;
-    transition: background ease 400ms;
+    transition: filter ease 400ms;
+}
+
+/* Sobre el hero violeta el ícono violeta se invierte a blanco para ser visible. */
+.on-hero .wsp-icon {
+    filter: brightness(0) invert(1);
 }
 
 </style>

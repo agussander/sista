@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatPrice, clampStep, buildPlanParams, parsePlanParams } from '$lib/components/elegirplan/data.js';
+import { formatPrice, clampStep, buildPlanParams, parsePlanParams, getFlow } from '$lib/components/elegirplan/data.js';
 
 describe('vitest setup', () => {
 	it('resuelve el alias $lib e importa data.js', () => {
@@ -52,6 +52,23 @@ describe('clampStep', () => {
 	});
 });
 
+describe('getFlow', () => {
+	it('Internet+TV incluye el paso de promo por defecto', () => {
+		const w = { tipo: 'tv', promo: false, noPromo: false };
+		expect(getFlow(w)).toEqual(['tipo', 'promo', 'internet', 'tv', 'adicionales', 'resumen']);
+	});
+
+	it('con noPromo (sinpromo=1) Internet+TV salta la promo y arma a medida', () => {
+		const w = { tipo: 'tv', promo: false, noPromo: true };
+		expect(getFlow(w)).toEqual(['tipo', 'internet', 'tv', 'adicionales', 'resumen']);
+	});
+
+	it('con noPromo, antes de elegir el tipo la barra ya excluye la promo', () => {
+		const w = { tipo: null, promo: false, noPromo: true };
+		expect(getFlow(w)).toEqual(['tipo', 'internet', 'tv', 'adicionales', 'resumen']);
+	});
+});
+
 describe('buildPlanParams', () => {
 	it('estado default sólo serializa el paso', () => {
 		const w = { step: 'tipo', tipo: null, internetPlan: null, tvPlatform: null, promo: false, addons: {} };
@@ -85,6 +102,11 @@ describe('buildPlanParams', () => {
 			'paso=adicionales&tipo=internet&plan=home&add=pack_futbol,telefono'
 		);
 	});
+
+	it('noPromo serializa sinpromo=1', () => {
+		const w = { step: 'tipo', tipo: null, internetPlan: null, tvPlatform: null, promo: false, noPromo: true, addons: {} };
+		expect(decodeURIComponent(buildPlanParams(w).toString())).toBe('paso=tipo&sinpromo=1');
+	});
 });
 
 describe('parsePlanParams', () => {
@@ -96,6 +118,7 @@ describe('parsePlanParams', () => {
 			internetPlan: null,
 			tvPlatform: null,
 			promo: false,
+			noPromo: false,
 			addons: { pack_futbol: false, cine: false, telefono: false }
 		});
 	});
@@ -110,8 +133,15 @@ describe('parsePlanParams', () => {
 			internetPlan: 'power',
 			tvPlatform: 'gigared',
 			promo: true,
+			noPromo: false,
 			addons: { pack_futbol: false, cine: true, telefono: true }
 		});
+	});
+
+	it('sinpromo=1 → noPromo true', () => {
+		const r = parsePlanParams(new URLSearchParams('tipo=tv&sinpromo=1'));
+		expect(r.noPromo).toBe(true);
+		expect(r.tipo).toBe('tv');
 	});
 
 	it('descarta valores inválidos', () => {

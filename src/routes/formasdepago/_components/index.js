@@ -7,7 +7,7 @@ export const mediosDePago= readable([
         opciones:
         [
         {title:'Mercado Pago', image:'QR-MercadoPago.jpg',pic:'mercadopago.jpeg'},
-        {title: 'Cuenta DNI',image:'/images/pago/cdni.png', pic:'cuenta-dni.png'}
+        {title: 'Cuenta DNI',image:'/images/pago/cdni.png', pic:'cuenta-dni.png', rounded:true}
         ],
     },
     {
@@ -15,7 +15,7 @@ export const mediosDePago= readable([
         title:'Transferencia / Depósito bancario',
         opciones:
         [
-        {title:'CBU único por cliente',pic:'transferencia.png'},
+        {title:'CBU único por cliente',pic:'transferencia.png',mono:true},
         ]
     },
     {
@@ -32,10 +32,10 @@ export const mediosDePago= readable([
         title: 'Otros',
         opciones:
         [
-        {title: 'Rapipago', pic: 'rapipago.webp'},
-        {title: 'Tarjeta de Crédito',pic:'credito.png'},
-        {title: 'Cheques',pic:'cheque.png'},
-        {title: 'Pago en nuestra oficina',pic:'oficina.png'}
+        {title: 'Efectivo',pic:'efectivo.svg',mono:true},
+        {title: 'Rapipago / Pagofacil', pic: 'rapipago.webp', pic2: 'PagoFacil.svg', rounded:true},
+        {title: 'Tarjetas',pic:'credito.png',mono:true},
+        {title: 'Cheques',pic:'cheque.png',mono:true}
         ]
     },
     {

@@ -14,6 +14,8 @@ let h = 0;
 let mounted = false;
 
 $: navDown = (scrollY > h - 200) || ($page.url.pathname !== '/');
+$: onHome = $page.url.pathname === '/';
+$: reserveNavSpace = !onHome || navDown;
 
 onMount(async () => {
     // Esperar un tick para que el estado se evalúe correctamente
@@ -26,7 +28,7 @@ onMount(async () => {
 <svelte:window bind:scrollY={scrollY} bind:innerHeight={h}></svelte:window>
 
 {#if mounted}
-    <div class="fixed-cont" style="height:{y-1}px">
+    <div class="fixed-cont" style="height:{reserveNavSpace && y ? y - 1 : 0}px">
         <nav class="navbar" class:down={navDown} transition:fly={{ y: -20, duration: 500 }}>
             <div class="flex" bind:clientHeight={y}>
                 <img on:click={()=> goto('/')} class="logo" src="/images/Sista-logo-violeta.svg" alt="Sista logo">
@@ -58,6 +60,7 @@ onMount(async () => {
                 <a class="menu-link" href="/acerca-de" on:click={()=>menu=false}>Sobre nosotros</a>
                 <a class="menu-link" href="/precios" on:click={()=>menu=false}>Precios</a>
                 <a class="menu-link" href="/tv" on:click={()=>menu=false}>TV</a>
+              <a class="menu-link" href="/telefonia" on:click={()=>menu=false}>Telefonía</a>
             </div>
 
             <div class="menu-actions">
@@ -284,9 +287,19 @@ nav.down {
     width: 1.8em;
     height: 1.8em;
     display: inline-block;
-    transition: background ease 400ms;
+    transition: filter ease 400ms;
     margin-left: 1em;
     margin-right:0;
+}
+
+/* Mientras el nav flota transparente sobre el hero violeta (sin scroll, en el
+   home), el hamburger y el ícono de WhatsApp violeta se invierten a blanco. */
+nav:not(.down) .wsp-icon {
+    filter: brightness(0) invert(1);
+}
+
+nav:not(.down) .menu-icon span {
+    background: #fff;
 }
 
 nav.down .wsp-icon {
