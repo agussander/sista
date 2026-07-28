@@ -2,7 +2,12 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { prunePhpFiles, writeRobotsTxt, findRemainingPhpFiles } from './prepareNodeBuild.js';
+import {
+	prunePhpFiles,
+	writeRobotsTxt,
+	findRemainingPhpFiles,
+	writeServerEntry
+} from './prepareNodeBuild.js';
 
 /** @type {string} */
 let dir;
@@ -153,5 +158,75 @@ describe('writeRobotsTxt', () => {
 		writeRobotsTxt(dir, { siteEnv: 'beta' });
 
 		expect(fs.readFileSync(path.join(dir, 'robots.txt'), 'utf8')).toContain('Disallow: /');
+	});
+});
+
+describe('writeServerEntry', () => {
+	/** Simula el arbol que deja adapter-node, mas el modulo fuente del header. */
+	function setupBuild() {
+		write('handler.js', 'export function handler() {}');
+		const robotsHeaderPath = path.join(dir, 'fuente-robotsHeader.js');
+		fs.writeFileSync(
+			robotsHeaderPath,
+			"export const NOINDEX_VALUE = 'noindex, nofollow';\nexport function shouldBlockIndexing(s) { return s !== 'production'; }\n"
+		);
+		return robotsHeaderPath;
+	}
+
+	it('escribe server.js dentro del build', () => {
+		const robotsHeaderPath = setupBuild();
+
+		writeServerEntry(dir, { robotsHeaderPath });
+
+		expect(fs.existsSync(path.join(dir, 'server.js'))).toBe(true);
+	});
+
+	it('copia robotsHeader.js al build para no depender de src/', () => {
+		const robotsHeaderPath = setupBuild();
+
+		writeServerEntry(dir, { robotsHeaderPath });
+
+		const copiado = fs.readFileSync(path.join(dir, 'robotsHeader.js'), 'utf8');
+		expect(copiado).toContain('shouldBlockIndexing');
+		expect(copiado).toContain('NOINDEX_VALUE');
+	});
+
+	it('el server.js generado resuelve todo con rutas hermanas', () => {
+		const robotsHeaderPath = setupBuild();
+
+		writeServerEntry(dir, { robotsHeaderPath });
+
+		const generado = fs.readFileSync(path.join(dir, 'server.js'), 'utf8');
+		expect(generado).toContain("from './handler.js'");
+		expect(generado).toContain("from './robotsHeader.js'");
+
+		// Hostinger resuelve el entry dentro del output dir: un import que salga
+		// de ahi no se encuentra y el arranque falla con 503. Se miran solo los
+		// imports reales, no los comentarios que hablan de rutas.
+		const specs = [...generado.matchAll(/from\s+'([^']+)'/g)].map((m) => m[1]);
+		expect(specs.length).toBeGreaterThan(0);
+		for (const spec of specs) {
+			if (spec.startsWith('node:')) continue;
+			expect(spec.startsWith('./')).toBe(true);
+			expect(spec).not.toContain('..');
+			expect(spec).not.toContain('build-node');
+		}
+	});
+
+	it('setea el header antes de delegar en el handler', () => {
+		const robotsHeaderPath = setupBuild();
+
+		writeServerEntry(dir, { robotsHeaderPath });
+
+		const generado = fs.readFileSync(path.join(dir, 'server.js'), 'utf8');
+		expect(generado.indexOf('setHeader')).toBeLessThan(generado.indexOf('handler(req, res)'));
+	});
+
+	it('falla si no encuentra el modulo fuente del header', () => {
+		write('handler.js', 'export function handler() {}');
+
+		expect(() =>
+			writeServerEntry(dir, { robotsHeaderPath: path.join(dir, 'no-existe.js') })
+		).toThrow();
 	});
 });

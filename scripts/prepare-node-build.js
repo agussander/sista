@@ -6,9 +6,15 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { prunePhpFiles, writeRobotsTxt, findRemainingPhpFiles } from './lib/prepareNodeBuild.js';
+import {
+	prunePhpFiles,
+	writeRobotsTxt,
+	findRemainingPhpFiles,
+	writeServerEntry
+} from './lib/prepareNodeBuild.js';
 
-const clientDir = path.resolve('build-node/client');
+const buildDir = path.resolve('build-node');
+const clientDir = path.join(buildDir, 'client');
 
 if (!fs.existsSync(clientDir)) {
 	console.error(`[prepare-node-build] No existe ${clientDir}. Corre el build primero.`);
@@ -34,3 +40,10 @@ console.log(
 		? `[prepare-node-build] robots.txt bloqueado (SITE_ENV=${siteEnv ?? 'sin definir'}).`
 		: '[prepare-node-build] robots.txt de produccion conservado.'
 );
+
+// El entry se emite adentro del build porque Hostinger resuelve el `entry_file`
+// relativo al output directory, no a la raiz del proyecto.
+const entryPath = writeServerEntry(buildDir, {
+	robotsHeaderPath: path.resolve('src/lib/server/robotsHeader.js')
+});
+console.log(`[prepare-node-build] entry emitido en ${path.relative(process.cwd(), entryPath)}.`);

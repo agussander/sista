@@ -11,7 +11,11 @@
  * Seteando el header aca, antes de delegar en `handler`, queda cubierto todo:
  * prerenderizadas, assets estaticos y respuestas dinamicas.
  *
- * Start command en hPanel: `node server.js`
+ * Este archivo es para correr la app LOCALMENTE desde la raiz del repo. El entry
+ * que se despliega NO es este: `prepare-node-build.js` emite un `server.js`
+ * equivalente dentro de `build-node/`, porque Hostinger resuelve el `entry_file`
+ * relativo al output directory y desde ahi no se ve la raiz del proyecto.
+ * Mantener los dos en sync, o correr `npm run build:node` y usar el generado.
  */
 import { createServer } from 'node:http';
 import { handler } from './build-node/handler.js';

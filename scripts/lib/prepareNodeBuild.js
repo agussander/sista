@@ -130,3 +130,73 @@ export function writeRobotsTxt(dir, { siteEnv }) {
 	fs.writeFileSync(path.join(dir, 'robots.txt'), BLOCKED_ROBOTS);
 	return true;
 }
+
+/** Cuerpo del entry que se emite dentro del build. Ver `writeServerEntry`. */
+const SERVER_ENTRY = `/**
+ * ARCHIVO GENERADO por scripts/lib/prepareNodeBuild.js — no editarlo a mano.
+ *
+ * Envuelve el \`handler\` de adapter-node en vez de usar su \`index.js\`, porque
+ * \`hooks.server.js\` NO alcanza para el header \`X-Robots-Tag\`: adapter-node
+ * sirve las paginas prerenderizadas desde un middleware de archivos estaticos
+ * que corre ANTES del handler de SvelteKit, asi que el hook nunca se ejecuta
+ * para ellas. Y como todo el sitio es \`prerender = true\`, sin esto ninguna
+ * pagina real llevaria el header.
+ *
+ * Vive DENTRO del build y solo importa hermanos: Hostinger resuelve el
+ * \`entry_file\` relativo al output directory, asi que un import que salga de
+ * aca (\`../src/...\`) no se encuentra y el arranque falla con 503.
+ */
+import { createServer } from 'node:http';
+import { handler } from './handler.js';
+import { shouldBlockIndexing, NOINDEX_VALUE } from './robotsHeader.js';
+
+const port = Number(process.env.PORT) || 3000;
+const host = process.env.HOST || '0.0.0.0';
+
+// Se evalua una sola vez al arrancar: \`SITE_ENV\` no cambia en caliente.
+const blockIndexing = shouldBlockIndexing(process.env.SITE_ENV);
+
+const server = createServer((req, res) => {
+	if (blockIndexing) {
+		res.setHeader('X-Robots-Tag', NOINDEX_VALUE);
+	}
+
+	handler(req, res);
+});
+
+server.listen(port, host, () => {
+	console.log(
+		\`[server] escuchando en http://\${host}:\${port} — indexacion \${
+			blockIndexing ? 'BLOQUEADA' : 'permitida'
+		} (SITE_ENV=\${process.env.SITE_ENV ?? 'sin definir'})\`
+	);
+});
+`;
+
+/**
+ * Emite el entry de produccion (`server.js`) dentro del output del build, junto
+ * con una copia de `robotsHeader.js`.
+ *
+ * Hostinger resuelve el `entry_file` **relativo al output directory**, no a la
+ * raiz del proyecto. Un `server.js` en la raiz que importe `./build-node/...`
+ * nunca lo encuentra: el proceso no arranca y el sitio responde 503. Por eso el
+ * entry se genera adentro y solo referencia hermanos.
+ *
+ * `robotsHeader.js` se copia (en vez de importarse desde `src/`) para que el
+ * build sea autocontenido y la regla siga viviendo en un unico lugar del fuente.
+ *
+ * @param {string} buildDir Raiz del output de adapter-node (`build-node/`)
+ * @param {{ robotsHeaderPath: string }} options Ruta al modulo fuente del header
+ * @returns {string} Ruta absoluta del `server.js` emitido
+ */
+export function writeServerEntry(buildDir, { robotsHeaderPath }) {
+	// Falla ruidosamente si el fuente se movio: es preferible romper el build a
+	// desplegar un entry que no arranca.
+	const robotsHeader = fs.readFileSync(robotsHeaderPath, 'utf8');
+
+	fs.writeFileSync(path.join(buildDir, 'robotsHeader.js'), robotsHeader);
+
+	const entryPath = path.join(buildDir, 'server.js');
+	fs.writeFileSync(entryPath, SERVER_ENTRY);
+	return entryPath;
+}
