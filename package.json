@@ -8,6 +8,7 @@
 	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build",
+		"build:node": "ADAPTER=node vite build && node scripts/prepare-node-build.js",
 		"preview": "vite preview",
 		"test": "vitest run",
 		"test:watch": "vitest",
