@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { prunePhpFiles, writeRobotsTxt } from './prepareNodeBuild.js';
+import { prunePhpFiles, writeRobotsTxt, findRemainingPhpFiles } from './prepareNodeBuild.js';
 
 /** @type {string} */
 let dir;
@@ -68,6 +68,55 @@ describe('prunePhpFiles', () => {
 		write('index.html', '<html></html>');
 
 		expect(prunePhpFiles(dir)).toEqual([]);
+	});
+
+	it('borra un archivo llamado exactamente .php', () => {
+		write('assets/.php', '<?php echo "hidden";');
+
+		prunePhpFiles(dir);
+
+		expect(fs.existsSync(path.join(dir, 'assets/.php'))).toBe(false);
+	});
+
+	it('borra un symlink llamado evil.php', () => {
+		write('assets/real-target.txt', 'contenido real');
+		fs.symlinkSync(
+			path.join(dir, 'assets/real-target.txt'),
+			path.join(dir, 'assets/evil.php')
+		);
+
+		prunePhpFiles(dir);
+
+		expect(fs.existsSync(path.join(dir, 'assets/evil.php'))).toBe(false);
+		// el archivo apuntado no se toca, solo el symlink
+		expect(fs.existsSync(path.join(dir, 'assets/real-target.txt'))).toBe(true);
+	});
+});
+
+describe('findRemainingPhpFiles', () => {
+	it('devuelve lista vacia en un arbol limpio', () => {
+		write('index.html', '<html></html>');
+		write('assets/correo_template.html', '<html></html>');
+
+		expect(findRemainingPhpFiles(dir)).toEqual([]);
+	});
+
+	it('encuentra un .php dentro de un directorio symlinkeado', () => {
+		const realSubdir = fs.mkdtempSync(path.join(os.tmpdir(), 'prepare-node-build-target-'));
+		fs.writeFileSync(path.join(realSubdir, 'hidden.php'), '<?php');
+		fs.symlinkSync(realSubdir, path.join(dir, 'linked-dir'));
+
+		const remaining = findRemainingPhpFiles(dir);
+
+		expect(remaining).toEqual(['linked-dir/hidden.php']);
+
+		fs.rmSync(realSubdir, { recursive: true, force: true });
+	});
+
+	it('no falla con un symlink roto', () => {
+		fs.symlinkSync(path.join(dir, 'no-existe.php'), path.join(dir, 'broken.php'));
+
+		expect(() => findRemainingPhpFiles(dir)).not.toThrow();
 	});
 });
 

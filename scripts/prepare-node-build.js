@@ -6,7 +6,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { prunePhpFiles, writeRobotsTxt } from './lib/prepareNodeBuild.js';
+import { prunePhpFiles, writeRobotsTxt, findRemainingPhpFiles } from './lib/prepareNodeBuild.js';
 
 const clientDir = path.resolve('build-node/client');
 
@@ -17,6 +17,15 @@ if (!fs.existsSync(clientDir)) {
 
 const removed = prunePhpFiles(clientDir);
 console.log(`[prepare-node-build] ${removed.length} archivo(s) .php borrados del build.`);
+
+const remaining = findRemainingPhpFiles(clientDir);
+if (remaining.length > 0) {
+	console.error(
+		`[prepare-node-build] ABORTADO: quedaron ${remaining.length} archivo(s) .php en el build:`
+	);
+	for (const file of remaining) console.error(`  - ${file}`);
+	process.exit(1);
+}
 
 const siteEnv = process.env.SITE_ENV;
 const blocked = writeRobotsTxt(clientDir, { siteEnv });
