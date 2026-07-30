@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { handleFormSubmission } from './formHandler.js';
+import { handleFormSubmission, formDataToFields } from './formHandler.js';
 
 const CONFIG = {
 	subject: 'Contacto Web',
@@ -184,5 +184,27 @@ describe('handleFormSubmission', () => {
 		);
 
 		expect(sent[0].html).toContain('<h1>Contacto Web</h1>');
+	});
+});
+
+describe('formDataToFields', () => {
+	it('devuelve las entradas de texto como objeto plano', () => {
+		const form = new FormData();
+		form.append('nombre', 'Ada');
+		form.append('tel', '221');
+		form.append('mensaje', '');
+
+		expect(formDataToFields(form)).toEqual({ nombre: 'Ada', tel: '221', mensaje: '' });
+	});
+
+	it('descarta los File y conserva el resto', () => {
+		const form = new FormData();
+		form.append('nombre', 'Ada');
+		form.append('cv', new File(['contenido'], 'cv.pdf', { type: 'application/pdf' }));
+
+		const fields = formDataToFields(form);
+
+		expect(fields).toEqual({ nombre: 'Ada' });
+		expect('cv' in fields).toBe(false);
 	});
 });

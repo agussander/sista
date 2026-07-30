@@ -10,6 +10,23 @@
 import { renderMailTemplate } from './mailTemplate.js';
 
 /**
+ * Aplana el `FormData` de un POST a un objeto plano, quedandose solo con las
+ * entradas de texto. Los `File` se descartan: los pocos formularios que suben
+ * archivos los sacan del `FormData` aparte, para mandarlos como adjuntos.
+ *
+ * @param {FormData} form
+ * @returns {Record<string, string>}
+ */
+export function formDataToFields(form) {
+	/** @type {Record<string, string>} */
+	const fields = {};
+	for (const [key, value] of form.entries()) {
+		if (typeof value === 'string') fields[key] = value;
+	}
+	return fields;
+}
+
+/**
  * @typedef {object} FormConfig
  * @property {string} subject Asunto del mail y titulo del template
  * @property {Record<string, string>} fields Mapa `name` del input -> etiqueta del mail

@@ -1,6 +1,6 @@
 /** Reemplazo de `static/assets/send-form-contacto.php`. */
 import { json } from '@sveltejs/kit';
-import { handleFormSubmission } from '$lib/server/formHandler.js';
+import { handleFormSubmission, formDataToFields } from '$lib/server/formHandler.js';
 import { buildMailDeps } from '$lib/server/endpointDeps.js';
 
 // Tiene POST: no se puede prerenderizar.
@@ -24,12 +24,19 @@ const CONFIG = {
 
 /** @type {import('./$types').RequestHandler} */
 export async function POST({ request, getClientAddress }) {
-	const form = await request.formData();
-	/** @type {Record<string, string>} */
-	const fields = {};
-	for (const [key, value] of form.entries()) {
-		if (typeof value === 'string') fields[key] = value;
+	// Es un POST publico: un body multipart truncado o con un `Content-Type` que
+	// no corresponde hace tirar a `formData()`. Sin esto seria un 500 en vez del
+	// `{success, message}` que espera el JS de los formularios.
+	/** @type {FormData} */
+	let form;
+	try {
+		form = await request.formData();
+	} catch (error) {
+		console.error('[api/contacto] body invalido:', error);
+		return json({ success: false, message: 'error' });
 	}
+
+	const fields = formDataToFields(form);
 
 	return json(await handleFormSubmission(fields, CONFIG, buildMailDeps(getClientAddress())));
 }
