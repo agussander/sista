@@ -88,4 +88,18 @@ describe('renderMailTemplate', () => {
 		expect(html).toContain('<h2>Aviso</h2>');
 		expect(html).toContain('<strong>Nombre:</strong> Ada');
 	});
+
+	it('sustituye placeholders directos propios del template, no solo [title]', () => {
+		const html = renderMailTemplate('<p>[foo]</p>', { title: 'X', foo: 'hola' });
+		expect(html).toContain('<p>hola</p>');
+	});
+
+	it('escapa los placeholders directos, incluido [title], para no inyectar html', () => {
+		const html = renderMailTemplate(TEMPLATE, {
+			title: 'Nueva postulación - <script>alert(1)</script>'
+		});
+
+		expect(html).not.toContain('<script>alert(1)</script>');
+		expect(html).toContain('&lt;script&gt;');
+	});
 });

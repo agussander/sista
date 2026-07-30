@@ -75,8 +75,16 @@ export function renderMailTemplate(templateHtml, data) {
 		body = body.replaceAll('[data]', list);
 	}
 
+	// Estos placeholders directos incluyen [title], y title puede traer texto
+	// escrito por un visitante (p.ej. el asunto de una postulacion incluye el
+	// apellido que carga la persona en el formulario). Por eso se escapan igual
+	// que los valores de [data], a diferencia del PHP original, que los
+	// insertaba crudos y quedaba abierto a inyeccion de HTML en el mail.
 	for (const [key, value] of Object.entries(data)) {
-		body = body.replaceAll(`[${key}]`, value === null || value === undefined ? '' : String(value));
+		body = body.replaceAll(
+			`[${key}]`,
+			value === null || value === undefined ? '' : escapeHtml(String(value))
+		);
 	}
 
 	return body;
