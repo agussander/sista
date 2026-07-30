@@ -61,4 +61,15 @@ describe('createRecord', () => {
 		expect(res.ok).toBe(false);
 		expect(res.status).toBe(0);
 	});
+
+	it('devuelve ok false con status 0 si la request corta por timeout', async () => {
+		const res = await createRecord('https://pb', 'c', {}, {
+			fetchImpl: async () => {
+				throw new DOMException('The operation was aborted due to timeout', 'TimeoutError');
+			}
+		});
+
+		expect(res.ok).toBe(false);
+		expect(res.status).toBe(0);
+	});
 });

@@ -5,6 +5,11 @@
  * el formulario devuelve error aunque el mail hubiera salido. El SDK
  * `pocketbase` no se usa aca porque para un POST suelto alcanza con `fetch` y
  * asi el modulo queda testeable sin mocks del SDK.
+ *
+ * La escritura va anonima: sin token ni header `Authorization`. Este modulo no
+ * implementa ninguna capa de seguridad propia — toda la proteccion de la
+ * coleccion depende de la Create Rule configurada en PocketBase, mas el
+ * reCAPTCHA que corre antes, en el endpoint que llama a `createRecord`.
  */
 
 /**
@@ -12,10 +17,17 @@
  * @param {string} collection Nombre de la coleccion
  * @param {Record<string, unknown>} data Cuerpo del registro
  * @param {{ fetchImpl?: typeof fetch }} [options]
- * @returns {Promise<{ok: boolean, status: number, body: string}>}
+ * @returns {Promise<{ok: boolean, status: number, body: string}>} `status` es
+ *   el HTTP status de PocketBase cuando la request llego a destino (2xx-5xx).
+ *   `status: 0` es un sentinel que significa "no llegue a PocketBase" —
+ *   timeout, DNS, conexion rechazada, etc. — y no un status real, para que el
+ *   llamador pueda distinguir "PocketBase me rechazo" de "no pude ni
+ *   preguntarle". `body` es el texto crudo de la respuesta (o el mensaje del
+ *   error de red); ningun endpoint lo usa hoy para decidir nada, se devuelve
+ *   solo como dato de diagnostico para quien loguee o depure el caso.
  */
 export async function createRecord(baseUrl, collection, data, { fetchImpl = fetch } = {}) {
-	const url = `${baseUrl.replace(/\/+$/, '')}/api/collections/${collection}/records`;
+	const url = `${baseUrl.replace(/\/+$/, '')}/api/collections/${encodeURIComponent(collection)}/records`;
 
 	try {
 		const res = await fetchImpl(url, {
