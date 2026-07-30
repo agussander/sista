@@ -16,7 +16,7 @@
 
 ## Pre-flight
 
-Baseline al escribir este plan: `npm test` → **12 archivos, 161 tests, todos pasando**. Si al empezar no está verde, parar y avisar.
+Baseline al escribir este plan: `npm test` → **12 archivos, 153 tests, todos pasando**. Si al empezar no está verde, parar y avisar.
 
 Restricción dura de toda la fase: **`npm run build` tiene que seguir produciendo el estático de siempre, con sus `.php` intactos**. Producción (`sista.com.ar`, FTP) no se toca. Cada tarea que agrega una ruta bajo `src/routes/api/` verifica los dos builds.
 
@@ -212,7 +212,7 @@ Expected: la primera línea imprime un archivo de `build-node/client/_app`, la s
 npm test
 ```
 
-Expected: `Test Files 13 passed (13)`, `Tests 166 passed (166)`.
+Expected: `Test Files 13 passed (13)`, `Tests 158 passed (158)`.
 
 - [ ] **Step 8: Commit**
 
@@ -811,7 +811,7 @@ export async function sendMail(transport, message) {
 npm test
 ```
 
-Expected: `Test Files 15 passed (15)`, `Tests 193 passed (193)`.
+Expected: `Test Files 15 passed (15)`, `Tests 185 passed (185)`.
 
 - [ ] **Step 6: Commit**
 
@@ -1076,7 +1076,7 @@ Expected: PASS, 11 tests.
 npm test
 ```
 
-Expected: `Test Files 16 passed (16)`, `Tests 204 passed (204)`.
+Expected: `Test Files 16 passed (16)`, `Tests 196 passed (196)`.
 
 - [ ] **Step 6: Commit**
 
@@ -1272,7 +1272,7 @@ Cortar el server: `kill %1`.
 npm test
 ```
 
-Expected: `Test Files 16 passed (16)`, `Tests 204 passed (204)`.
+Expected: `Test Files 16 passed (16)`, `Tests 196 passed (196)`.
 
 ```bash
 git add svelte.config.js src/routes/api/contacto/+server.js src/lib/server/endpointDeps.js src/lib/components/forms/Form1.svelte
@@ -1696,7 +1696,7 @@ Expected: la primera responde `{"success":false,"message":"spam"}` y la segunda 
 npm test
 ```
 
-Expected: `Test Files 17 passed (17)`, `Tests 209 passed (209)`.
+Expected: `Test Files 17 passed (17)`, `Tests 201 passed (201)`.
 
 ```bash
 git add src/routes/api/llamenme src/lib/components/home/LlamenmeForm.svelte
@@ -2061,7 +2061,7 @@ Si la primera da `{"status":"error"}`, el problema es SMTP: revisar que `.env` t
 npm test
 ```
 
-Expected: `Test Files 18 passed (18)`, `Tests 214 passed (214)`.
+Expected: `Test Files 18 passed (18)`, `Tests 206 passed (206)`.
 
 ```bash
 git add src/lib/server/bajaEmail.js src/lib/server/bajaEmail.test.js src/routes/api/email-baja "src/routes/solicitudbaja2&np9277zhw/_components/Paso4.svelte"
@@ -2438,7 +2438,7 @@ Expected: `{"status":"error","message":"Faltan datos necesarios"}`.
 npm test
 ```
 
-Expected: `Test Files 19 passed (19)`, `Tests 225 passed (225)`.
+Expected: `Test Files 19 passed (19)`, `Tests 217 passed (217)`.
 
 ```bash
 git add src/lib/server/ispcube.js src/lib/server/ispcube.test.js src/routes/api/ticket-ispcube "src/routes/solicitudbaja2&np9277zhw/_components/Paso4.svelte"
@@ -2584,7 +2584,7 @@ Expected: `0`. La única mención permitida es la del propio `formEndpoints.js` 
 npm test
 ```
 
-Expected: `Test Files 19 passed (19)`, `Tests 225 passed (225)`.
+Expected: `Test Files 19 passed (19)`, `Tests 217 passed (217)`.
 
 ```bash
 git add src/routes/api/trabajo src/routes/trabajaconnosotros2/+page.svelte
