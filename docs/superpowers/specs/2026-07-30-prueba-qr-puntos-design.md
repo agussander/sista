@@ -15,7 +15,7 @@ Esta prueba valida ese circuito y nada más:
 
 **Entra:**
 
-- Un QR que codifica `https://ghostwhite-okapi-714606.hostingersite.com/puntos/003566`, escaneable con la cámara nativa de Android e iOS.
+- Un QR que codifica `https://ghostwhite-okapi-714606.hostingersite.com/puntos/003566/`, escaneable con la cámara nativa de Android e iOS. **La barra final no es opcional:** `src/routes/+layout.js` fija `trailingSlash = 'always'`, así que sin ella cada escaneo se come un 308.
 - Una página que consulta IspCube en el servidor y muestra el nombre del cliente.
 - El texto "Sumar puntos a {nombre}" y un botón.
 - El botón responde con una confirmación en pantalla.
@@ -63,7 +63,9 @@ Ninguna otra variante sirve: `customer_code` da `422`, y `client_code`, `nro_cli
 
 ## Arquitectura
 
-Rama nueva **desde `main`**, no desde `fase1-endpoints-node`. `main` ya tiene `build:node` y `server.js` funcionando (fase 0 cerrada) y esta prueba no necesita nada de los endpoints de formularios de la fase 1, así que las dos líneas de trabajo no se pisan.
+Rama nueva **desde `fase1-endpoints-node`**, que a esta altura tiene la fase 1 a mitad de camino (17 commits sobre `main`).
+
+Branchear desde `main` sería más independiente en teoría, pero en la práctica cuesta caro: `main` **no** tiene el `strict: false` que esta ruta necesita, así que habría que re-hacerlo y chocar con la fase 1 en esa línea exacta al mergear. Además el subdominio corre **una sola app**, así que desplegar una rama desde `main` pisaría la fase 1 que está ahí para probarse. Partiendo de `fase1-endpoints-node` las dos cosas conviven en el mismo deploy.
 
 | Archivo | Responsabilidad |
 |---|---|
@@ -73,21 +75,19 @@ Rama nueva **desde `main`**, no desde `fase1-endpoints-node`. `main` ya tiene `b
 | `src/lib/formatName.test.js` (crear) | Tests del formateo. |
 | `src/routes/puntos/[nro]/+page.server.js` (crear) | Capa fina: lee `$env/dynamic/private`, llama al módulo, devuelve `{nombre}`. `prerender = false`. |
 | `src/routes/puntos/[nro]/+page.svelte` (crear) | La pantalla y sus estados. |
+| `src/lib/server/ispcubeDeps.js` (crear) | Única capa que lee `$env` para IspCube. Sigue el patrón de `endpointDeps.js`. |
 | `scripts/generar-qr.js` (crear) | Script one-off que emite el PNG del QR. |
-| `svelte.config.js` (modificar) | `strict: false` en adapter-static. |
 | `package.json` (modificar) | `qrcode` como devDependency. |
 
-`ispcube.js` no importa `$env` por la misma razón que fijó el plan de la fase 1: los módulos que reciben sus secrets por parámetro se testean con Vitest sin los módulos virtuales de SvelteKit, y el punto donde se leen los secrets queda concentrado en la capa de rutas. Cuando la fase 1 porte `send-ticket-ispcube.php`, va a poder reusar el mismo módulo.
+`ispcube.js` no importa `$env`, y los secrets se leen en `ispcubeDeps.js`: es la convención que la fase 1 ya dejó establecida en `src/lib/server/` (módulos puros testeables con Vitest, más un único armador que toca `$env/dynamic/private`). Cuando la fase 1 porte `send-ticket-ispcube.php`, reusa el mismo `ispcube.js`.
 
-### El cambio en `svelte.config.js` no es opcional
+**`svelte.config.js` no se toca:** el `strict: false` que esta ruta necesita ya está en la rama base (commit `268ba1b`). Vale saber *por qué* está: `/puntos/[nro]` es una ruta no prerenderizable, y sin ese flag **`npm run build` falla** y se cae el deploy estático de `sista.com.ar`. Con el flag, la ruta no se emite en el build estático y producción queda igual que hoy.
 
-`/puntos/[nro]` es la primera ruta **no prerenderizable** del repo. Sin `strict: false` en adapter-static, **`npm run build` falla** y con él se cae el deploy estático de `sista.com.ar`. Con el flag, la ruta simplemente no se emite en el build estático y producción queda exactamente como está hoy.
-
-Es el mismo cambio que la fase 1 ya identificó como necesario. Quien llegue segundo se lo encuentra hecho; no hay conflicto, es la misma línea.
+**El `noindex` tampoco se toca:** [server.js](../../../server.js) y `src/hooks.server.js` ya ponen `X-Robots-Tag: noindex, nofollow` en todo el subdominio mientras `SITE_ENV !== 'production'`. La página lo hereda sin código propio.
 
 ## Flujo de datos
 
-1. La cámara abre `https://ghostwhite-okapi-714606.hostingersite.com/puntos/003566`.
+1. La cámara abre `https://ghostwhite-okapi-714606.hostingersite.com/puntos/003566/`.
 2. `+page.server.js` toma `params.nro`.
 3. Pide token a `/api/sanctum/token`.
 4. Consulta `GET /api/customer?code=<nro>` con los cinco headers.
@@ -138,7 +138,7 @@ El QR se genera **después** de que la página esté andando en el subdominio, p
 
 ## Deuda asumida a conciencia
 
-1. **La ruta es enumerable.** Con el número en claro, `/puntos/003567` muestra el nombre de otro cliente. Mitigación mínima acá: `noindex` en la página, reusando `src/lib/server/robotsHeader.js`, para que no la indexe Google. **Es lo primero a resolver antes de que esto sea real** — las opciones ya evaluadas son un token opaco por cliente o el número firmado con HMAC.
+1. **La ruta es enumerable.** Con el número en claro, `/puntos/003567/` muestra el nombre de otro cliente. El `noindex` del subdominio evita que Google lo levante, pero **no impide que alguien recorra los números a mano**. Es lo primero a resolver antes de que esto sea real — las opciones ya evaluadas son un token opaco por cliente o el número firmado con HMAC.
 2. **Sin caché del token.** Un login por visita. Con volumen real conviene cachearlo en memoria del proceso.
 3. **`status` ignorado.** Ver arriba.
 4. **Sin identidad del comercio.** Cualquiera con el link ve la pantalla. La plataforma real necesita que el que escanea esté autenticado.
