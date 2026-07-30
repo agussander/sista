@@ -16,7 +16,12 @@ const config = {
 		// Estático, sin `fallback`: las rutas inexistentes las resuelve el
 		// servidor con HTTP 404 + `404.html` (ver `static/.htaccess`).
 		// En Node, ese 404 lo maneja `src/routes/+error.svelte`.
-		adapter: useNode ? adapterNode({ out: 'build-node' }) : adapterStatic()
+		//
+		// `strict: false` porque desde la Fase 1 el repo tiene rutas que NO se
+		// pueden prerenderizar: los `+server.js` de `src/routes/api/`. En el
+		// build estático simplemente no se emiten, y los formularios siguen
+		// hablando con los `.php` gracias a `src/lib/formEndpoints.js`.
+		adapter: useNode ? adapterNode({ out: 'build-node' }) : adapterStatic({ strict: false })
 	}
 };
 

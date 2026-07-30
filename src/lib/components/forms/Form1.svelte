@@ -2,6 +2,7 @@
     import { onMount } from 'svelte';
     import { goto } from '$app/navigation';
     import Recaptcha from '$lib/components/ui/Recaptcha.svelte';
+    import { FORM_ENDPOINTS } from '$lib/formEndpoints.js';
 
     let loading = false;
     let mounted = false;
@@ -43,7 +44,7 @@
             formData.append('mensaje', formElement.querySelector('[name="mensaje"]').value);
             formData.append('g-recaptcha-response', recaptchaToken);
 
-            const response = await fetch('/assets/send-form-contacto.php', {
+            const response = await fetch(FORM_ENDPOINTS.CONTACTO, {
                 method: 'POST',
                 body: formData
             });
