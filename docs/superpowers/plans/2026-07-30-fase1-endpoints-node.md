@@ -926,7 +926,12 @@ describe('handleFormSubmission', () => {
 		);
 
 		expect(res.success).toBe(true);
-		expect(sent[0].html).not.toContain('Empresa');
+		// Se busca el markup exacto del label (no el string suelto 'Empresa'):
+		// el subject 'Empresas - Contacto web' tambien contiene esa substring,
+		// asi que un toContain('Empresa') daria un falso negativo.
+		expect(sent[0].html).not.toContain("<span class='label'>Empresa:</span>");
+		expect(sent[0].html).not.toContain("<span class='label'>Mensaje:</span>");
+		expect(sent[0].html).toContain("<span class='label'>Nombre:</span>");
 	});
 
 	it('recorta los espacios de los valores', async () => {
