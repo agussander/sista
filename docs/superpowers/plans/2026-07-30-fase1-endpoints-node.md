@@ -681,7 +681,7 @@ export function renderMailTemplate(templateHtml, data) {
 npx vitest run src/lib/server/mailTemplate.test.js
 ```
 
-Expected: PASS, 15 tests.
+Expected: PASS, 14 tests.
 
 - [ ] **Step 5: Commit**
 
