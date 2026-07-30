@@ -5,6 +5,7 @@
     import { fly, fade } from 'svelte/transition';
     import Recaptcha from '../ui/Recaptcha.svelte';
     import PlanDetails from '../ui/PlanDetails.svelte';
+    import { FORM_ENDPOINTS } from '$lib/formEndpoints.js';
 
     let loading = false;
     let mounted = false;
@@ -45,7 +46,7 @@
             formData.append('contacto', formElement.querySelector('[name="contacto"]').value);
             formData.append('g-recaptcha-response', recaptchaToken);
 
-            const response = await fetch('/assets/send-form-modal.php', {
+            const response = await fetch(FORM_ENDPOINTS.MODAL, {
                 method: 'POST',
                 body: formData
             });
