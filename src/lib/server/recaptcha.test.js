@@ -91,6 +91,20 @@ describe('verifyRecaptcha', () => {
 		expect(res).toEqual({ ok: false, reason: 'invalid', score: null });
 	});
 
+	it('devuelve invalid si la respuesta llega pero no es JSON parseable', async () => {
+		const res = await verifyRecaptcha('tok', {
+			secret: 's3cr3t',
+			fetchImpl: async () => ({
+				ok: true,
+				json: async () => {
+					throw new Error('Unexpected token < in JSON');
+				}
+			})
+		});
+
+		expect(res).toEqual({ ok: false, reason: 'invalid', score: null });
+	});
+
 	it('devuelve network si fetch explota', async () => {
 		const res = await verifyRecaptcha('tok', {
 			secret: 's3cr3t',

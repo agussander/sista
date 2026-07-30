@@ -36,18 +36,26 @@ export async function verifyRecaptcha(token, { secret, remoteIp = null, fetchImp
 	if (remoteIp) body.set('remoteip', remoteIp);
 
 	/** @type {any} */
-	let data;
+	let res;
 	try {
-		const res = await fetchImpl(RECAPTCHA_VERIFY_URL, {
+		res = await fetchImpl(RECAPTCHA_VERIFY_URL, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
 			body: body.toString(),
 			signal: AbortSignal.timeout(10_000)
 		});
-		data = await res.json();
 	} catch (error) {
 		console.error('[recaptcha] error de red:', error);
 		return { ok: false, reason: 'network', score: null };
+	}
+
+	/** @type {any} */
+	let data;
+	try {
+		data = await res.json();
+	} catch (error) {
+		console.error('[recaptcha] respuesta invalida:', error);
+		return { ok: false, reason: 'invalid', score: null };
 	}
 
 	if (!data || typeof data.success === 'undefined') {
