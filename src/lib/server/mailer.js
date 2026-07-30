@@ -16,16 +16,34 @@ export const FROM_NAME = 'Web';
 /**
  * @param {object} config
  * @param {string} config.host
- * @param {number} config.port
+ * @param {number | string} config.port
  * @param {string} config.user
  * @param {string} config.pass
  */
 export function createTransport({ host, port, user, pass }) {
+	// `env` dinamico (`$env/dynamic/private`) entrega strings; coercionamos una
+	// sola vez para que la comparacion con 465 no falle en silencio.
+	const numericPort = Number(port);
+
+	if (!user || !pass) {
+		console.error('[mailer] SMTP sin credenciales (SMTP_USER/SMTP_PASSWORD vacios)');
+	}
+
 	return nodemailer.createTransport({
 		host,
-		port,
+		port: numericPort,
 		// 587 con STARTTLS, igual que `ENCRYPTION_STARTTLS` en el PHP.
-		secure: port === 465,
+		secure: numericPort === 465,
+		// El PHP fuerza el upgrade a TLS y falla si el servidor no lo ofrece
+		// (`ENCRYPTION_STARTTLS`); sin esto nodemailer hace STARTTLS oportunista
+		// y seguiria en texto plano -mandando credenciales sin cifrar- si el
+		// servidor no lo ofrece. Irrelevante con `secure: true` en 465.
+		requireTLS: true,
+		// A diferencia del PHP (que apuntaba a `mail.sista.ar` y desactivaba la
+		// verificacion del certificado TLS), dejamos la verificacion estricta de
+		// nodemailer por defecto: el `.env` actual usa `smtp.gmail.com`, cuyo
+		// certificado valida sin problemas. Si algun dia se vuelve a apuntar a un
+		// host con certificado self-signed, esto va a romper y hay que revisitarlo.
 		auth: { user, pass },
 		connectionTimeout: 30_000,
 		greetingTimeout: 30_000,
@@ -57,7 +75,10 @@ export async function sendMail(transport, message) {
 		return { success: true, message: 'success' };
 	} catch (error) {
 		const detail = error instanceof Error ? error.message : String(error);
-		console.error('[mailer] fallo el envio:', detail);
+		// Nodemailer adjunta `.code`/`.command`/`.responseCode`/`.response` en los
+		// errores SMTP; se loguea el objeto completo para no perderlos, aunque lo
+		// que devolvemos en `error` sigue siendo el string.
+		console.error('[mailer] fallo el envio:', detail, error);
 		return { success: false, message: 'error', error: detail };
 	}
 }
