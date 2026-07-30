@@ -33,6 +33,24 @@ Seis de los ocho endpoints reciben `FormData`, así que les aplica. Dos consecue
 1. **En las verificaciones con `curl` hay que mandar el `Origin`.** Y tiene que ser `https://localhost:3000`, no `http://`: adapter-node, sin `ORIGIN` configurado, deriva el origen como `https://` + el header `Host`. Los comandos del plan ya salen con el header puesto.
 2. **En Hostinger hay que setear `ORIGIN`.** Hoy funciona de casualidad: el proxy termina TLS, la app ve el `Host` del subdominio, le antepone `https://` por default, y eso coincide con el `Origin` que manda el navegador. Es frágil — cualquier cambio en cómo el proxy pasa los headers rompe los 6 formularios de golpe y con un error que no dice nada útil. Se setea explícito en la Task 15.
 
+### La interfaz de `endpointDeps.js`, corregida en la Task 6
+
+**Los bloques de código de las tareas 7, 9, 10, 11 y 13 quedaron escritos contra una interfaz anterior.** Al implementarlas hay que adaptarlos a ésta, que es la que existe en el repo desde la Task 6:
+
+```js
+getMailSender()                  // sin argumentos → la funcion sendMail, ya atada al transport y al from
+getRecaptchaVerifier(remoteIp)   // → la funcion de verificacion, ya atada al secret
+buildMailDeps(remoteIp)          // el paquete completo, compuesto de las dos anteriores + templateHtml
+formDataToFields(form)           // en formHandler.js: FormData → objeto plano, descartando los File
+```
+
+Reglas al portar cada endpoint:
+
+- Los que usan `handleFormSubmission` (contacto, empresas, modal, trabajo) siguen con `buildMailDeps(getClientAddress())`. Sin cambios.
+- Los que **solo mandan mail** (llamenme, baja, email-baja) usan `getMailSender()`, no `buildMailDeps(...)`. Pedir el paquete entero para usar una sola pieza fue exactamente el error que se corrigió.
+- Los que validan captcha por su cuenta (llamenme, baja) usan `getRecaptchaVerifier(getClientAddress())`. **Nunca** vuelvas a escribir `verifyRecaptcha(token, { secret: env.RECAPTCHA_SECRET_KEY || '', ... })` en un endpoint: ese fallback vive en un solo lugar.
+- Los que reciben `FormData` usan `formDataToFields(form)` en vez de repetir el loop, y envuelven el `await request.formData()` en try/catch devolviendo `{success: false, message: 'error'}`.
+
 ### Diferencia con el spec, ya decidida
 
 - **`form-trabajo` va como `+server.js` con redirect 303, no como form action de SvelteKit.** Un `+page.server.js` con `actions` haría no-prerenderizable a `/trabajaconnosotros2/`, y esa página **desaparecería del build estático** — justo lo que no puede pasar. Un endpoint que responde `redirect(303, '/gracias/')` deja la página 100% prerenderizada y solo cambia el atributo `action` del `<form>`.
