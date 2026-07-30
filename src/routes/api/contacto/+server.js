@@ -3,8 +3,13 @@ import { json } from '@sveltejs/kit';
 import { handleFormSubmission } from '$lib/server/formHandler.js';
 import { buildMailDeps } from '$lib/server/endpointDeps.js';
 
-// Tiene POST: no se puede prerenderizar. `trailingSlash: 'ignore'` evita que
-// herede el `'always'` del layout raiz y responda 308 en vez de procesar.
+// Tiene POST: no se puede prerenderizar.
+//
+// `trailingSlash: 'ignore'` es explicito para que el POST se atienda igual con
+// y sin barra final. NO esta para neutralizar el `trailingSlash = 'always'` de
+// `src/routes/+layout.js`: verificado empiricamente que ese valor aplica a las
+// paginas bajo el layout y no cascadea a los `+server.js` -sacando esta linea,
+// un POST a `/api/contacto` responde 200 igual, no 308-.
 export const prerender = false;
 export const trailingSlash = 'ignore';
 
