@@ -25,6 +25,11 @@ import { renderMailTemplate } from './mailTemplate.js';
  * @param {object} deps
  * @param {(token: string) => Promise<{ok: boolean, reason: string, score: number | null}>} deps.verifyRecaptcha
  * @param {(message: object) => Promise<{success: boolean, message: string, error?: string}>} deps.sendMail
+ *   Debe resolver siempre, nunca rechazar: reporta sus fallas en el propio
+ *   valor de retorno (`{success: false, message: 'error'}`), no tirando. El
+ *   orquestador no la envuelve en try/catch a proposito, confiando en ese
+ *   contrato (asi lo hacen `static/assets/includes/MailHandler.php` y
+ *   `src/lib/server/mailer.js`).
  * @param {string} deps.templateHtml
  * @returns {Promise<{success: boolean, message: string, field?: string, reason?: string, error?: string}>}
  */

@@ -97,6 +97,35 @@ describe('handleFormSubmission', () => {
 		expect(sent[0].html).toContain("<span class='label'>Nombre:</span>");
 	});
 
+	it('corta con incompleto si un campo requerido llega como valor no-string (multipart File) sin tirar excepcion', async () => {
+		const { sent, deps: d } = deps();
+		const archivo = new File(['contenido'], 'cv.pdf', { type: 'application/pdf' });
+
+		await expect(
+			handleFormSubmission(
+				{ nombre: 'Ada', tel: archivo, mensaje: 'hola', 'g-recaptcha-response': 'tok' },
+				CONFIG,
+				d
+			)
+		).resolves.toEqual({ success: false, message: 'incompleto', field: 'tel' });
+		expect(sent).toHaveLength(0);
+	});
+
+	it('acepta un campo opcional que llega como valor no-string (multipart File) y lo deja fuera del mail', async () => {
+		const { sent, deps: d } = deps();
+		const archivo = new File(['contenido'], 'cv.pdf', { type: 'application/pdf' });
+		const config = {
+			subject: 'Trabajo Web',
+			fields: { nombre: 'Nombre', tel: 'Contacto', cv: 'CV' },
+			optional_fields: ['cv']
+		};
+
+		await expect(
+			handleFormSubmission({ nombre: 'Ada', tel: '221', cv: archivo, 'g-recaptcha-response': 'tok' }, config, d)
+		).resolves.toMatchObject({ success: true });
+		expect(sent[0].html).not.toContain("<span class='label'>CV:</span>");
+	});
+
 	it('recorta los espacios de los valores', async () => {
 		const { sent, deps: d } = deps();
 		await handleFormSubmission(
