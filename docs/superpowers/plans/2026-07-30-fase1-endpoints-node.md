@@ -24,6 +24,15 @@ Restricción dura de toda la fase: **`npm run build` tiene que seguir produciend
 
 Las site keys de reCAPTCHA están registradas para los dominios de Sista. **Hay que dar de alta `ghostwhite-okapi-714606.hostingersite.com` en la consola de reCAPTCHA de Google** (https://www.google.com/recaptcha/admin) antes de la verificación end-to-end de la Task 14, o *todos* los formularios devuelven `message: 'recaptcha'` y parece un bug del código. Es un paso manual del dueño de la cuenta.
 
+### La protección CSRF de SvelteKit, descubierta durante la Task 6
+
+SvelteKit rechaza con **403 `Cross-site POST form submissions are forbidden`** todo POST cuyo `Content-Type` sea de formulario (`multipart/form-data`, `application/x-www-form-urlencoded`, `text/plain`) y cuyo header `Origin` no coincida con el origen de la app. Los POST con `application/json` no pasan por ese filtro.
+
+Seis de los ocho endpoints reciben `FormData`, así que les aplica. Dos consecuencias:
+
+1. **En las verificaciones con `curl` hay que mandar el `Origin`.** Y tiene que ser `https://localhost:3000`, no `http://`: adapter-node, sin `ORIGIN` configurado, deriva el origen como `https://` + el header `Host`. Los comandos del plan ya salen con el header puesto.
+2. **En Hostinger hay que setear `ORIGIN`.** Hoy funciona de casualidad: el proxy termina TLS, la app ve el `Host` del subdominio, le antepone `https://` por default, y eso coincide con el `Origin` que manda el navegador. Es frágil — cualquier cambio en cómo el proxy pasa los headers rompe los 6 formularios de golpe y con un error que no dice nada útil. Se setea explícito en la Task 15.
+
 ### Diferencia con el spec, ya decidida
 
 - **`form-trabajo` va como `+server.js` con redirect 303, no como form action de SvelteKit.** Un `+page.server.js` con `actions` haría no-prerenderizable a `/trabajaconnosotros2/`, y esa página **desaparecería del build estático** — justo lo que no puede pasar. Un endpoint que responde `redirect(303, '/gracias/')` deja la página 100% prerenderizada y solo cambia el atributo `action` del `<form>`.
@@ -1161,8 +1170,9 @@ import { json } from '@sveltejs/kit';
 import { handleFormSubmission } from '$lib/server/formHandler.js';
 import { buildMailDeps } from '$lib/server/endpointDeps.js';
 
-// Tiene POST: no se puede prerenderizar. `trailingSlash: 'ignore'` evita que
-// herede el `'always'` del layout raiz y responda 308 en vez de procesar.
+// Tiene POST: no se puede prerenderizar. El `trailingSlash` es explicito para
+// que el POST se atienda igual con y sin barra final; el `'always'` que declara
+// el layout raiz aplica a las paginas, no a los `+server.js` (verificado).
 export const prerender = false;
 export const trailingSlash = 'ignore';
 
@@ -1264,7 +1274,7 @@ Expected: la primera línea imprime un archivo de `build/_app` (el estático sig
 ```bash
 node --env-file=.env server.js &
 sleep 3
-curl -s -X POST http://localhost:3000/api/contacto -F "nombre=Test" -F "tel=221" -F "mensaje=hola"
+curl -s -X POST -H "Origin: https://localhost:3000" http://localhost:3000/api/contacto -F "nombre=Test" -F "tel=221" -F "mensaje=hola"
 ```
 
 Expected: `{"success":false,"message":"recaptcha","reason":"empty"}` — sin token, corta en el captcha. Lo importante es que responde JSON y no un 404 ni un 308.
@@ -1398,8 +1408,8 @@ Expected: `0`.
 ```bash
 node --env-file=.env server.js &
 sleep 3
-curl -s -X POST http://localhost:3000/api/empresas -F "nombre=Test"
-curl -s -X POST http://localhost:3000/api/modal -F "nombre=Test"
+curl -s -X POST -H "Origin: https://localhost:3000" http://localhost:3000/api/empresas -F "nombre=Test"
+curl -s -X POST -H "Origin: https://localhost:3000" http://localhost:3000/api/modal -F "nombre=Test"
 kill %1
 ```
 
@@ -1686,8 +1696,8 @@ y reemplazar `fetch('/assets/send-llamenme.php', {` por `fetch(FORM_ENDPOINTS.LL
 npm run build:node > /dev/null
 node --env-file=.env server.js &
 sleep 3
-curl -s -X POST http://localhost:3000/api/llamenme -F "numero=2211234567" -F "website=soy-un-bot"
-curl -s -X POST http://localhost:3000/api/llamenme -F "numero=2211234567"
+curl -s -X POST -H "Origin: https://localhost:3000" http://localhost:3000/api/llamenme -F "numero=2211234567" -F "website=soy-un-bot"
+curl -s -X POST -H "Origin: https://localhost:3000" http://localhost:3000/api/llamenme -F "numero=2211234567"
 kill %1
 ```
 
@@ -1816,7 +1826,7 @@ y reemplazar `fetch('/assets/send-form-baja2.php', {` por `fetch(FORM_ENDPOINTS.
 npm run build:node > /dev/null
 node --env-file=.env server.js &
 sleep 3
-curl -s -X POST http://localhost:3000/api/baja -F "nombre=Test"
+curl -s -X POST -H "Origin: https://localhost:3000" http://localhost:3000/api/baja -F "nombre=Test"
 kill %1
 ```
 
@@ -2569,7 +2579,7 @@ por:
 npm run build:node > /dev/null
 node --env-file=.env server.js &
 sleep 3
-curl -s -o /dev/null -w "%{http_code} %{redirect_url}\n" -X POST http://localhost:3000/api/trabajo -F "nombre=Test"
+curl -s -o /dev/null -w "%{http_code} %{redirect_url}\n" -H "Origin: https://localhost:3000" -X POST http://localhost:3000/api/trabajo -F "nombre=Test"
 kill %1
 ```
 
@@ -2660,7 +2670,7 @@ npm run build:node > /dev/null
 node --env-file=.env server.js &
 sleep 3
 for e in contacto empresas modal llamenme baja email-baja ticket-ispcube trabajo; do
-  printf "%-16s %s\n" "$e" "$(curl -s -o /dev/null -w '%{http_code}' -X POST http://localhost:3000/api/$e)"
+  printf "%-16s %s\n" "$e" "$(curl -s -o /dev/null -w '%{http_code}' -H "Origin: https://localhost:3000" -X POST http://localhost:3000/api/$e)"
 done
 ```
 
@@ -2745,8 +2755,11 @@ hPanel → la web app → Environment Variables. Agregar, con los valores del `.
 | `ISPCUBE_PASSWORD` | `.env` |
 | `ISPCUBE_API_KEY` | `.env` |
 | `ISPCUBE_CLIENT_ID` | `.env` |
+| `ORIGIN` | `https://ghostwhite-okapi-714606.hostingersite.com` |
 
 `SITE_ENV=beta` y las tres `VITE_` ya están de la Fase 0. **No hay endpoint de API para variables de entorno: esto es sí o sí por hPanel.**
+
+`ORIGIN` no sale del `.env`: es de adapter-node y desactiva la derivación del origen a partir de los headers del proxy. Sin ella, la protección CSRF de SvelteKit funciona hoy por casualidad (ver la nota de Pre-flight) y los 6 formularios que mandan `FormData` se caen con un 403 si el proxy alguna vez cambia cómo pasa `Host` o el protocolo. **En el cutover a `sista.ar` hay que actualizar este valor**, igual que `SITE_ENV`.
 
 - [ ] **Step 4: Disparar el build desde la rama**
 
@@ -2766,9 +2779,9 @@ Expected: el build más reciente en `state: completed`.
 ```bash
 BASE=https://ghostwhite-okapi-714606.hostingersite.com
 for e in contacto empresas modal llamenme baja email-baja ticket-ispcube; do
-  printf "%-16s %s\n" "$e" "$(curl -s -X POST $BASE/api/$e)"
+  printf "%-16s %s\n" "$e" "$(curl -s -H "Origin: $BASE" -X POST $BASE/api/$e)"
 done
-curl -s -o /dev/null -w "trabajo %{http_code}\n" -X POST $BASE/api/trabajo
+curl -s -o /dev/null -w "trabajo %{http_code}\n" -H "Origin: $BASE" -X POST $BASE/api/trabajo
 ```
 
 Expected: los que usan FormData responden `{"success":false,"message":"recaptcha","reason":"empty"}`; `email-baja` y `ticket-ispcube` responden `{"status":"error",...}` por falta de datos; `trabajo` devuelve `303`.
