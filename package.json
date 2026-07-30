@@ -8,7 +8,7 @@
 	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build",
-		"build:node": "ADAPTER=node vite build && node scripts/prepare-node-build.js",
+		"build:node": "ADAPTER=node VITE_FORMS_BACKEND=node vite build && node scripts/prepare-node-build.js",
 		"preview": "vite preview",
 		"test": "vitest run",
 		"test:watch": "vitest",
