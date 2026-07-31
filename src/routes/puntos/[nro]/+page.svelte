@@ -34,6 +34,10 @@
 		</p>
 	{:else}
 		<p class="puntos__error">No pudimos consultar el sistema. Probá de nuevo.</p>
+		{#if data.debug}
+			<!-- Solo fuera de produccion; ver el comentario en +page.server.js -->
+			<p class="puntos__debug">motivo: {data.debug}</p>
+		{/if}
 	{/if}
 </main>
 
@@ -92,5 +96,12 @@
 		margin: 0;
 		font-size: 1.25rem;
 		text-wrap: balance;
+	}
+
+	.puntos__debug {
+		margin: 0;
+		font-family: ui-monospace, monospace;
+		font-size: 0.8rem;
+		opacity: 0.5;
 	}
 </style>
