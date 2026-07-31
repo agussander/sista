@@ -1,109 +1,178 @@
 import { describe, it, expect } from 'vitest';
-import { getAuthToken, getCustomerByCode, AUTH_PATH, CUSTOMER_PATH } from './ispcube.js';
+import { getAuthToken, createTicket, getCustomerByCode } from './ispcube.js';
 
 const CONFIG = {
-	baseUrl: 'https://ispcube.test',
-	username: 'api_web2',
-	password: 's3cr3t',
-	apiKey: 'k3y',
+	baseUrl: 'https://sista.ispcube.online',
+	username: 'u',
+	password: 'p',
+	apiKey: 'k',
 	clientId: '734'
 };
 
-/**
- * `fetch` falso que va devolviendo las respuestas de la lista, en orden.
- * Cada una es `{status, body}`; si `body` es `undefined`, `.json()` explota
- * (simula una respuesta que no es JSON).
- */
-function fakeFetch(responses, calls = []) {
+const TICKET = {
+	nro_cliente: '1234',
+	dni_cliente: '30111222',
+	mensaje_ticket: 'texto',
+	form_type: 'baja2'
+};
+
+/** Respuesta con forma de `Response`, para que el modulo la trate como la real. */
+const res = (status, body) => ({
+	ok: status >= 200 && status < 300,
+	status,
+	text: async () => JSON.stringify(body),
+	json: async () => body
+});
+
+function fakeFetch(responses, calls) {
 	let i = 0;
 	return async (url, init) => {
-		calls.push({ url, init });
-		const r = responses[Math.min(i, responses.length - 1)];
-		i += 1;
-		return {
-			ok: r.status >= 200 && r.status < 300,
-			status: r.status,
-			json: async () => {
-				if (r.body === undefined) throw new Error('no es json');
-				return r.body;
-			}
-		};
+		calls?.push({ url, init });
+		return responses[Math.min(i++, responses.length - 1)];
 	};
 }
 
-const AUTH_OK = { status: 200, body: { data: { token: 't0k3n' } } };
-
-const CLIENTE_OK = {
-	status: 200,
-	body: { id: 7277, code: '003566', name: 'TALONE SANDRA ELIZABETH', status: 'enabled' }
-};
-
 describe('getAuthToken', () => {
-	it('devuelve el token que viene en data.token', async () => {
-		const res = await getAuthToken({ ...CONFIG, fetchImpl: fakeFetch([AUTH_OK]) });
-		expect(res).toEqual({ ok: true, token: 't0k3n' });
-	});
-
-	it('acepta el token en la raiz de la respuesta', async () => {
-		const res = await getAuthToken({
-			...CONFIG,
-			fetchImpl: fakeFetch([{ status: 200, body: { token: 'otro' } }])
-		});
-		expect(res).toEqual({ ok: true, token: 'otro' });
-	});
-
-	it('falla con reason config si falta una credencial, sin llamar a la api', async () => {
+	it('pega al endpoint de sanctum con los headers de la api', async () => {
 		const calls = [];
-		const res = await getAuthToken({
-			...CONFIG,
-			apiKey: '',
-			fetchImpl: fakeFetch([AUTH_OK], calls)
+		const token = await getAuthToken(CONFIG, {
+			fetchImpl: fakeFetch([res(200, { data: { token: 'tok-123' } })], calls)
 		});
 
-		expect(res).toEqual({ ok: false, reason: 'config' });
-		expect(calls).toHaveLength(0);
+		expect(token).toBe('tok-123');
+		expect(calls[0].url).toBe('https://sista.ispcube.online/api/sanctum/token');
+		expect(calls[0].init.headers['api-key']).toBe('k');
+		expect(calls[0].init.headers['client-id']).toBe('734');
+		expect(calls[0].init.headers['login-type']).toBe('api');
 	});
 
-	it('falla con reason auth si la respuesta no trae token', async () => {
-		const res = await getAuthToken({
-			...CONFIG,
-			fetchImpl: fakeFetch([{ status: 400, body: { status: false, message: 'credenciales' } }])
+	it('manda usuario y contrasena en el body', async () => {
+		const calls = [];
+		await getAuthToken(CONFIG, {
+			fetchImpl: fakeFetch([res(200, { data: { token: 't' } })], calls)
 		});
-		expect(res).toEqual({ ok: false, reason: 'auth' });
+
+		expect(JSON.parse(calls[0].init.body)).toEqual({ username: 'u', password: 'p' });
 	});
 
-	it('falla con reason network si fetch explota', async () => {
-		const res = await getAuthToken({
-			...CONFIG,
+	it('acepta el token en la raiz, que es como lo devuelve la api hoy', async () => {
+		const token = await getAuthToken(CONFIG, {
+			fetchImpl: fakeFetch([res(200, { token: '145237|TKm9T1uu' })])
+		});
+		expect(token).toBe('145237|TKm9T1uu');
+	});
+
+	it('devuelve null si la respuesta no trae token', async () => {
+		const token = await getAuthToken(CONFIG, { fetchImpl: fakeFetch([res(200, { data: {} })]) });
+		expect(token).toBeNull();
+	});
+
+	it('devuelve null si la red falla', async () => {
+		const token = await getAuthToken(CONFIG, {
+			fetchImpl: async () => {
+				throw new Error('ETIMEDOUT');
+			}
+		});
+		expect(token).toBeNull();
+	});
+});
+
+describe('createTicket', () => {
+	it('postea el ticket con el bearer recibido', async () => {
+		const calls = [];
+		const out = await createTicket(CONFIG, TICKET, 'bearer-abc', {
+			fetchImpl: fakeFetch([res(201, { ticket_id: 7, ticket_number: 'T-7' })], calls)
+		});
+
+		expect(calls[0].url).toBe('https://sista.ispcube.online/tickets');
+		expect(calls[0].init.headers.Authorization).toBe('Bearer bearer-abc');
+		expect(JSON.parse(calls[0].init.body).subject).toBe('Solicitud de Baja - Cliente: 1234');
+		expect(out).toEqual({
+			status: 'success',
+			message: 'Ticket creado exitosamente',
+			ticket_id: 7,
+			ticket_number: 'T-7'
+		});
+	});
+
+	it('acepta 200 ademas de 201', async () => {
+		const out = await createTicket(CONFIG, TICKET, 'b', { fetchImpl: fakeFetch([res(200, {})]) });
+		expect(out.status).toBe('success');
+	});
+
+	it('deja el numero de tramite en null si la api no lo devuelve', async () => {
+		const out = await createTicket(CONFIG, TICKET, 'b', { fetchImpl: fakeFetch([res(201, {})]) });
+		expect(out.ticket_number).toBeNull();
+	});
+
+	it('traduce el 401 a error de autenticacion', async () => {
+		const out = await createTicket(CONFIG, TICKET, 'b', { fetchImpl: fakeFetch([res(401, {})]) });
+		expect(out).toEqual({
+			status: 'error',
+			message: 'Error de autenticación con la API de IspCube'
+		});
+	});
+
+	it('traduce el 403 a falta de permisos', async () => {
+		const out = await createTicket(CONFIG, TICKET, 'b', { fetchImpl: fakeFetch([res(403, {})]) });
+		expect(out.message).toBe('No tiene permisos para crear tickets');
+	});
+
+	it('incluye el detalle del 400', async () => {
+		const out = await createTicket(CONFIG, TICKET, 'b', {
+			fetchImpl: fakeFetch([res(400, { error: 'customer_id invalido' })])
+		});
+		expect(out.message).toContain('customer_id invalido');
+	});
+
+	it('incluye el detalle del 422', async () => {
+		const out = await createTicket(CONFIG, TICKET, 'b', {
+			fetchImpl: fakeFetch([res(422, { errors: 'dni requerido' })])
+		});
+		expect(out.message).toContain('dni requerido');
+	});
+
+	it('reporta cualquier otro status', async () => {
+		const out = await createTicket(CONFIG, TICKET, 'b', { fetchImpl: fakeFetch([res(500, {})]) });
+		expect(out.status).toBe('error');
+		expect(out.message).toContain('500');
+	});
+
+	it('no explota si la api responde algo que no es json', async () => {
+		const out = await createTicket(CONFIG, TICKET, 'b', {
+			fetchImpl: fakeFetch([{ ok: true, status: 201, text: async () => '<html>502</html>' }])
+		});
+		expect(out.status).toBe('success');
+		expect(out.ticket_number).toBeNull();
+	});
+
+	it('reporta el error de red', async () => {
+		const out = await createTicket(CONFIG, TICKET, 'b', {
 			fetchImpl: async () => {
 				throw new Error('ECONNRESET');
 			}
 		});
-		expect(res).toEqual({ ok: false, reason: 'network' });
+		expect(out.status).toBe('error');
+		expect(out.message).toContain('ECONNRESET');
 	});
+});
 
-	it('postea las credenciales a la url de auth con los headers obligatorios', async () => {
-		const calls = [];
-		await getAuthToken({ ...CONFIG, fetchImpl: fakeFetch([AUTH_OK], calls) });
+const AUTH_OK = res(200, { data: { token: 't0k3n' } });
 
-		expect(calls[0].url).toBe('https://ispcube.test' + AUTH_PATH);
-		expect(calls[0].init.method).toBe('POST');
-		expect(JSON.parse(calls[0].init.body)).toEqual({ username: 'api_web2', password: 's3cr3t' });
-		expect(calls[0].init.headers['api-key']).toBe('k3y');
-		expect(calls[0].init.headers['client-id']).toBe('734');
-		expect(calls[0].init.headers['login-type']).toBe('api');
-		expect(calls[0].init.headers.username).toBe('api_web2');
-	});
+const CLIENTE_OK = res(200, {
+	id: 7277,
+	code: '003566',
+	name: 'TALONE SANDRA ELIZABETH',
+	status: 'enabled'
 });
 
 describe('getCustomerByCode', () => {
 	it('devuelve code, name y status del cliente', async () => {
-		const res = await getCustomerByCode('003566', {
-			...CONFIG,
+		const out = await getCustomerByCode('003566', CONFIG, {
 			fetchImpl: fakeFetch([AUTH_OK, CLIENTE_OK])
 		});
 
-		expect(res).toEqual({
+		expect(out).toEqual({
 			ok: true,
 			customer: { code: '003566', name: 'TALONE SANDRA ELIZABETH', status: 'enabled' }
 		});
@@ -111,107 +180,118 @@ describe('getCustomerByCode', () => {
 
 	it('consulta ?code= respetando los ceros a la izquierda', async () => {
 		const calls = [];
-		await getCustomerByCode('003566', {
-			...CONFIG,
+		await getCustomerByCode('003566', CONFIG, {
 			fetchImpl: fakeFetch([AUTH_OK, CLIENTE_OK], calls)
 		});
 
-		expect(calls[1].url).toBe(`https://ispcube.test${CUSTOMER_PATH}?code=003566`);
+		expect(calls[1].url).toBe('https://sista.ispcube.online/api/customer?code=003566');
 	});
 
 	it('manda el bearer y el header username en la consulta', async () => {
 		const calls = [];
-		await getCustomerByCode('003566', {
-			...CONFIG,
+		await getCustomerByCode('003566', CONFIG, {
 			fetchImpl: fakeFetch([AUTH_OK, CLIENTE_OK], calls)
 		});
 
 		expect(calls[1].init.headers.Authorization).toBe('Bearer t0k3n');
-		// Sin este header la api responde 400 "username header requerido",
-		// aunque el bearer sea valido.
-		expect(calls[1].init.headers.username).toBe('api_web2');
+		// Sin estos dos la api responde 400 "<header> requerido", aunque el
+		// bearer sea valido. Son los que le faltan al client-handler.php.
+		expect(calls[1].init.headers.username).toBe('u');
+		expect(calls[1].init.headers['login-type']).toBe('api');
 	});
 
 	it('devuelve not_found cuando la api responde 404', async () => {
-		const res = await getCustomerByCode('999999', {
-			...CONFIG,
-			fetchImpl: fakeFetch([
-				AUTH_OK,
-				{ status: 404, body: { result: true, message: 'Cliente no encontrado' } }
-			])
+		const out = await getCustomerByCode('999999', CONFIG, {
+			fetchImpl: fakeFetch([AUTH_OK, res(404, { result: true, message: 'Cliente no encontrado' })])
 		});
 
-		expect(res).toEqual({ ok: false, reason: 'not_found' });
+		expect(out).toEqual({ ok: false, reason: 'not_found' });
 	});
 
 	it('rechaza un codigo con formato invalido sin llamar a la api', async () => {
 		const calls = [];
 		const fetchImpl = fakeFetch([AUTH_OK, CLIENTE_OK], calls);
 
-		expect(await getCustomerByCode('abc', { ...CONFIG, fetchImpl })).toEqual({
+		expect(await getCustomerByCode('abc', CONFIG, { fetchImpl })).toEqual({
 			ok: false,
 			reason: 'not_found'
 		});
-		expect(await getCustomerByCode('', { ...CONFIG, fetchImpl })).toEqual({
+		expect(await getCustomerByCode('', CONFIG, { fetchImpl })).toEqual({
 			ok: false,
 			reason: 'not_found'
 		});
-		expect(await getCustomerByCode('1'.repeat(13), { ...CONFIG, fetchImpl })).toEqual({
+		expect(await getCustomerByCode('1'.repeat(13), CONFIG, { fetchImpl })).toEqual({
 			ok: false,
 			reason: 'not_found'
 		});
 		expect(calls).toHaveLength(0);
 	});
 
-	it('devuelve api cuando la api responde 500', async () => {
-		const res = await getCustomerByCode('003566', {
-			...CONFIG,
-			fetchImpl: fakeFetch([AUTH_OK, { status: 500, body: { message: 'boom' } }])
+	it('falla con reason config si falta una credencial, sin llamar a la api', async () => {
+		const calls = [];
+		const out = await getCustomerByCode(
+			'003566',
+			{ ...CONFIG, apiKey: '' },
+			{ fetchImpl: fakeFetch([AUTH_OK, CLIENTE_OK], calls) }
+		);
+
+		expect(out).toEqual({ ok: false, reason: 'config' });
+		expect(calls).toHaveLength(0);
+	});
+
+	it('devuelve auth si no se pudo obtener el token, sin consultar el cliente', async () => {
+		const calls = [];
+		const out = await getCustomerByCode('003566', CONFIG, {
+			fetchImpl: fakeFetch([res(200, { data: {} })], calls)
 		});
 
-		expect(res).toEqual({ ok: false, reason: 'api' });
+		expect(out).toEqual({ ok: false, reason: 'auth' });
+		expect(calls).toHaveLength(1);
+	});
+
+	it('devuelve api cuando la api responde 500', async () => {
+		const out = await getCustomerByCode('003566', CONFIG, {
+			fetchImpl: fakeFetch([AUTH_OK, res(500, { message: 'boom' })])
+		});
+
+		expect(out).toEqual({ ok: false, reason: 'api' });
 	});
 
 	it('devuelve invalid si la respuesta no trae name', async () => {
-		const res = await getCustomerByCode('003566', {
-			...CONFIG,
-			fetchImpl: fakeFetch([AUTH_OK, { status: 200, body: { code: '003566' } }])
+		const out = await getCustomerByCode('003566', CONFIG, {
+			fetchImpl: fakeFetch([AUTH_OK, res(200, { code: '003566' })])
 		});
 
-		expect(res).toEqual({ ok: false, reason: 'invalid' });
+		expect(out).toEqual({ ok: false, reason: 'invalid' });
 	});
 
 	it('devuelve invalid si la respuesta no es json', async () => {
-		const res = await getCustomerByCode('003566', {
-			...CONFIG,
-			fetchImpl: fakeFetch([AUTH_OK, { status: 200 }])
+		const out = await getCustomerByCode('003566', CONFIG, {
+			fetchImpl: fakeFetch([
+				AUTH_OK,
+				{
+					ok: true,
+					status: 200,
+					json: async () => {
+						throw new Error('no es json');
+					}
+				}
+			])
 		});
 
-		expect(res).toEqual({ ok: false, reason: 'invalid' });
-	});
-
-	it('propaga el fallo del auth sin consultar el cliente', async () => {
-		const calls = [];
-		const res = await getCustomerByCode('003566', {
-			...CONFIG,
-			fetchImpl: fakeFetch([{ status: 400, body: { message: 'nope' } }], calls)
-		});
-
-		expect(res).toEqual({ ok: false, reason: 'auth' });
-		expect(calls).toHaveLength(1);
+		expect(out).toEqual({ ok: false, reason: 'invalid' });
 	});
 
 	it('devuelve network si fetch explota en la consulta', async () => {
 		let n = 0;
-		const res = await getCustomerByCode('003566', {
-			...CONFIG,
+		const out = await getCustomerByCode('003566', CONFIG, {
 			fetchImpl: async () => {
 				n += 1;
-				if (n === 1) return { ok: true, status: 200, json: async () => AUTH_OK.body };
+				if (n === 1) return AUTH_OK;
 				throw new Error('ECONNRESET');
 			}
 		});
 
-		expect(res).toEqual({ ok: false, reason: 'network' });
+		expect(out).toEqual({ ok: false, reason: 'network' });
 	});
 });
