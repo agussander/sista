@@ -5,6 +5,7 @@
     import VoverAtras from "$lib/components/ui/VoverAtras.svelte";
     import Recaptcha from "$lib/components/ui/Recaptcha.svelte";
     import { MetaTags } from "svelte-meta-tags";
+    import { FORM_ENDPOINTS } from '$lib/formEndpoints.js';
 
     let loading = false;
     let mounted = false;
@@ -47,7 +48,7 @@
             formData.append('motivo', formElement.querySelector('[name="motivo"]').value);
             formData.append('g-recaptcha-response', recaptchaToken);
 
-            const response = await fetch('/assets/send-form-baja2.php', {
+            const response = await fetch(FORM_ENDPOINTS.BAJA, {
                 method: 'POST',
                 body: formData
             });

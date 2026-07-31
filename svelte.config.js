@@ -16,7 +16,19 @@ const config = {
 		// Estático, sin `fallback`: las rutas inexistentes las resuelve el
 		// servidor con HTTP 404 + `404.html` (ver `static/.htaccess`).
 		// En Node, ese 404 lo maneja `src/routes/+error.svelte`.
-		adapter: useNode ? adapterNode({ out: 'build-node' }) : adapterStatic()
+		//
+		// `strict: false` porque desde la Fase 1 el repo tiene rutas que NO se
+		// pueden prerenderizar: los `+server.js` de `src/routes/api/`. En el
+		// build estático simplemente no se emiten, y los formularios siguen
+		// hablando con los `.php` gracias a `src/lib/formEndpoints.js`.
+		//
+		// Lo que se pierde a cambio: con `strict: false` el build estático ya no
+		// avisa si una PÁGINA deja de ser prerenderizable por accidente (un
+		// `+page.server.js` con `actions`, un `load` que lee algo de runtime).
+		// Esa página desaparece de `build/` -y de producción- en silencio, sin
+		// romper el build. Es justo el chequeo que gritó cuando se agregó el
+		// primer `+server.js`. Si falta una página en `build/`, empezar por acá.
+		adapter: useNode ? adapterNode({ out: 'build-node' }) : adapterStatic({ strict: false })
 	}
 };
 

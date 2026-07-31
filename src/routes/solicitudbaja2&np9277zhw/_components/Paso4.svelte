@@ -1,6 +1,7 @@
 <script>
 import { datosBaja, paso } from './bajaStore';
 import StepButtons from './StepButtons.svelte';
+import { FORM_ENDPOINTS } from '$lib/formEndpoints.js';
 
 const data=Object.keys($datosBaja).filter(objKey =>
     objKey !== 'consentimientoEntrega').reduce((newObj, key) =>
@@ -43,8 +44,8 @@ const submitBaja=async()=>{
 
     // 1. Crear el ticket en IspCube
     try {
-        console.log('Enviando solicitud a:', '/assets/send-ticket-ispcube.php');
-        const res = await fetch('/assets/send-ticket-ispcube.php',options);
+        console.log('Enviando solicitud a:', FORM_ENDPOINTS.TICKET_ISPCUBE);
+        const res = await fetch(FORM_ENDPOINTS.TICKET_ISPCUBE, options);
         
         if (!res.ok) {
             throw new Error(`HTTP ${res.status}: ${res.statusText}`);
@@ -99,8 +100,8 @@ const submitBaja=async()=>{
             })
         };
         
-        console.log('Enviando email a:', '/assets/send-email-baja.php');
-        const emailRes = await fetch('/assets/send-email-baja.php', emailOptions);
+        console.log('Enviando email a:', FORM_ENDPOINTS.EMAIL_BAJA);
+        const emailRes = await fetch(FORM_ENDPOINTS.EMAIL_BAJA, emailOptions);
         
         if (!emailRes.ok) {
             throw new Error(`HTTP ${emailRes.status}: ${emailRes.statusText}`);

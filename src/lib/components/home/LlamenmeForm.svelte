@@ -2,6 +2,7 @@
     import { onMount } from 'svelte';
     import Recaptcha from '$lib/components/ui/Recaptcha.svelte';
     import { computeCallHeading, computeWhatsappSublabel } from '$lib/llamenme/visibility.js';
+    import { FORM_ENDPOINTS } from '$lib/formEndpoints.js';
 
     // Dentro de la ventana de atención se avisa directo en la tarjeta; fuera,
     // al enviar se abre el modal de preferencia de contacto. Lo decide el Hero
@@ -68,7 +69,7 @@
             formData.append('website', website);
             formData.append('g-recaptcha-response', token);
 
-            const response = await fetch('/assets/send-llamenme.php', {
+            const response = await fetch(FORM_ENDPOINTS.LLAMENME, {
                 method: 'POST',
                 body: formData
             });
