@@ -1,6 +1,7 @@
 <script>
 import { onDestroy, onMount } from "svelte";
 import { MetaTags } from "svelte-meta-tags";
+import { FORM_ENDPOINTS } from '$lib/formEndpoints.js';
 
 
 let secundario=false;
@@ -37,7 +38,7 @@ const recaptchaSiteKeyBaja = import.meta.env.VITE_RECAPTCHA_SITE_KEY_BAJA ?? '6L
 <section>
     <h1>¿Querés trabajar con nosotros?</h1>
     <p>Completá este formulario para darnos tu información</p>
-    <form action="/assets/form-trabajo.php" method="POST" enctype="multipart/form-data">
+    <form action={FORM_ENDPOINTS.TRABAJO} method="POST" enctype="multipart/form-data">
         <input type="hidden" name="form_type" value="trabajo">
         <div class="group">
             <h2>Datos personales</h2>
