@@ -73,15 +73,20 @@
 		'/gigaredplay',
 		'/whatsapp',
 		'/experto-wifi',
-		'/elegirplan'
+		'/elegirplan',
+		'/puntos'
 	];
 
 	const setMobile = () => ($mobile = $windowX < 750);
+	// `/puntos` es la pantalla que ve el comercio al escanear el QR de un
+	// cliente: un kiosco de un solo boton. El nav y el footer ahi son ruido y
+	// obligan a scrollear para llegar al unico control que importa.
 	let hideChrome = $derived(
 		$page.url.pathname.startsWith('/conectarlaciudad') ||
 			$page.url.pathname.startsWith('/tolosano') ||
 			$page.url.pathname.startsWith('/mail-banner') ||
-			$page.url.pathname.startsWith('/experto-wifi')
+			$page.url.pathname.startsWith('/experto-wifi') ||
+			$page.url.pathname.startsWith('/puntos')
 	);
 
 	let isAllowedPath = $derived(() => {
