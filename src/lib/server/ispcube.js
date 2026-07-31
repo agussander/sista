@@ -1,12 +1,22 @@
 /**
- * Alta de tickets en IspCube. Puerto de `static/assets/send-ticket-ispcube.php`.
+ * Cliente de la API de IspCube.
  *
- * OJO: esto crea tickets REALES en el IspCube de produccion. No dispararlo
- * desde una verificacion automatica ni desde un test: todos los tests de este
- * modulo inyectan `fetchImpl`.
+ * Cubre dos usos que llegaron por caminos separados y comparten el mismo host y
+ * la misma autenticacion:
+ *
+ *   - alta de tickets de baja (`createTicket`), puerto de
+ *     `static/assets/send-ticket-ispcube.php`;
+ *   - consulta de un cliente por su numero (`getCustomerByCode`), que usa la
+ *     pantalla de la plataforma de puntos.
+ *
+ * OJO: `createTicket` crea tickets REALES en el IspCube de produccion. No
+ * dispararlo desde una verificacion automatica ni desde un test: todos los
+ * tests de este modulo inyectan `fetchImpl`. `getCustomerByCode` es de solo
+ * lectura.
  *
  * Como el resto de `src/lib/server/`, no lee `$env`: la config entra por
- * parametro y el `+server.js` es el unico que toca las variables de entorno.
+ * parametro y quien la lee es el `+server.js` (tickets) o `ispcubeDeps.js`
+ * (puntos).
  */
 
 /**
@@ -20,6 +30,13 @@
 
 /** Timeout heredado del PHP (`CURLOPT_TIMEOUT => 30`). */
 const TIMEOUT_MS = 30_000;
+
+/**
+ * Timeout mas corto para la consulta de cliente: del otro lado hay alguien
+ * mirando la pantalla despues de escanear un QR, y 30 segundos en blanco es
+ * peor que un mensaje de error.
+ */
+const CUSTOMER_TIMEOUT_MS = 15_000;
 
 /** @param {IspcubeConfig} config */
 function apiHeaders({ apiKey, clientId }) {
@@ -56,7 +73,15 @@ export async function getAuthToken(config, { fetchImpl = fetch } = {}) {
 			signal: AbortSignal.timeout(TIMEOUT_MS)
 		});
 		const data = await res.json();
-		return data?.data?.token ?? null;
+		// La API devuelve el token en la raiz (`{"token": "..."}`), no anidado en
+		// `data`. El PHP leia `data.token` y por eso su fallback de auth nunca
+		// devolvia nada. Se aceptan las dos formas: verificado contra el IspCube
+		// de produccion el 2026-07-31, pero no hay contrato escrito que lo fije.
+		const token = data?.data?.token ?? data?.token ?? null;
+		if (!token) {
+			console.error('[ispcube] el auth respondio sin token:', data?.message ?? data);
+		}
+		return token;
 	} catch (error) {
 		console.error('[ispcube] fallo la autenticacion:', error);
 		return null;
@@ -136,4 +161,105 @@ export async function createTicket(config, datos, bearerToken, { fetchImpl = fet
 		default:
 			return { status: 'error', message: `Error inesperado de la API: ${res.status}` };
 	}
+}
+
+/** Solo digitos. El zero-padding es significativo: `3566` NO es `003566`. */
+const CODE_PATTERN = /^\d{1,12}$/;
+
+/**
+ * @typedef {object} Customer
+ * @property {string} code
+ * @property {string} name Tal como lo devuelve la api, en mayusculas
+ * @property {string} status `enabled`, `disabled`, etc.
+ */
+
+/**
+ * @typedef {{ok: true, customer: Customer} | {ok: false, reason: string}} CustomerResult
+ */
+
+/**
+ * Busca un cliente por su numero. Solo lectura.
+ *
+ * `reason` puede ser `not_found`, `config`, `auth`, `api`, `invalid` o
+ * `network`.
+ *
+ * @param {unknown} code Numero de cliente, con sus ceros ("003566")
+ * @param {IspcubeConfig} config
+ * @param {{ fetchImpl?: typeof fetch }} [options]
+ * @returns {Promise<CustomerResult>}
+ */
+export async function getCustomerByCode(code, config, { fetchImpl = fetch } = {}) {
+	// Un codigo mal formado se resuelve sin gastar una llamada, y cae en el
+	// mismo `not_found` que un cliente inexistente para no confirmarle a quien
+	// sondea si un codigo existe.
+	if (typeof code !== 'string' || !CODE_PATTERN.test(code)) {
+		return { ok: false, reason: 'not_found' };
+	}
+
+	const { baseUrl, username, password, apiKey, clientId } = config;
+	if (!baseUrl || !username || !password || !apiKey || !clientId) {
+		console.error('[ispcube] faltan credenciales: revisar las ISPCUBE_* del entorno');
+		return { ok: false, reason: 'config' };
+	}
+
+	const token = await getAuthToken(config, { fetchImpl });
+	if (!token) return { ok: false, reason: 'auth' };
+
+	const url = `${trimBase(baseUrl)}/api/customer?code=${encodeURIComponent(code)}`;
+
+	/** @type {any} */
+	let res;
+	try {
+		res = await fetchImpl(url, {
+			// `login-type` y `username` no son folklore: sin cualquiera de los dos
+			// la consulta responde `400 {"status":false,"message":"<header>
+			// requerido"}` aunque el bearer sea valido. `apiHeaders` no los trae
+			// porque el alta de tickets no los necesita.
+			//
+			// Es justo lo que le falta a `static/assets/client-handler.php`, y por
+			// eso su busqueda por DNI devuelve "DNI not found" para todo cliente
+			// valido.
+			headers: {
+				...apiHeaders(config),
+				'login-type': 'api',
+				username,
+				Authorization: `Bearer ${token}`
+			},
+			signal: AbortSignal.timeout(CUSTOMER_TIMEOUT_MS)
+		});
+	} catch (error) {
+		console.error('[ispcube] error de red consultando el cliente:', error);
+		return { ok: false, reason: 'network' };
+	}
+
+	// El 404 se corta antes de parsear: es el caso esperado, no un error.
+	if (res.status === 404) return { ok: false, reason: 'not_found' };
+
+	/** @type {any} */
+	let data;
+	try {
+		data = await res.json();
+	} catch (error) {
+		console.error('[ispcube] la api no devolvio json:', error);
+		return { ok: false, reason: 'invalid' };
+	}
+
+	if (!res.ok) {
+		console.error(`[ispcube] HTTP ${res.status} consultando el cliente:`, data?.message);
+		return { ok: false, reason: 'api' };
+	}
+
+	if (!data || typeof data.name !== 'string') {
+		console.error('[ispcube] respuesta sin el campo name:', data);
+		return { ok: false, reason: 'invalid' };
+	}
+
+	return {
+		ok: true,
+		customer: {
+			code: typeof data.code === 'string' ? data.code : code,
+			name: data.name,
+			status: typeof data.status === 'string' ? data.status : ''
+		}
+	};
 }

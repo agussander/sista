@@ -16,7 +16,11 @@
 
 ## Pre-flight
 
-Baseline al escribir este plan: `npm test` → **16 archivos, 202 tests, todos pasando**. Si al empezar no está verde, parar y avisar.
+Baseline al crear la rama: `npm test` → **17 archivos, 208 tests, todos pasando**. Si al empezar no está verde, parar y avisar.
+
+> **La Fase 1 avanza en paralelo sobre `fase1-endpoints-node`.** Este plan se escribió con un baseline de 16/202 y la rama se creó unos commits después, ya con `/api/empresas`, `/api/modal` y `pocketbase.js` adentro. Si los conteos de tests no dan exactos, **verificar de dónde salió la diferencia antes de asumir que está mal**: lo más probable es que la rama base haya avanzado otra vez.
+>
+> Además, `src/routes/api/llamenme/+server.js` puede aparecer **sin trackear** en el working tree: es trabajo en vuelo de la otra sesión y sigue al usuario entre ramas. **Nunca usar `git add -A` en este plan** — todos los commits van con rutas explícitas.
 
 ### Cosas que YA están hechas y no hay que rehacer
 
@@ -169,7 +173,7 @@ Expected: PASS, 9 tests.
 npm test
 ```
 
-Expected: `Test Files 17 passed (17)`, `Tests 211 passed (211)`.
+Expected: `Test Files 18 passed (18)`, `Tests 217 passed (217)`.
 
 - [ ] **Step 7: Commit**
 
@@ -606,7 +610,7 @@ Expected: PASS, 16 tests.
 npm test
 ```
 
-Expected: `Test Files 18 passed (18)`, `Tests 227 passed (227)`.
+Expected: `Test Files 19 passed (19)`, `Tests 233 passed (233)`.
 
 - [ ] **Step 6: Commit**
 
@@ -827,7 +831,7 @@ Expected: imprime algún archivo de `build-node/server`.
 npm test
 ```
 
-Expected: `Test Files 18 passed (18)`, `Tests 227 passed (227)`.
+Expected: `Test Files 19 passed (19)`, `Tests 233 passed (233)`.
 
 - [ ] **Step 7: Commit**
 
@@ -903,10 +907,11 @@ kill %1
 
 - [ ] **Step 7: Commit si hubo ajustes**
 
-Si algo de lo anterior obligó a tocar código:
+Si algo de lo anterior obligó a tocar código, commitear **con rutas explícitas** (ver Pre-flight: hay trabajo sin trackear de otra sesión en el working tree):
 
 ```bash
-git add -A && git commit -m "fix: ajustes de la verificacion local contra ispcube"
+git add src/lib/server/ispcube.js src/lib/server/ispcubeDeps.js src/routes/puntos
+git commit -m "fix: ajustes de la verificacion local contra ispcube"
 ```
 
 Si no hubo cambios, seguir.
