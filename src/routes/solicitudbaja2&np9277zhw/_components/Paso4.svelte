@@ -1,6 +1,7 @@
 <script>
 import { datosBaja, paso } from './bajaStore';
 import StepButtons from './StepButtons.svelte';
+import { FORM_ENDPOINTS } from '$lib/formEndpoints.js';
 
 const data=Object.keys($datosBaja).filter(objKey =>
     objKey !== 'consentimientoEntrega').reduce((newObj, key) =>
@@ -99,8 +100,8 @@ const submitBaja=async()=>{
             })
         };
         
-        console.log('Enviando email a:', '/assets/send-email-baja.php');
-        const emailRes = await fetch('/assets/send-email-baja.php', emailOptions);
+        console.log('Enviando email a:', FORM_ENDPOINTS.EMAIL_BAJA);
+        const emailRes = await fetch(FORM_ENDPOINTS.EMAIL_BAJA, emailOptions);
         
         if (!emailRes.ok) {
             throw new Error(`HTTP ${emailRes.status}: ${emailRes.statusText}`);
