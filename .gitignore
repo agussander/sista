@@ -33,3 +33,6 @@ repro_tmp.mjs
 static/Wireframes objetivos inversion.html
 static/assets/CertificadoAfiliacion*.pdf
 static/images/tv/FB 7-223274 05_06_26.pdf
+
+# QRs generados a mano por scripts/generar-qr.js
+qr/
