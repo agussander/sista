@@ -44,8 +44,8 @@ const submitBaja=async()=>{
 
     // 1. Crear el ticket en IspCube
     try {
-        console.log('Enviando solicitud a:', '/assets/send-ticket-ispcube.php');
-        const res = await fetch('/assets/send-ticket-ispcube.php',options);
+        console.log('Enviando solicitud a:', FORM_ENDPOINTS.TICKET_ISPCUBE);
+        const res = await fetch(FORM_ENDPOINTS.TICKET_ISPCUBE, options);
         
         if (!res.ok) {
             throw new Error(`HTTP ${res.status}: ${res.statusText}`);
