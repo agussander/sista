@@ -329,3 +329,96 @@ export async function getCustomerByCode(code, config, { fetchImpl = fetch } = {}
 		}
 	};
 }
+
+/**
+ * Ejecuta una consulta GET autenticada contra IspCube, reintentando una sola
+ * vez con token nuevo si la respuesta es 401.
+ *
+ * El reintento existe por el cache de token: si IspCube revoca un token, el
+ * cacheado seguiria devolviendose hasta 23 h y el panel quedaria muerto todo
+ * ese tiempo.
+ *
+ * @param {string} path Ruta absoluta desde el host, con su query string
+ * @param {IspcubeConfig} config
+ * @param {{ fetchImpl?: typeof fetch }} [options]
+ * @returns {Promise<{ok: true, data: any} | {ok: false, reason: string, status?: number}>}
+ */
+async function getAutenticado(path, config, { fetchImpl = fetch } = {}) {
+	const { baseUrl, username, password, apiKey, clientId } = config;
+	if (!baseUrl || !username || !password || !apiKey || !clientId) {
+		console.error('[ispcube] faltan credenciales: revisar las ISPCUBE_* del entorno');
+		return { ok: false, reason: 'config' };
+	}
+
+	const url = `${trimBase(baseUrl)}${path}`;
+
+	/** @param {boolean} forzar */
+	const intentar = async (forzar) => {
+		const token = await getAuthToken(config, { fetchImpl, forzar });
+		if (!token) return { fallo: /** @type {const} */ ('auth') };
+		const res = await fetchImpl(url, {
+			headers: {
+				...apiHeaders(config),
+				'login-type': 'api',
+				username,
+				Authorization: `Bearer ${token}`
+			},
+			signal: AbortSignal.timeout(CUSTOMER_TIMEOUT_MS)
+		});
+		return { res };
+	};
+
+	try {
+		let intento = await intentar(false);
+		if (intento.fallo) return { ok: false, reason: 'auth' };
+
+		if (intento.res.status === 401) {
+			intento = await intentar(true);
+			if (intento.fallo) return { ok: false, reason: 'auth' };
+		}
+
+		const res = intento.res;
+		if (res.status === 404) return { ok: false, reason: 'not_found', status: 404 };
+
+		if (!res.ok) {
+			console.error(`[ispcube] HTTP ${res.status} en ${path}`);
+			return { ok: false, reason: 'api', status: res.status };
+		}
+
+		try {
+			return { ok: true, data: await res.json() };
+		} catch (error) {
+			console.error('[ispcube] la api no devolvio json:', error);
+			return { ok: false, reason: 'invalid' };
+		}
+	} catch (error) {
+		console.error(`[ispcube] error de red en ${path}:`, error);
+		return { ok: false, reason: 'network' };
+	}
+}
+
+/**
+ * Tickets de un cliente. Solo lectura.
+ *
+ * Un 404 significa "este cliente no tiene tickets", no un error: se devuelve
+ * lista vacia para que la UI no tenga que distinguir los dos casos.
+ *
+ * @param {unknown} code Numero de cliente, con sus ceros
+ * @param {IspcubeConfig} config
+ * @param {{ fetchImpl?: typeof fetch }} [options]
+ * @returns {Promise<{ok: true, tickets: any[]} | {ok: false, reason: string}>}
+ */
+export async function getTickets(code, config, options = {}) {
+	if (typeof code !== 'string' || !CODE_PATTERN.test(code)) {
+		return { ok: false, reason: 'invalid' };
+	}
+
+	const r = await getAutenticado(`/api/tickets?code=${encodeURIComponent(code)}`, config, options);
+
+	if (!r.ok) {
+		if (r.reason === 'not_found') return { ok: true, tickets: [] };
+		return { ok: false, reason: r.reason };
+	}
+
+	return { ok: true, tickets: Array.isArray(r.data) ? r.data : [] };
+}

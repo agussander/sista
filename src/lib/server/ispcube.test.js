@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { getAuthToken, createTicket, getCustomerByCode, limpiarCacheToken } from './ispcube.js';
+import { getAuthToken, createTicket, getCustomerByCode, getTickets, limpiarCacheToken } from './ispcube.js';
 
 const CONFIG = {
 	baseUrl: 'https://sista.ispcube.online',
@@ -403,5 +403,80 @@ describe('cache del token', () => {
 
 		expect(await enVuelo).toBe('tok-viejo');
 		expect(await forzada).toBe('tok-nuevo');
+	});
+});
+
+describe('getTickets', () => {
+	beforeEach(() => limpiarCacheToken());
+
+	const okAuth = res(200, { token: 'tok' });
+
+	it('consulta por code con todos los headers obligatorios', async () => {
+		const calls = [];
+		await getTickets('003566', CONFIG, {
+			fetchImpl: fakeFetch([okAuth, res(200, [])], calls)
+		});
+
+		expect(calls[1].url).toBe('https://sista.ispcube.online/api/tickets?code=003566');
+		expect(calls[1].init.headers['login-type']).toBe('api');
+		expect(calls[1].init.headers.username).toBe('u');
+		expect(calls[1].init.headers.Authorization).toBe('Bearer tok');
+	});
+
+	it('devuelve los tickets cuando la api responde un array', async () => {
+		const tickets = [{ id: 1, ticket_area_id: 6, created_at: '2026-07-01T10:00:00.000000Z' }];
+		const r = await getTickets('003566', CONFIG, {
+			fetchImpl: fakeFetch([okAuth, res(200, tickets)])
+		});
+
+		expect(r).toEqual({ ok: true, tickets });
+	});
+
+	it('trata un cliente sin tickets como lista vacia, no como error', async () => {
+		const r = await getTickets('003566', CONFIG, {
+			fetchImpl: fakeFetch([okAuth, res(404, {})])
+		});
+
+		expect(r).toEqual({ ok: true, tickets: [] });
+	});
+
+	it('rechaza un code mal formado sin gastar un request', async () => {
+		const calls = [];
+		const r = await getTickets('abc', CONFIG, { fetchImpl: fakeFetch([okAuth], calls) });
+
+		expect(r).toEqual({ ok: false, reason: 'invalid' });
+		expect(calls).toHaveLength(0);
+	});
+
+	it('reintenta una vez con token nuevo ante un 401', async () => {
+		const calls = [];
+		const fetchImpl = fakeFetch(
+			[okAuth, res(401, {}), res(200, { token: 'tok-2' }), res(200, [])],
+			calls
+		);
+		const r = await getTickets('003566', CONFIG, { fetchImpl });
+
+		expect(r).toEqual({ ok: true, tickets: [] });
+		expect(calls).toHaveLength(4);
+		expect(calls[3].init.headers.Authorization).toBe('Bearer tok-2');
+	});
+
+	it('devuelve reason api si el 401 persiste tras el reintento', async () => {
+		const r = await getTickets('003566', CONFIG, {
+			fetchImpl: fakeFetch([okAuth, res(401, {}), res(200, { token: 't2' }), res(401, {})])
+		});
+
+		expect(r).toEqual({ ok: false, reason: 'api' });
+	});
+
+	it('devuelve reason network si el fetch explota', async () => {
+		const r = await getTickets('003566', CONFIG, {
+			fetchImpl: async (url) => {
+				if (String(url).includes('sanctum')) return okAuth;
+				throw new Error('ECONNRESET');
+			}
+		});
+
+		expect(r).toEqual({ ok: false, reason: 'network' });
 	});
 });
