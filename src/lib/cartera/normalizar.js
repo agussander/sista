@@ -4,7 +4,8 @@
  * El cliente de IspCube trae ~80 campos; el snapshot guarda ocho. Esta capa
  * existe para que ni la UI ni las alertas sepan como es el JSON de la API.
  */
-import { toTitleCase } from '$lib/formatName.js';
+import { toTitleCase } from '../formatName.js';
+import { partesFechaHora, compararFechaHora } from './fechas.js';
 
 /**
  * Un cliente de `GET /api/customer`, reducido a lo que usa la Cartera.
@@ -82,7 +83,14 @@ export function resumenTickets(tickets, { areasSoporte, estadosCerrados }) {
 		else nAbiertos++;
 
 		const fecha = typeof t.created_at === 'string' ? t.created_at : '';
-		if (fecha && (!ultimo || fecha > ultimo.fecha)) {
+		const partes = partesFechaHora(fecha);
+		// Comparar por partes en vez de `fecha > ultimo.fecha`: si algun
+		// created_at llegara con espacio en vez de "T", el string ordena mal
+		// (el espacio va antes que la T) e invierte el resultado. Si `fecha`
+		// no tiene forma de fecha, `partes` es null y se descarta como
+		// candidato a ultimo (igual que antes, cuando una `fecha` vacia no
+		// entraba).
+		if (partes && (!ultimo || compararFechaHora(partes, partesFechaHora(ultimo.fecha)) > 0)) {
 			ultimo = {
 				id: t.id,
 				fecha,

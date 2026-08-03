@@ -85,7 +85,7 @@ export function fusionarPagos(guardados, nuevos, hoy) {
 
 /**
  * @typedef {object} OpcionesPuntos
- * @property {'ventanilla' | 'tarjeta'} perfil
+ * @property {'ventanilla' | 'tarjeta'} perfil todavia sin usar: la ventana la define diaCorte
  * @property {number} diaCorte Ultimo dia de la ventana de pago del cliente
  * @property {import('./fechas.js').Partes} instalacion
  * @property {import('./fechas.js').Partes} hoy
