@@ -4138,3 +4138,65 @@ Aguas abajo esto ya estaba contemplado sin saberlo: `/api/cartera/sync` hace
 `cobranzas.ok ? pagosDeCobranzas(...) : null`, y el store hace
 `if (datos.pagos)` antes de pisar el histórico. Con `ok: false` el snapshot
 conserva los pagos que ya tenía en vez de sobrescribirlos con una lista vacía.
+
+---
+
+## Extensión: permisos por usuario en el admin
+
+**Origen (2026-08-03).** Una revisión de seguridad encontró que `verificarAsesor`
+calculaba el id del asesor y lo descartaba: los tres endpoints solo miraban
+`auth.ok`. O sea, **autenticación haciendo las veces de autorización** —
+cualquier registro de la colección `users` de PocketBase podía leer la base
+entera de clientes de Sista (nombres, direcciones, teléfonos, deudas de 8.325
+personas).
+
+Consultado, Agustín pidió algo más amplio que un rol: **poder delimitar desde
+PocketBase, usuario por usuario, a qué funciones del admin accede cada uno.**
+
+### Modelo
+
+Un campo nuevo en la colección `users`:
+
+| Campo | Tipo | Valores |
+|---|---|---|
+| `permisos` | Select **múltiple** | `precios`, `novedades`, `trabajos`, `tecnicos`, `llamenme`, `encuestas`, `ruleta`, `conectarlaciudad`, `tolosano`, `cartera` |
+
+Los valores son las mismas claves que ya usa `Sidebar.svelte` en su campo
+`content` para decidir qué muestra `Content.svelte`. No se inventa un
+vocabulario nuevo: se reusa el que el panel ya tiene.
+
+`encuestas` cubre las dos encuestas de calidad, que en el sidebar son dos
+entradas (`formulario_calidad` y `formulario_calidad_2`) pero una sola función.
+
+### Dónde se aplica
+
+**En el servidor**, que es donde importa de verdad: los endpoints de
+`/api/cartera/` exigen el permiso `cartera`. Sin él, 403.
+
+**En la UI**, como comodidad y no como seguridad: el sidebar muestra solo las
+secciones que el usuario tiene. Un usuario que edite su `localStorage` no gana
+nada, porque el servidor vuelve a chequear y las reglas de PocketBase siguen
+gobernando las colecciones.
+
+### Orden de despliegue (elegido: campo primero)
+
+1. Crear el campo `permisos` en `users` y cargárselo a las cuentas existentes.
+2. Recién entonces desplegar el guardia estricto.
+
+Al revés, todo usuario sin el campo cargado quedaría afuera del panel. Como la
+UI de la Cartera todavía no existe, hay margen de sobra para hacerlo en este
+orden.
+
+### Cambio de nombre
+
+`verificarAsesor` pasa a llamarse **`verificarPermiso(request, pocketbaseUrl,
+permiso, options)`**. El nombre viejo mentía: no verificaba que quien llama sea
+un asesor, solo que tuviera una sesión válida — que es justamente el agujero que
+esto cierra.
+
+### Lo que esto NO es
+
+No es un sistema de roles con herencia, ni permisos por operación (leer/escribir
+por separado), ni control de qué clientes ve cada asesor. Eso último ya lo
+resuelven las reglas de `cartera_clientes` (`asesor = @request.auth.id`). Acá se
+decide únicamente **qué secciones del panel abre cada persona**.
