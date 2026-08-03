@@ -11,7 +11,7 @@
  *     cliente degrada a `{ok: false}` sin tumbar al resto del lote.
  *
  * La guardia de autenticacion ya esta cubierta en server.test.js; aca se
- * mockea verificarAsesor para poder llegar a `snapshotDe` con distintos
+ * mockea verificarPermiso para poder llegar a `snapshotDe` con distintos
  * datos.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -19,7 +19,7 @@ import { POST } from './+server.js';
 import { getCustomerByCode, getTickets, getCobranzas } from '$lib/server/ispcube.js';
 
 vi.mock('$lib/server/adminAuth.js', () => ({
-	verificarAsesor: vi.fn(async () => ({ ok: true, asesorId: 'asesor-1' }))
+	verificarPermiso: vi.fn(async () => ({ ok: true, usuarioId: 'usuario-1' }))
 }));
 
 vi.mock('$lib/server/ispcube.js', () => ({

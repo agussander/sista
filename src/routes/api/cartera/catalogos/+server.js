@@ -9,7 +9,7 @@
 import { json } from '@sveltejs/kit';
 import { getCatalogos } from '$lib/server/ispcube.js';
 import { ispcubeConfig, pocketbaseUrl } from '$lib/server/ispcubeDeps.js';
-import { verificarAsesor } from '$lib/server/adminAuth.js';
+import { verificarPermiso } from '$lib/server/adminAuth.js';
 
 export const prerender = false;
 export const trailingSlash = 'ignore';
@@ -22,8 +22,19 @@ let cache = null;
 
 /** @type {import('./$types').RequestHandler} */
 export async function GET({ request }) {
-	const auth = await verificarAsesor(request, pocketbaseUrl());
-	if (!auth.ok) return json({ error: auth.reason }, { status: 401 });
+	const auth = await verificarPermiso(request, pocketbaseUrl(), 'cartera');
+	if (!auth.ok) {
+		// sin_token/token_invalido: no sabemos quien es. sin_permiso: sabemos
+		// quien es y no puede: por eso el codigo distinto (403, no 401).
+		const status = auth.reason === 'sin_permiso' ? 403 : 401;
+		return json({ error: auth.reason }, { status });
+	}
+	// auth.usuarioId no se usa: este endpoint no escribe en PocketBase ni
+	// filtra datos por usuario, solo sirve catalogos globales de IspCube. El
+	// permiso ya se valido arriba.
+	// auth.usuarioId no se usa: este endpoint no escribe en PocketBase ni
+	// filtra datos por usuario, solo sirve catalogos globales de IspCube. El
+	// permiso ya se valido arriba.
 
 	if (cache && cache.expira > Date.now()) {
 		return json({ ...cache.datos, cacheado: true });

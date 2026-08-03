@@ -13,7 +13,7 @@
 import { json } from '@sveltejs/kit';
 import { getCustomerByCode, getTickets, getCobranzas } from '$lib/server/ispcube.js';
 import { ispcubeConfig, pocketbaseUrl } from '$lib/server/ispcubeDeps.js';
-import { verificarAsesor } from '$lib/server/adminAuth.js';
+import { verificarPermiso } from '$lib/server/adminAuth.js';
 import { normalizarCliente, resumenTickets } from '$lib/cartera/normalizar.js';
 import { pagosDeCobranzas } from '$lib/cartera/pagos.js';
 import { idsFinitos } from '$lib/cartera/ids.js';
@@ -38,8 +38,16 @@ const CONCURRENCIA = 4;
 
 /** @type {import('./$types').RequestHandler} */
 export async function POST({ request }) {
-	const auth = await verificarAsesor(request, pocketbaseUrl());
-	if (!auth.ok) return json({ error: auth.reason }, { status: 401 });
+	const auth = await verificarPermiso(request, pocketbaseUrl(), 'cartera');
+	if (!auth.ok) {
+		// sin_token/token_invalido: no sabemos quien es. sin_permiso: sabemos
+		// quien es y no puede: por eso el codigo distinto (403, no 401).
+		const status = auth.reason === 'sin_permiso' ? 403 : 401;
+		return json({ error: auth.reason }, { status });
+	}
+	// auth.usuarioId no se usa: este endpoint no escribe en PocketBase (ver
+	// comentario arriba del archivo), asi que no hay nada que atar al usuario.
+	// El permiso ya se valido arriba.
 
 	/** @type {any} */
 	let body;
