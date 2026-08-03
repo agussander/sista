@@ -192,6 +192,18 @@ describe('puntosPorMes', () => {
 		expect(puntos[0].estado).toBe('pendiente');
 	});
 
+	it('pendiente justo el dia del corte sin pago (el corte es inclusive)', () => {
+		const puntos = puntosPorMes([], {
+			perfil: 'ventanilla',
+			diaCorte: 10,
+			instalacion,
+			hoy: { anio: 2026, mes: 7, dia: 10 },
+			meses: 1
+		});
+
+		expect(puntos[0].estado).toBe('pendiente');
+	});
+
 	it('devuelve un punto por mes, del mas viejo al mas nuevo', () => {
 		const puntos = puntosPorMes([{ mes: '2026-06', dia: 3, monto: 1 }], {
 			perfil: 'ventanilla',

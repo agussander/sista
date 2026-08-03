@@ -113,9 +113,22 @@ describe('alertas de mora', () => {
 		expect(tipos(r)).not.toContain('mora_2');
 	});
 
+	it('sin mora_1 justo el dia del corte (ventanilla, dia 10)', () => {
+		// El corte es inclusive: pagar el mismo dia 10 todavia esta en ventana.
+		const r = alertasDe(sinPagos, { anio: 2026, mes: 7, dia: 10 }, CONFIG);
+		expect(tipos(r)).not.toContain('mora_1');
+	});
+
 	it('mora_2 pasado el dia 20 sin pago', () => {
 		const r = alertasDe(sinPagos, { anio: 2026, mes: 7, dia: 21 }, CONFIG);
 		expect(tipos(r)).toContain('mora_2');
+	});
+
+	it('mora_1 sin mora_2 justo el dia 20 (ventanilla)', () => {
+		// Ya paso el corte 1 (10) pero el corte 2 (20) todavia es inclusive.
+		const r = alertasDe(sinPagos, { anio: 2026, mes: 7, dia: 20 }, CONFIG);
+		expect(tipos(r)).toContain('mora_1');
+		expect(tipos(r)).not.toContain('mora_2');
 	});
 
 	it('un pago en el mes apaga las dos', () => {
@@ -155,6 +168,17 @@ describe('alertas de mora', () => {
 		);
 
 		expect(tipos(r)).toContain('mora_1');
+	});
+
+	it('a un cliente de tarjeta no le salta mora_1 justo el dia 21', () => {
+		// El corte de tarjeta tambien es inclusive.
+		const r = alertasDe(
+			{ ...sinPagos, perfil_pago: 'tarjeta' },
+			{ anio: 2026, mes: 7, dia: 21 },
+			CONFIG
+		);
+
+		expect(tipos(r)).not.toContain('mora_1');
 	});
 
 	it('a un cliente de tarjeta nunca le salta mora_2', () => {
