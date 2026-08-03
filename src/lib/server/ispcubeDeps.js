@@ -21,3 +21,16 @@ export function ispcubeConfig() {
 		clientId: env.ISPCUBE_CLIENT_ID || ''
 	};
 }
+
+/**
+ * URL de PocketBase para validar tokens de admin desde el servidor.
+ *
+ * `VITE_POCKETBASE_URL` ya existe y es la misma instancia que usa el navegador;
+ * se reusa para no duplicar configuracion. El default replica el de
+ * `src/lib/pocketbase.js`.
+ *
+ * @returns {string}
+ */
+export function pocketbaseUrl() {
+	return env.VITE_POCKETBASE_URL || 'https://sista.pockethost.io';
+}
