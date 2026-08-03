@@ -138,6 +138,11 @@ onMount(async () => {
                     Datos del {desdeCuando(actual.sincronizado)}
                     {#if carteraStore.sincronizando}· actualizando…{/if}
                 </p>
+                {#if !carteraStore.sincronizando && carteraStore.refrescoFallido(actual.code)}
+                    <p class="aviso-refresco">
+                        No pudimos actualizar contra IspCube ahora. Mostrando el último snapshot.
+                    </p>
+                {/if}
             </div>
             <button class="cerrar" onclick={onCerrar} aria-label="Cerrar">×</button>
         </header>
@@ -251,6 +256,9 @@ header { display: flex; justify-content: space-between; align-items: flex-start;
 h3 { margin: 0; color: var(--violeta2); }
 .code { color: #9ca3af; font-size: 0.88em; }
 .datos-de { color: #b9a7d9; font-size: 0.78em; margin: 0.3em 0 0; }
+/* Mismo tono que las alertas de mora (amber), no rojo: el snapshot desactualizado
+   es el modo degradado esperado del diseño, no un error. */
+.aviso-refresco { color: #92400e; font-size: 0.78em; margin: 0.2em 0 0; }
 .cerrar { background: none; border: none; font-size: 1.8em; line-height: 1; cursor: pointer; color: #9ca3af; }
 .alertas { display: flex; flex-wrap: wrap; gap: 0.5em; margin: 1.2em 0; }
 .chip { font-size: 0.85em; padding: 0.4em 0.9em; border-radius: 1em; font-weight: 600; }

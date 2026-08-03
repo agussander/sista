@@ -38,6 +38,15 @@ let loading = $state(true);
 let sincronizando = $state(false);
 let error = $state('');
 
+// Codigos cuyo ultimo intento de refresco contra IspCube fallo (fetch caido,
+// 502, o ese code puntual con `ok: false` en la respuesta de /sync). Es la
+// unica forma en que el detalle y la lista se enteran de un refresco fallido:
+// antes esos casos solo llegaban a `console.error` y la pantalla se quedaba
+// mostrando el snapshot viejo sin ningun aviso. Es un Set reactivo (Svelte 5
+// hace `$state` profundo sobre Map/Set): `.add`/`.delete` alcanzan sin
+// reasignar.
+let fallosRefresco = $state(new Set());
+
 // Codigos con un sync en vuelo ahora mismo. No es reactivo a proposito: solo
 // lo lee `sincronizar` para no duplicar trabajo, ninguna vista lo muestra.
 const codigosEnCurso = new Set();
@@ -156,15 +165,35 @@ async function sincronizar(codesEntrada) {
 		const { resultados } = await res.json();
 
 		for (const r of resultados) {
-			if (!r.ok) continue;
+			if (!r.ok) {
+				// El fetch a /sync funciono, pero IspCube no pudo responder para
+				// este cliente puntual (not_found, 502, etc). El snapshot local
+				// sigue siendo el que habia: se marca como "no se pudo
+				// actualizar" para que el detalle y la lista lo digan, en vez de
+				// mostrar la fecha vieja como si estuviera al dia.
+				fallosRefresco.add(r.code);
+				continue;
+			}
+			fallosRefresco.delete(r.code);
 			await guardarSnapshot(r.code, r.datos);
 		}
 	} catch (e) {
+		// fetch rechazado (red caida) o un status que no sea 401/403/2xx: no se
+		// sabe el resultado individual de ningun code de este lote, asi que se
+		// marcan todos. Es el lado seguro: en el peor caso un cliente que si se
+		// pudo refrescar queda marcado como "no se pudo" hasta el proximo
+		// intento, nunca al reves.
 		console.error('[cartera] fallo la sincronizacion:', e);
+		codes.forEach((c) => fallosRefresco.add(c));
 	} finally {
 		codes.forEach((c) => codigosEnCurso.delete(c));
 		sincronizando = codigosEnCurso.size > 0;
 	}
+}
+
+/** Si el ultimo intento de refrescar `code` contra IspCube fallo. */
+function refrescoFallido(code) {
+	return fallosRefresco.has(code);
 }
 
 async function guardarSnapshot(code, datos) {
@@ -383,5 +412,6 @@ export const carteraStore = {
 	notasDe,
 	agregarNota,
 	marcarTicketsVistos,
-	archivar
+	archivar,
+	refrescoFallido
 };

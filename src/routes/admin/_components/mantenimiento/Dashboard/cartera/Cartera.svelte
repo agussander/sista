@@ -188,7 +188,14 @@ onMount(() => carteraStore.cargar());
                             {/each}
                         </div>
 
-                        <span class="sync">{desdeCuando(cliente.sincronizado)}</span>
+                        <span class="sync">
+                            {desdeCuando(cliente.sincronizado)}
+                            {#if carteraStore.refrescoFallido(cliente.code)}
+                                <span class="sync-fallo" title="No pudimos actualizar contra IspCube. Mostrando el último snapshot.">
+                                    · sin actualizar
+                                </span>
+                            {/if}
+                        </span>
                     </button>
                 </li>
             {/each}
@@ -273,6 +280,9 @@ li.urgencia-alta { border-left: 4px solid #ef4444; box-shadow: 0 1px 8px rgba(23
 .chip.mora_2 { background: #fee2e2; color: #991b1b; }
 .chip.tickets { background: #dbeafe; color: #1e40af; }
 .sync { color: #9ca3af; font-size: 0.8em; white-space: nowrap; }
+/* Mismo tono amber que las alertas de mora, no rojo: un refresco fallido deja
+   al cliente en el modo degradado esperado (snapshot viejo), no en un error. */
+.sync-fallo { color: #92400e; }
 .vacio { color: #6b7280; padding: 2em 0; display: flex; flex-direction: column; align-items: flex-start; gap: 0.8em; }
 .error {
     color: #991b1b; background: #fef2f2; border: 1px solid #fecaca; border-radius: 0.8em;
