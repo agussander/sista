@@ -6,8 +6,18 @@ import { token, record } from '../adminStore';
 import { llamenmeStore, primeAudio } from './Dashboard/llamenme/llamenmeStore.svelte.js';
 import Sidebar from './Dashboard/Sidebar.svelte';
 import Content from './Dashboard/Content.svelte';
+import { PANEL_SECCIONES } from './Dashboard/panelSecciones.js';
+import { seccionPermitida } from '$lib/adminPermisos.js';
 
 let selected = $state(null);
+
+// Misma lista y mismo filtro que usa el Sidebar (ver panelSecciones.js): antes
+// esta grilla tenia sus cinco botones hardcodeados aparte, sin filtrar por
+// permiso, y por eso quedo sin "Cartera de clientes" cuando se agrego. Con una
+// sola fuente, la grilla y el sidebar nunca vuelven a desincronizarse.
+const seccionesPermitidas = $derived(
+    PANEL_SECCIONES.filter((item) => seccionPermitida(item.content, $record?.permisos))
+);
 
 $effect(() => {
     const view = $page.url.searchParams.get('view');
@@ -110,41 +120,26 @@ $effect(() => {
         </button>
         {#if !selected}
             <div class="home-screen">
-                <div class="panel-menu">
-                    <button class="panel-btn" onclick={() => handlePanelSelect('precios')}>
-                        <span class="panel-icon-wrap">
-                            <svg class="panel-icon" xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                        </span>
-                        <span class="panel-label">Precios</span>
-                    </button>
-                    <button class="panel-btn" onclick={() => handlePanelSelect('novedades')}>
-                        <span class="panel-icon-wrap">
-                            <svg class="panel-icon" xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M2 10h20"/></svg>
-                        </span>
-                        <span class="panel-label">Novedades</span>
-                    </button>
-                    <button class="panel-btn" onclick={() => handlePanelSelect('trabajos')}>
-                        <span class="panel-icon-wrap">
-                            <svg class="panel-icon" xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                        </span>
-                        <span class="panel-label">Trabajos</span>
-                    </button>
-                    <button class="panel-btn" onclick={() => handlePanelSelect('tecnicos')}>
-                        <span class="panel-icon-wrap">
-                            <svg class="panel-icon" xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
-                        </span>
-                        <span class="panel-label">Técnicos</span>
-                    </button>
-                    <button class="panel-btn" onclick={() => handlePanelSelect('llamenme')}>
-                        <span class="panel-icon-wrap">
-                            {#if llamenmeStore.unread > 0}
-                                <span class="notif-dot" aria-label="Nuevas solicitudes"></span>
-                            {/if}
-                            <svg class="panel-icon" xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-                        </span>
-                        <span class="panel-label">Quiero que me llamen</span>
-                    </button>
-                </div>
+                {#if seccionesPermitidas.length === 0}
+                    <p class="sin-permisos">
+                        Todavía no tenés secciones habilitadas. Pedile a un administrador que te asigne
+                        permisos en tu usuario.
+                    </p>
+                {:else}
+                    <div class="panel-menu">
+                        {#each seccionesPermitidas as item}
+                            <button class="panel-btn" onclick={() => handlePanelSelect(item.content)}>
+                                <span class="panel-icon-wrap">
+                                    {#if item.content === 'llamenme' && llamenmeStore.unread > 0}
+                                        <span class="notif-dot" aria-label="Nuevas solicitudes"></span>
+                                    {/if}
+                                    <span class="panel-icon">{@html `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${item.icon}</svg>`}</span>
+                                </span>
+                                <span class="panel-label">{item.title}</span>
+                            </button>
+                        {/each}
+                    </div>
+                {/if}
             </div>
         {:else}
             <Content {selected} record={$record} />
@@ -447,13 +442,32 @@ $effect(() => {
 .panel-icon {
     width: 1.7em;
     height: 1.7em;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     color: var(--violeta2);
     stroke: var(--violeta2);
     transition: stroke 0.18s, color 0.18s;
 }
+.panel-icon :global(svg) {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
 .panel-btn:hover .panel-icon {
     color: white;
     stroke: white;
+}
+.sin-permisos {
+    max-width: 26em;
+    padding: 1.2em 1.4em;
+    background: #fff;
+    border: 1.5px dashed #d9cbef;
+    border-radius: 1em;
+    color: #6b7280;
+    font-size: 1em;
+    line-height: 1.5;
+    text-align: center;
 }
 .panel-label {
     font-size: 1.08em;
