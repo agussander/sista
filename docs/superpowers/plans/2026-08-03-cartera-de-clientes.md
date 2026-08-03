@@ -4101,3 +4101,40 @@ Antes de desplegar, confirmá que estas variables están en el entorno del servi
 - `VITE_POCKETBASE_URL`
 
 Ver `DEPLOY.md` y la memoria sobre la migración a adapter-node.
+
+---
+
+## Desviaciones del plan durante la ejecución
+
+### Task 2 — deduplicación de pedidos de token en vuelo
+
+El plan solo pedía cachear el token resuelto. La revisión notó que dos llamadas
+concurrentes con el cache frío disparaban cada una su propio POST al endpoint de
+token — y que la Task 11 (`Promise.all([getTickets, getCobranzas])`) y la Task 12
+(concurrencia 4) iban a golpear eso de lleno. Se agregó un mapa de pedidos en
+vuelo. `forzar: true` lo saltea a propósito: quien fuerza sabe que el token en
+camino puede ser el podrido.
+
+### Task 4 — unificar `getCustomerByCode` sobre `getAutenticado`
+
+Ver la nota al principio de la Task 4. Resumen: el cache de token de la Task 2
+podía dejar sin auto-reparo ante 401 justo al único camino en producción.
+
+### Tasks 3 y 4 — un payload que no es array ya no se lava en lista vacía
+
+**El plan especificaba** `Array.isArray(r.data) ? r.data : []` en `getTickets` y
+`getCobranzas`. **Se cambió a** `{ok: false, reason: 'invalid'}`.
+
+Por qué: si IspCube devuelve un objeto de error con HTTP 200 —un patrón que esta
+API usa—, la versión del plan lo convertía en lista vacía. Para tickets es
+tolerable; para cobranzas no, porque las alertas de mora se calculan sobre esa
+lista y "la API contestó cualquier cosa" quedaba indistinguible de "este cliente
+no pagó". El resultado habría sido un asesor llamando a alguien que sí pagó.
+
+El 404 **sigue** mapeando a lista vacía: un cliente sin tickets ni cobranzas es
+un caso normal.
+
+Aguas abajo esto ya estaba contemplado sin saberlo: `/api/cartera/sync` hace
+`cobranzas.ok ? pagosDeCobranzas(...) : null`, y el store hace
+`if (datos.pagos)` antes de pisar el histórico. Con `ok: false` el snapshot
+conserva los pagos que ya tenía en vez de sobrescribirlos con una lista vacía.
