@@ -592,10 +592,36 @@ git commit -m "feat: getTickets para la Cartera de clientes"
 
 ---
 
-### Task 4: `getCobranzas` y `getCatalogos`
+### Task 4: `getCobranzas`, `getCatalogos` y unificar `getCustomerByCode`
+
+> **Alcance ampliado durante la ejecución (2026-08-03).** La revisión de la Task 3
+> encontró dos problemas en el módulo, no en el commit:
+>
+> 1. **`getCustomerByCode` no tiene el auto-reparo ante 401.** El cache de token
+>    de la Task 2 puede dejarlo con un token revocado hasta 23 h — y es el único
+>    camino que hoy está en producción (la pantalla `/puntos/[nro]` del QR). O
+>    sea: introdujimos el cache y dejamos sin proteger justo lo que ya se usa.
+> 2. **Divergencia en el vocabulario de errores.** `getCustomerByCode` parsea el
+>    JSON *antes* de mirar `res.ok`; `getAutenticado` mira el status primero. Un
+>    502 con cuerpo HTML —caso que el propio módulo documenta como real— da
+>    `invalid` por un camino y `api` por el otro.
+>
+> Las dos se arreglan con el mismo movimiento: plegar `getCustomerByCode` sobre
+> `getAutenticado`. Se hace acá y no después porque al terminar esta task hay
+> tres consumidores del transporte compartido y una copia divergente; reconciliar
+> una copia es barato, reconciliar tres no.
+>
+> **Dos comportamientos deliberados de `getCustomerByCode` que el refactor NO
+> puede perder:**
+> - Un `code` mal formado devuelve `not_found`, **no** `invalid`. Es a propósito:
+>   no le confirma a quien sondea si un número de cliente existe.
+> - Una respuesta sin el campo `name` devuelve `invalid`.
+>
+> Su contrato público (`{ok: true, customer}` / `{ok: false, reason}`) no cambia:
+> lo consume `/puntos/[nro]`, que está en producción.
 
 **Files:**
-- Modify: `src/lib/server/ispcube.js` (agregar al final)
+- Modify: `src/lib/server/ispcube.js` (agregar al final, y refactorizar `getCustomerByCode`)
 - Test: `src/lib/server/ispcube.test.js`
 
 - [ ] **Step 1: Escribir los tests que fallan**
