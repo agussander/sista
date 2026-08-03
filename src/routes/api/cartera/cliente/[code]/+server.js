@@ -54,8 +54,13 @@ export async function GET({ request, params, url }) {
 
 	return json({
 		cliente: normalizarCliente(cliente.customer.crudo ?? cliente.customer),
+		// Solo el resumen: el payload crudo de tickets trae el texto completo de
+		// cada comentario y no lo lee nadie. Devolverlo entero terminaba
+		// guardado en PocketBase por `agregar()` en el store, sin cota de tamano
+		// y con una forma distinta a la que deja `resumenTickets` en cada
+		// sincronizacion posterior.
 		tickets: tickets.ok
-			? { ...resumenTickets(tickets.tickets, { areasSoporte, estadosCerrados }), lista: tickets.tickets }
+			? resumenTickets(tickets.tickets, { areasSoporte, estadosCerrados })
 			: { error: tickets.reason },
 		pagos: cobranzas.ok ? pagosDeCobranzas(cobranzas.cobranzas) : { error: cobranzas.reason }
 	});

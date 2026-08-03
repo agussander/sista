@@ -32,9 +32,6 @@ export async function GET({ request }) {
 	// auth.usuarioId no se usa: este endpoint no escribe en PocketBase ni
 	// filtra datos por usuario, solo sirve catalogos globales de IspCube. El
 	// permiso ya se valido arriba.
-	// auth.usuarioId no se usa: este endpoint no escribe en PocketBase ni
-	// filtra datos por usuario, solo sirve catalogos globales de IspCube. El
-	// permiso ya se valido arriba.
 
 	if (cache && cache.expira > Date.now()) {
 		return json({ ...cache.datos, cacheado: true });
