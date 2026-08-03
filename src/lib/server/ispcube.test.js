@@ -599,4 +599,19 @@ describe('getCatalogos', () => {
 
 		expect(r).toEqual({ ok: false, reason: 'api' });
 	});
+
+	it('no pide areas_list si entities_list ya fallo (serial, no Promise.all)', async () => {
+		const calls = [];
+		const r = await getCatalogos(CONFIG, {
+			// Solo dos respuestas armadas: auth y el 500 de entities_list. Si la
+			// implementacion pidiera areas_list en paralelo (Promise.all), ese
+			// tercer fetch reusaria la ultima respuesta (fakeFetch no tiene mas
+			// para darle) y el test lo detectaria igual por la cantidad de calls.
+			fetchImpl: fakeFetch([okAuth, res(500, {})], calls)
+		});
+
+		expect(r).toEqual({ ok: false, reason: 'api' });
+		// auth + entities_list, nada mas: areas_list no se llega a pedir.
+		expect(calls).toHaveLength(2);
+	});
 });

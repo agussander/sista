@@ -1,22 +1,29 @@
 /**
  * Cliente de la API de IspCube.
  *
- * Cubre dos usos que llegaron por caminos separados y comparten el mismo host y
+ * Cubre usos que llegaron por caminos separados y comparten el mismo host y
  * la misma autenticacion:
  *
  *   - alta de tickets de baja (`createTicket`), puerto de
  *     `static/assets/send-ticket-ispcube.php`;
  *   - consulta de un cliente por su numero (`getCustomerByCode`), que usa la
- *     pantalla de la plataforma de puntos.
+ *     pantalla de la plataforma de puntos;
+ *   - `getTickets`, `getCobranzas` y `getCatalogos`, para la Cartera de
+ *     clientes del panel /admin.
+ *
+ * Las cuatro funciones de solo lectura (`getCustomerByCode`, `getTickets`,
+ * `getCobranzas`, `getCatalogos`) comparten transporte en el helper interno
+ * `getAutenticado`: headers obligatorios, lectura de status y un reintento
+ * ante un 401 con token nuevo.
  *
  * OJO: `createTicket` crea tickets REALES en el IspCube de produccion. No
  * dispararlo desde una verificacion automatica ni desde un test: todos los
- * tests de este modulo inyectan `fetchImpl`. `getCustomerByCode` es de solo
+ * tests de este modulo inyectan `fetchImpl`. El resto del modulo es de solo
  * lectura.
  *
  * Como el resto de `src/lib/server/`, no lee `$env`: la config entra por
- * parametro y quien la lee es el `+server.js` (tickets) o `ispcubeDeps.js`
- * (puntos).
+ * parametro. Quien la arma es `ispcubeDeps.js`, para el alta de tickets, la
+ * plataforma de puntos y (a futuro) la Cartera.
  */
 
 /**
@@ -32,11 +39,13 @@
 const TIMEOUT_MS = 30_000;
 
 /**
- * Timeout mas corto para la consulta de cliente: del otro lado hay alguien
- * mirando la pantalla despues de escanear un QR, y 30 segundos en blanco es
- * peor que un mensaje de error.
+ * Timeout mas corto para las lecturas (`getAutenticado`, y por lo tanto
+ * `getCustomerByCode`, `getTickets`, `getCobranzas`, `getCatalogos`): del
+ * otro lado suele haber alguien mirando la pantalla -al escanear un QR, al
+ * abrir la Cartera de un cliente-, y 30 segundos en blanco es peor que un
+ * mensaje de error.
  */
-const CUSTOMER_TIMEOUT_MS = 15_000;
+const READ_TIMEOUT_MS = 15_000;
 
 /** @param {IspcubeConfig} config */
 function apiHeaders({ apiKey, clientId }) {
@@ -272,11 +281,19 @@ async function getAutenticado(path, config, { fetchImpl = fetch } = {}) {
 		const res = await fetchImpl(url, {
 			headers: {
 				...apiHeaders(config),
+				// `login-type` y `username` no son folklore: sin cualquiera de los
+				// dos la consulta responde `400 {"status":false,"message":"<header>
+				// requerido"}` aunque el bearer sea valido. `apiHeaders` no los trae
+				// porque el alta de tickets no los necesita.
+				//
+				// Es justo lo que le falta a `static/assets/client-handler.php`, y por
+				// eso su busqueda por DNI devuelve "DNI not found" para todo cliente
+				// valido.
 				'login-type': 'api',
 				username,
 				Authorization: `Bearer ${token}`
 			},
-			signal: AbortSignal.timeout(CUSTOMER_TIMEOUT_MS)
+			signal: AbortSignal.timeout(READ_TIMEOUT_MS)
 		});
 		return { res };
 	};
@@ -286,6 +303,11 @@ async function getAutenticado(path, config, { fetchImpl = fetch } = {}) {
 		if (intento.fallo) return { ok: false, reason: 'auth' };
 
 		if (intento.res.status === 401) {
+			// Si esto empieza a aparecer seguido, el token cacheado 23 h se esta
+			// revocando del lado de IspCube: cada 401 recuperado cuesta un request
+			// extra en una api facturada por request, y sin este log no queda
+			// ningun rastro de que paso.
+			console.error(`[ispcube] token rechazado (401) en ${path}, reintentando con uno nuevo`);
 			intento = await intentar(true);
 			if (intento.fallo) return { ok: false, reason: 'auth' };
 		}
@@ -294,7 +316,26 @@ async function getAutenticado(path, config, { fetchImpl = fetch } = {}) {
 		if (res.status === 404) return { ok: false, reason: 'not_found', status: 404 };
 
 		if (!res.ok) {
-			console.error(`[ispcube] HTTP ${res.status} en ${path}`);
+			// Se lee el cuerpo best-effort: la API manda el motivo del rechazo en
+			// `message`, y en Hostinger no hay forma de ver logs de runtime en
+			// vivo, asi que un log que solo diga el status no alcanza para
+			// diagnosticar. Chequear el status primero (arriba) sigue mandando en
+			// la decision; esto solo suma detalle al log.
+			let detalle = '';
+			try {
+				const raw = await res.text();
+				try {
+					// Forma normal: `{"status":false,"message":"..."}`.
+					detalle = JSON.parse(raw)?.message ?? raw;
+				} catch {
+					// No es JSON (un 502 con HTML, por ejemplo): se loguea el texto
+					// crudo, que sigue siendo mas util que nada.
+					detalle = raw;
+				}
+			} catch (error) {
+				detalle = `(no se pudo leer el cuerpo: ${error instanceof Error ? error.message : error})`;
+			}
+			console.error(`[ispcube] HTTP ${res.status} en ${path}:`, detalle);
 			return { ok: false, reason: 'api', status: res.status };
 		}
 
@@ -451,6 +492,9 @@ export async function getCobranzas(code, config, options = {}) {
  * @returns {Promise<{ok: true, entidades: any[], areas: any[]} | {ok: false, reason: string}>}
  */
 export async function getCatalogos(config, options = {}) {
+	// Serial a proposito, no Promise.all: si entities_list falla no tiene
+	// sentido gastar un segundo request -facturado- en areas_list para
+	// terminar tirando el resultado igual.
 	const entidades = await getAutenticado('/api/cash/entities_list', config, options);
 	if (!entidades.ok) return { ok: false, reason: entidades.reason };
 
