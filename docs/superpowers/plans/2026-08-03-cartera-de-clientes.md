@@ -2527,6 +2527,26 @@ git commit -m "feat: endpoint de sincronizacion de snapshots de la Cartera"
 
 **Esta task es manual**, en el admin de PocketBase (`https://sista.pockethost.io/_/`). No hay migraciones versionadas en este repo.
 
+- [ ] **Step 0 (HACER PRIMERO): revisar la regla Create de `users` y agregar `permisos`**
+
+**Primero lo urgente.** Collections → `users` → API Rules → **Create rule**.
+
+Si está vacía, el registro en PocketBase es **público**: cualquiera se crea una
+cuenta. Combinado con los endpoints de la Cartera, eso significa que cualquiera
+en internet podría leer la base entera de clientes de Sista. Si está vacía,
+cerrala (`@request.auth.id != ""` para que solo un usuario autenticado pueda
+crear cuentas, o dejala sin regla de API y creá las cuentas desde el panel).
+
+Después, agregá el campo de permisos a `users`:
+
+| Campo | Tipo | Valores |
+|---|---|---|
+| `permisos` | **Select**, con "Max select" en 10 (múltiple) | `precios`, `novedades`, `trabajos`, `tecnicos`, `llamenme`, `encuestas`, `ruleta`, `conectarlaciudad`, `tolosano`, `cartera` |
+
+Y **cargáselo a las cuentas existentes** antes de desplegar. Un usuario sin
+permisos cargados no accede a nada: el guardia falla cerrado a propósito. A los
+asesores comerciales dales al menos `cartera`.
+
 - [ ] **Step 1: Crear `cartera_clientes`**
 
 Tipo **Base**. Campos:
@@ -2602,14 +2622,21 @@ En **Create**, además, para que nadie cree registros a nombre de otro:
 
 **API Rules:** List y View con `@request.auth.id != ""` (cualquier asesor autenticado necesita leerla). Update con `@request.auth.id != ""` por ahora; cuando existan roles, restringir a admin.
 
-Creá **un único registro** con los valores del sondeo de la Task 1:
+Creá **un único registro** con estos valores, ya resueltos por el sondeo de la
+Task 1 y confirmados con Agustín:
 
-- `dia_corte_1`: `10`
-- `dia_corte_2`: `20`
-- `dia_corte_tarjeta`: `21`
-- `entidades_tarjeta`: los ids de entidad que el sondeo mostró como tarjeta
-- `areas_soporte`: los ids de área de soporte
-- `estados_cerrados`: los ids de estado que significan cerrado (de `/api/tickets/status_list`)
+| Campo | Valor | Qué es |
+|---|---|---|
+| `entidades_tarjeta` | `[152, 64, 153, 59, 54]` | Crédito **y** débito automático |
+| `areas_soporte` | `[1]` | Área "Soporte" |
+| `estados_cerrados` | `[3, 6, 8]` | Cerrado, FINALIZADO, ANULADO |
+| `dia_corte_1` | `10` | |
+| `dia_corte_2` | `20` | |
+| `dia_corte_tarjeta` | `21` | |
+
+El débito automático entra junto con el crédito porque la ventana del 21 no
+existe por ser "tarjeta": existe porque a esos clientes se les debita en fecha
+fija y no van a pagar por ventanilla.
 
 - [ ] **Step 4: Verificar las reglas**
 
