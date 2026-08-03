@@ -185,10 +185,21 @@ describe('getCustomerByCode', () => {
 			fetchImpl: fakeFetch([AUTH_OK, CLIENTE_OK])
 		});
 
-		expect(out).toEqual({
-			ok: true,
-			customer: { code: '003566', name: 'TALONE SANDRA ELIZABETH', status: 'enabled' }
+		expect(out.ok).toBe(true);
+		expect(out.customer.code).toBe('003566');
+		expect(out.customer.name).toBe('TALONE SANDRA ELIZABETH');
+		expect(out.customer.status).toBe('enabled');
+	});
+
+	it('devuelve la respuesta cruda para quien necesite mas campos', async () => {
+		const data = { code: '003566', name: 'ANA', status: 'enabled', entity_id: 4, debt: '100.00' };
+		const r = await getCustomerByCode('003566', CONFIG, {
+			fetchImpl: fakeFetch([res(200, { token: 'tok' }), res(200, data)])
 		});
+
+		expect(r.ok).toBe(true);
+		expect(r.customer.crudo.entity_id).toBe(4);
+		expect(r.customer.crudo.debt).toBe('100.00');
 	});
 
 	it('consulta ?code= respetando los ceros a la izquierda', async () => {
@@ -329,10 +340,10 @@ describe('getCustomerByCode', () => {
 		);
 		const out = await getCustomerByCode('003566', CONFIG, { fetchImpl });
 
-		expect(out).toEqual({
-			ok: true,
-			customer: { code: '003566', name: 'TALONE SANDRA ELIZABETH', status: 'enabled' }
-		});
+		expect(out.ok).toBe(true);
+		expect(out.customer.code).toBe('003566');
+		expect(out.customer.name).toBe('TALONE SANDRA ELIZABETH');
+		expect(out.customer.status).toBe('enabled');
 		expect(calls).toHaveLength(4);
 		expect(calls[3].init.headers.Authorization).toBe('Bearer tok-2');
 	});

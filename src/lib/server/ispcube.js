@@ -246,6 +246,7 @@ const CODE_PATTERN = /^\d{1,12}$/;
  * @property {string} code
  * @property {string} name Tal como lo devuelve la api, en mayusculas
  * @property {string} status `enabled`, `disabled`, etc.
+ * @property {any} crudo La respuesta completa de la api, sin recortar
  */
 
 /**
@@ -399,7 +400,11 @@ export async function getCustomerByCode(code, config, options = {}) {
 		customer: {
 			code: typeof r.data.code === 'string' ? r.data.code : code,
 			name: r.data.name,
-			status: typeof r.data.status === 'string' ? r.data.status : ''
+			status: typeof r.data.status === 'string' ? r.data.status : '',
+			// La respuesta completa, para quien necesite mas que el nombre. La
+			// pantalla de puntos solo usa los tres campos de arriba; la Cartera
+			// necesita entity_id, start_date y las deudas.
+			crudo: r.data
 		}
 	};
 }
