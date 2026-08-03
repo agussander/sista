@@ -25,12 +25,23 @@ let configurando = $state(false);
 // mensaje mas especifico (p. ej. el 403 de "no tenes permiso") con uno
 // generico. Por eso el banner es descartable y se "reabre" solo cuando el
 // texto cambia, no cuando el store simplemente lo repite.
+//
+// `ultimoError` se limpia apenas `carteraStore.error` vuelve a '': sin esto,
+// un archivar() que falla dos veces seguidas (la primera se descarta, el
+// error se borra solo a los 3s, la segunda repite el mismo string) nunca
+// reabre el banner, porque `error !== ultimoError` da false las dos veces.
+// Al resetear `ultimoError` cuando el error se apaga, la proxima vez que
+// aparezca -sea el mismo texto o no- vuelve a contar como "nuevo".
 let errorDescartado = $state(false);
 let ultimoError = $state('');
 $effect(() => {
-    if (carteraStore.error && carteraStore.error !== ultimoError) {
-        ultimoError = carteraStore.error;
-        errorDescartado = false;
+    if (carteraStore.error) {
+        if (carteraStore.error !== ultimoError) {
+            ultimoError = carteraStore.error;
+            errorDescartado = false;
+        }
+    } else {
+        ultimoError = '';
     }
 });
 
