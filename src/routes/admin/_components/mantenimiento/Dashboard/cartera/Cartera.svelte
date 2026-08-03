@@ -5,6 +5,7 @@ import Spinner from '$lib/components/ui/Spinner.svelte';
 import { carteraStore } from './carteraStore.svelte.js';
 import AgregarCliente from './AgregarCliente.svelte';
 import ClienteDetalle from './ClienteDetalle.svelte';
+import CarteraConfig from './CarteraConfig.svelte';
 import { puntosPorMes } from '$lib/cartera/pagos.js';
 import { diaCorteDe } from '$lib/cartera/alertas.js';
 import { partesFecha } from '$lib/cartera/fechas.js';
@@ -17,6 +18,7 @@ let busqueda = $state('');
 let filtro = $state('todos');
 let abierto = $state(null);
 let agregando = $state(false);
+let configurando = $state(false);
 
 // El banner de error del store es un string compartido: lo escriben cargar(),
 // sincronizar() y archivar(), y una sincronizacion de fondo puede pisar un
@@ -120,7 +122,10 @@ onMount(() => carteraStore.cargar());
 <section>
     <header>
         <h2>Cartera de clientes</h2>
-        <button class="agregar" onclick={() => (agregando = true)}>+ Agregar cliente</button>
+        <div class="acciones-header">
+            <button class="config" onclick={() => (configurando = true)} title="Configuración">⚙</button>
+            <button class="agregar" onclick={() => (agregando = true)}>+ Agregar cliente</button>
+        </div>
     </header>
 
     <div class="controles">
@@ -192,15 +197,24 @@ onMount(() => carteraStore.cargar());
     {#if abierto}
         <ClienteDetalle cliente={abierto} onCerrar={() => (abierto = null)} />
     {/if}
+
+    {#if configurando}
+        <CarteraConfig onCerrar={() => (configurando = false)} />
+    {/if}
 </section>
 
 <style>
 section { padding: 1.5em 2em; }
 header { display: flex; align-items: center; justify-content: space-between; gap: 1em; }
 h2 { color: var(--violeta2); margin: 0; }
+.acciones-header { display: flex; gap: 0.6em; align-items: center; }
 .agregar {
     background: var(--violeta2); color: #fff; border: none; border-radius: 2em;
     padding: 0.7em 1.4em; font-size: 1em; font-weight: 600; cursor: pointer;
+}
+.config {
+    background: #fff; border: 1.5px solid #e0e0e0; color: var(--violeta2);
+    border-radius: 50%; width: 2.4em; height: 2.4em; font-size: 1em; cursor: pointer;
 }
 .controles { display: flex; flex-wrap: wrap; gap: 1em; margin: 1.5em 0; align-items: center; }
 input[type='search'] {
