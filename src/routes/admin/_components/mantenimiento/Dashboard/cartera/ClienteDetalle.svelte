@@ -102,11 +102,26 @@ onMount(async () => {
 });
 </script>
 
+<!--
+    Escape va en `svelte:window`, no en un onkeydown del `.fondo`: el foco
+    siempre termina dentro de `.panel` (el textarea, un input, un boton), y un
+    keydown ahi nunca llega a burbujear hasta `.fondo` porque el panel tenia su
+    propio onkeydown con stopPropagation. Con `svelte:window` el Escape se
+    escucha una sola vez para toda la ventana, sin depender de donde este el
+    foco ni de la burbuja del evento.
+-->
+<svelte:window onkeydown={(e) => e.key === 'Escape' && onCerrar()} />
+
+<!--
+    El cierre por teclado ya existe (Escape arriba, mas el boton "x" abajo);
+    este backdrop solo suma el cierre por click como comodidad para mouse, asi
+    que no necesita su propio par de teclado.
+-->
+<!-- svelte-ignore a11y_click_events_have_key_events -->
 <div
     class="fondo"
     role="presentation"
     onclick={onCerrar}
-    onkeydown={(e) => e.key === 'Escape' && onCerrar()}
 >
     <div
         class="panel"
@@ -114,7 +129,6 @@ onMount(async () => {
         aria-label="Detalle del cliente"
         tabindex="-1"
         onclick={(e) => e.stopPropagation()}
-        onkeydown={(e) => e.stopPropagation()}
     >
         <header>
             <div>

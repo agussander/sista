@@ -94,11 +94,23 @@ async function guardar() {
 onMount(cargar);
 </script>
 
+<!--
+    Escape en `svelte:window`: ver el comentario en ClienteDetalle.svelte. El
+    onkeydown que vivia en `.fondo` nunca disparaba porque el foco esta siempre
+    dentro de `.panel`, que cortaba la burbuja con su propio stopPropagation.
+-->
+<svelte:window onkeydown={(e) => e.key === 'Escape' && onCerrar()} />
+
+<!--
+    El cierre por teclado ya existe (Escape arriba, mas el boton "Cancelar");
+    este backdrop solo suma el cierre por click como comodidad para mouse, asi
+    que no necesita su propio par de teclado.
+-->
+<!-- svelte-ignore a11y_click_events_have_key_events -->
 <div
     class="fondo"
     role="presentation"
     onclick={onCerrar}
-    onkeydown={(e) => e.key === 'Escape' && onCerrar()}
 >
     <div
         class="panel"
@@ -106,7 +118,6 @@ onMount(cargar);
         aria-label="Configuración de la Cartera"
         tabindex="-1"
         onclick={(e) => e.stopPropagation()}
-        onkeydown={(e) => e.stopPropagation()}
     >
         <h3>Configuración de la Cartera</h3>
 
