@@ -15,6 +15,10 @@
  * @typedef {{anio: number, mes: number, dia: number}} Partes
  */
 
+/**
+ * @typedef {{anio: number, mes: number, dia: number, hora: number, minuto: number, segundo: number}} PartesConHora
+ */
+
 /** Dias de cada mes; febrero se corrige aparte. */
 const DIAS_POR_MES = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
@@ -43,6 +47,44 @@ export function partesFecha(valor) {
 	const m = valor.match(/^(\d{4})-(\d{2})-(\d{2})/);
 	if (!m) return null;
 	return { anio: Number(m[1]), mes: Number(m[2]), dia: Number(m[3]) };
+}
+
+/**
+ * Extrae anio, mes, dia, hora, minuto y segundo de una fecha de IspCube.
+ * Mismo parseo por texto que `partesFecha`, nunca `new Date()`.
+ *
+ * Si el string no trae hora (por ejemplo `"2026-03-01"`), hora/minuto/segundo
+ * quedan en 0: se lo trata como el primer instante del dia, no como "sin
+ * dato". Para esta funcion siempre hay un momento del dia, aunque sea
+ * implicito.
+ *
+ * @param {unknown} valor
+ * @returns {PartesConHora | null} `null` si no tiene forma de fecha
+ */
+export function partesFechaHora(valor) {
+	if (typeof valor !== 'string') return null;
+	const m = valor.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2}):(\d{2})/);
+	if (m) {
+		return {
+			anio: Number(m[1]),
+			mes: Number(m[2]),
+			dia: Number(m[3]),
+			hora: Number(m[4]),
+			minuto: Number(m[5]),
+			segundo: Number(m[6])
+		};
+	}
+
+	const soloFecha = valor.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+	if (!soloFecha) return null;
+	return {
+		anio: Number(soloFecha[1]),
+		mes: Number(soloFecha[2]),
+		dia: Number(soloFecha[3]),
+		hora: 0,
+		minuto: 0,
+		segundo: 0
+	};
 }
 
 /**
@@ -97,4 +139,29 @@ export function compararFechas(a, b) {
 	if (a.anio !== b.anio) return a.anio - b.anio;
 	if (a.mes !== b.mes) return a.mes - b.mes;
 	return a.dia - b.dia;
+}
+
+/**
+ * Compara dos fechas-hora por sus partes, con granularidad de segundo.
+ * Devuelve <0, 0 o >0.
+ *
+ * Supuesto de huso horario: se usa solo para comparar `tickets.ultimo.fecha`
+ * (el `created_at` de IspCube) contra `tickets_vistos_hasta` (escrito por el
+ * navegador del asesor con `toISOString()`). Los dos llegan en UTC con
+ * sufijo `Z`, asi que comparar sus partes de texto tal cual es correcto: no
+ * hace falta convertir zona porque ya estan en la misma. Si alguna vez
+ * `tickets_vistos_hasta` llegara en el formato con espacio
+ * (`"2026-07-14 18:00:00"`), cuya zona no esta documentada, esta comparacion
+ * pasa a ser aproximada.
+ *
+ * @param {PartesConHora} a
+ * @param {PartesConHora} b
+ */
+export function compararFechaHora(a, b) {
+	if (a.anio !== b.anio) return a.anio - b.anio;
+	if (a.mes !== b.mes) return a.mes - b.mes;
+	if (a.dia !== b.dia) return a.dia - b.dia;
+	if (a.hora !== b.hora) return a.hora - b.hora;
+	if (a.minuto !== b.minuto) return a.minuto - b.minuto;
+	return a.segundo - b.segundo;
 }

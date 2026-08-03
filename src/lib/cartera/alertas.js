@@ -7,7 +7,14 @@
  *
  * Este es el modulo que mas va a cambiar con el uso. Esta aislado a proposito.
  */
-import { partesFecha, claveMes, sumarMeses, compararFechas } from './fechas.js';
+import {
+	partesFecha,
+	partesFechaHora,
+	claveMes,
+	sumarMeses,
+	compararFechas,
+	compararFechaHora
+} from './fechas.js';
 
 /** Meses desde la instalacion hasta el llamado de seguimiento. */
 const MESES_SEGUIMIENTO = 2;
@@ -93,11 +100,15 @@ export function alertasDe(cliente, hoy, config) {
 	}
 
 	// --- Tickets nuevos ------------------------------------------------------
-	const ultimo = partesFecha(cliente?.tickets?.ultimo?.fecha);
+	// Con granularidad de dia (compararFechas) un ticket abierto el mismo dia
+	// en que el asesor marco "visto" nunca alertaba: tickets_vistos_hasta se
+	// escribe apenas el asesor abre al cliente, y un ticket nuevo esa misma
+	// tarde es el caso comun, no el borde. Por eso aca se compara con hora.
+	const ultimo = partesFechaHora(cliente?.tickets?.ultimo?.fecha);
 	if (ultimo) {
-		const visto = partesFecha(cliente?.tickets_vistos_hasta);
+		const visto = partesFechaHora(cliente?.tickets_vistos_hasta);
 		// Sin marca de visto, cualquier ticket es nuevo: el asesor nunca miro.
-		if (!visto || compararFechas(ultimo, visto) > 0) {
+		if (!visto || compararFechaHora(ultimo, visto) > 0) {
 			alertas.push({ tipo: 'tickets', desde: cliente.tickets.ultimo.fecha });
 		}
 	}

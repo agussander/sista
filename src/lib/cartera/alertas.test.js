@@ -240,6 +240,51 @@ describe('alerta de tickets nuevos', () => {
 		const r = alertasDe(base, { anio: 2026, mes: 7, dia: 15 }, CONFIG);
 		expect(tipos(r)).not.toContain('tickets');
 	});
+
+	it('salta con un ticket mas tarde el mismo dia que la marca de visto', () => {
+		// Bug: con granularidad de dia, tickets_vistos_hasta escrito a la manana
+		// y un ticket abierto esa misma tarde no alertaban nunca.
+		const r = alertasDe(
+			{
+				...base,
+				tickets: { abiertos: 1, cerrados: 0, ultimo: { fecha: '2026-07-14T18:00:00.000000Z' } },
+				tickets_vistos_hasta: '2026-07-14T09:00:00.000000Z'
+			},
+			{ anio: 2026, mes: 7, dia: 15 },
+			CONFIG
+		);
+
+		expect(tipos(r)).toContain('tickets');
+	});
+
+	it('no salta con un ticket mas temprano el mismo dia que la marca de visto', () => {
+		const r = alertasDe(
+			{
+				...base,
+				tickets: { abiertos: 1, cerrados: 0, ultimo: { fecha: '2026-07-14T09:00:00.000000Z' } },
+				tickets_vistos_hasta: '2026-07-14T18:00:00.000000Z'
+			},
+			{ anio: 2026, mes: 7, dia: 15 },
+			CONFIG
+		);
+
+		expect(tipos(r)).not.toContain('tickets');
+	});
+
+	it('no salta si el ticket y la marca de visto son el mismo instante', () => {
+		// "Visto hasta" incluye ese instante.
+		const r = alertasDe(
+			{
+				...base,
+				tickets: { abiertos: 1, cerrados: 0, ultimo: { fecha: '2026-07-14T18:00:00.000000Z' } },
+				tickets_vistos_hasta: '2026-07-14T18:00:00.000000Z'
+			},
+			{ anio: 2026, mes: 7, dia: 15 },
+			CONFIG
+		);
+
+		expect(tipos(r)).not.toContain('tickets');
+	});
 });
 
 describe('TIPOS_CONTACTO', () => {
