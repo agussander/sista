@@ -105,7 +105,11 @@ async function cargar() {
 	refrescarVencidos().catch((e) => console.error('[cartera] fallo el refresco automatico:', e));
 }
 
-export function alertasDeCliente(cliente) {
+// No se exporta suelta: como el resto de la logica del store, solo se expone
+// a traves del objeto `carteraStore` de mas abajo (junto con `cargar`,
+// `sincronizar`, etc.), para que consumirla desde un componente sea siempre
+// `carteraStore.alertasDeCliente(...)`.
+function alertasDeCliente(cliente) {
 	return alertasDe(cliente, hoyPartes(), config);
 }
 
@@ -413,5 +417,6 @@ export const carteraStore = {
 	agregarNota,
 	marcarTicketsVistos,
 	archivar,
-	refrescoFallido
+	refrescoFallido,
+	alertasDeCliente
 };

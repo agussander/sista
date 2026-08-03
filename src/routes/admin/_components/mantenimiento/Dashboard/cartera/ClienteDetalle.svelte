@@ -161,7 +161,30 @@ onMount(async () => {
             <div><dt>Medio de pago</dt><dd>{actual.entity_nombre || '—'} <span class="perfil">({actual.perfil_pago})</span></dd></div>
             <div><dt>Deuda</dt><dd>{plata(actual.debt)}</dd></div>
             <div><dt>Deuda vencida</dt><dd>{plata(actual.duedebt)}</dd></div>
-            <div><dt>Tickets</dt><dd>{actual.tickets?.abiertos ?? 0} abiertos · {actual.tickets?.cerrados ?? 0} cerrados</dd></div>
+            <div>
+                <dt>Tickets</dt>
+                {#if actual.tickets}
+                    <dd>
+                        {actual.tickets.abiertos ?? 0} abiertos · {actual.tickets.cerrados ?? 0} cerrados
+                        {#if actual.tickets.ultimo}
+                            <span class="ultimo-ticket">
+                                Último: {fmt(actual.tickets.ultimo.fecha)}
+                                {#if actual.tickets.ultimo.categoria != null}· categoría #{actual.tickets.ultimo.categoria}{/if}
+                                {#if actual.tickets.ultimo.estado != null}· estado #{actual.tickets.ultimo.estado}{/if}
+                            </span>
+                        {:else}
+                            <span class="ultimo-ticket">Sin tickets registrados.</span>
+                        {/if}
+                    </dd>
+                {:else}
+                    <!-- `tickets` null: la llamada a IspCube fallo en la ultima
+                         sincronizacion (ver comentario de resumenTickets en
+                         /api/cartera/sync). No hay abiertos/cerrados ni ultimo
+                         que mostrar, asi que se dice eso en vez de mostrar "0
+                         abiertos" como si supieramos que no hay ninguno. -->
+                    <dd class="tickets-desconocido">No se pudo leer tickets en la última sincronización.</dd>
+                {/if}
+            </div>
         </dl>
 
         <section class="bloque">
@@ -271,6 +294,8 @@ h3 { margin: 0; color: var(--violeta2); }
 dt { color: #6b7280; font-size: 0.8em; text-transform: uppercase; letter-spacing: 0.03em; }
 dd { margin: 0; font-weight: 600; color: #374151; }
 .perfil { font-weight: 400; color: #9ca3af; font-size: 0.9em; }
+.ultimo-ticket { display: block; font-weight: 400; color: #9ca3af; font-size: 0.82em; margin-top: 0.2em; }
+.tickets-desconocido { font-weight: 400; color: #9ca3af; }
 .bloque { border-top: 1px solid #ececec; padding-top: 1.5em; margin-top: 1.5em; }
 h4 { margin: 0 0 1em; color: var(--violeta2); font-size: 1.05em; }
 .pagos { display: flex; gap: 1.2em; flex-wrap: wrap; }
