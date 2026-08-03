@@ -75,8 +75,10 @@ export function alertasDe(cliente, hoy, config) {
 		(p) => p?.mes === mesActual
 	);
 
-	// El mes de la instalacion no cuenta: todavia no le facturaron nada.
-	const recienInstalado = instalacion && claveMes(instalacion) === mesActual;
+	// El mes de la instalacion no cuenta: todavia no le facturaron nada. Una
+	// instalacion FUTURA (fecha mal cargada o alta programada) tampoco puede
+	// estar en mora: por eso es `>=` y no `===`.
+	const recienInstalado = instalacion && claveMes(instalacion) >= mesActual;
 
 	if (!pagoDelMes && !recienInstalado) {
 		const corte1 = diaCorteDe(perfil, config);

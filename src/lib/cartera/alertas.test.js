@@ -177,6 +177,20 @@ describe('alertas de mora', () => {
 
 		expect(tipos(r)).not.toContain('mora_1');
 	});
+
+	it('no hay mora si la instalacion es en un mes futuro', () => {
+		// Bug: el guard comparaba con `===`, asi que una instalacion futura
+		// (fecha mal cargada o alta programada) no lo alcanzaba y la mora
+		// disparaba igual.
+		const r = alertasDe(
+			{ ...sinPagos, fecha_instalacion: '2026-09-10' },
+			{ anio: 2026, mes: 7, dia: 25 },
+			CONFIG
+		);
+
+		expect(tipos(r)).not.toContain('mora_1');
+		expect(tipos(r)).not.toContain('mora_2');
+	});
 });
 
 describe('alerta de tickets nuevos', () => {
