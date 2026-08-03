@@ -34,11 +34,29 @@ $effect(() => {
     }
 });
 
+// Peso de cada alerta para que la fila comunique urgencia de un vistazo: un
+// cliente con mora vencida se nota mas que uno que solo tiene el recordatorio
+// de seguimiento, aun antes de leer los chips.
+const PESO = { mora_2: 3, mora_1: 2, tickets: 2, seguimiento: 1 };
+
+function urgenciaDe(alertas) {
+    if (alertas.length === 0) return null;
+    const total = alertas.reduce((acc, a) => acc + (PESO[a.tipo] ?? 1), 0);
+    if (total >= 3) return 'alta';
+    if (total >= 2) return 'media';
+    return 'baja';
+}
+
 // Las alertas salen del registro del cliente y nada mas: la de seguimiento usa
 // `ultimo_contacto`, que el store mantiene al guardar una nota de contacto. Sin
-// eso, saber si alguien ya llamo costaria una consulta por fila.
+// eso, saber si alguien ya llamo costaria una consulta por fila. La urgencia se
+// calcula aca, una vez por cliente, para no recalcularla dos veces por fila en
+// el template.
 const conAlertas = $derived(
-    clientes.map((c) => ({ cliente: c, alertas: carteraStore.alertasDeCliente(c) }))
+    clientes.map((c) => {
+        const alertas = carteraStore.alertasDeCliente(c);
+        return { cliente: c, alertas, urgencia: urgenciaDe(alertas) };
+    })
 );
 
 const FILTROS = [
@@ -67,19 +85,6 @@ const ETIQUETAS = {
     mora_2: 'Mora vencida',
     tickets: 'Tickets nuevos'
 };
-
-// Peso de cada alerta para que la fila comunique urgencia de un vistazo: un
-// cliente con mora vencida se nota mas que uno que solo tiene el recordatorio
-// de seguimiento, aun antes de leer los chips.
-const PESO = { mora_2: 3, mora_1: 2, tickets: 2, seguimiento: 1 };
-
-function urgenciaDe(alertas) {
-    if (alertas.length === 0) return null;
-    const total = alertas.reduce((acc, a) => acc + (PESO[a.tipo] ?? 1), 0);
-    if (total >= 3) return 'alta';
-    if (total >= 2) return 'media';
-    return 'baja';
-}
 
 const ETIQUETA_ESTADO_PUNTO = {
     verde: 'Pagó en término',
@@ -161,8 +166,8 @@ onMount(() => carteraStore.cargar());
         </div>
     {:else}
         <ul class="lista">
-            {#each visibles as { cliente, alertas } (cliente.id)}
-                <li class:con-alerta={alertas.length > 0} class={urgenciaDe(alertas) ? `urgencia-${urgenciaDe(alertas)}` : ''}>
+            {#each visibles as { cliente, alertas, urgencia } (cliente.id)}
+                <li class:con-alerta={alertas.length > 0} class={urgencia ? `urgencia-${urgencia}` : ''}>
                     <button class="fila" onclick={() => (abierto = cliente)}>
                         <div class="quien">
                             <strong>{cliente.nombre}</strong>
