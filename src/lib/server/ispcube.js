@@ -244,93 +244,6 @@ const CODE_PATTERN = /^\d{1,12}$/;
  */
 
 /**
- * Busca un cliente por su numero. Solo lectura.
- *
- * `reason` puede ser `not_found`, `config`, `auth`, `api`, `invalid` o
- * `network`.
- *
- * @param {unknown} code Numero de cliente, con sus ceros ("003566")
- * @param {IspcubeConfig} config
- * @param {{ fetchImpl?: typeof fetch }} [options]
- * @returns {Promise<CustomerResult>}
- */
-export async function getCustomerByCode(code, config, { fetchImpl = fetch } = {}) {
-	// Un codigo mal formado se resuelve sin gastar una llamada, y cae en el
-	// mismo `not_found` que un cliente inexistente para no confirmarle a quien
-	// sondea si un codigo existe.
-	if (typeof code !== 'string' || !CODE_PATTERN.test(code)) {
-		return { ok: false, reason: 'not_found' };
-	}
-
-	const { baseUrl, username, password, apiKey, clientId } = config;
-	if (!baseUrl || !username || !password || !apiKey || !clientId) {
-		console.error('[ispcube] faltan credenciales: revisar las ISPCUBE_* del entorno');
-		return { ok: false, reason: 'config' };
-	}
-
-	const token = await getAuthToken(config, { fetchImpl });
-	if (!token) return { ok: false, reason: 'auth' };
-
-	const url = `${trimBase(baseUrl)}/api/customer?code=${encodeURIComponent(code)}`;
-
-	/** @type {any} */
-	let res;
-	try {
-		res = await fetchImpl(url, {
-			// `login-type` y `username` no son folklore: sin cualquiera de los dos
-			// la consulta responde `400 {"status":false,"message":"<header>
-			// requerido"}` aunque el bearer sea valido. `apiHeaders` no los trae
-			// porque el alta de tickets no los necesita.
-			//
-			// Es justo lo que le falta a `static/assets/client-handler.php`, y por
-			// eso su busqueda por DNI devuelve "DNI not found" para todo cliente
-			// valido.
-			headers: {
-				...apiHeaders(config),
-				'login-type': 'api',
-				username,
-				Authorization: `Bearer ${token}`
-			},
-			signal: AbortSignal.timeout(CUSTOMER_TIMEOUT_MS)
-		});
-	} catch (error) {
-		console.error('[ispcube] error de red consultando el cliente:', error);
-		return { ok: false, reason: 'network' };
-	}
-
-	// El 404 se corta antes de parsear: es el caso esperado, no un error.
-	if (res.status === 404) return { ok: false, reason: 'not_found' };
-
-	/** @type {any} */
-	let data;
-	try {
-		data = await res.json();
-	} catch (error) {
-		console.error('[ispcube] la api no devolvio json:', error);
-		return { ok: false, reason: 'invalid' };
-	}
-
-	if (!res.ok) {
-		console.error(`[ispcube] HTTP ${res.status} consultando el cliente:`, data?.message);
-		return { ok: false, reason: 'api' };
-	}
-
-	if (!data || typeof data.name !== 'string') {
-		console.error('[ispcube] respuesta sin el campo name:', data);
-		return { ok: false, reason: 'invalid' };
-	}
-
-	return {
-		ok: true,
-		customer: {
-			code: typeof data.code === 'string' ? data.code : code,
-			name: data.name,
-			status: typeof data.status === 'string' ? data.status : ''
-		}
-	};
-}
-
-/**
  * Ejecuta una consulta GET autenticada contra IspCube, reintentando una sola
  * vez con token nuevo si la respuesta es 401.
  *
@@ -395,6 +308,59 @@ async function getAutenticado(path, config, { fetchImpl = fetch } = {}) {
 		console.error(`[ispcube] error de red en ${path}:`, error);
 		return { ok: false, reason: 'network' };
 	}
+}
+
+/**
+ * Busca un cliente por su numero. Solo lectura.
+ *
+ * `reason` puede ser `not_found`, `config`, `auth`, `api`, `invalid` o
+ * `network`: los mismos que devuelve `getAutenticado`, mas `invalid` para el
+ * caso propio de esta funcion (JSON valido pero sin el campo `name`).
+ *
+ * A diferencia de `getTickets`/`getCobranzas`, un code mal formado cae en
+ * `not_found` en vez de `invalid`: esta funcion no esta detras de
+ * autenticacion de admin -la abre quien escanea el QR de un cliente en la
+ * plataforma de puntos- y no hay que confirmarle a quien sondea si un numero
+ * de cliente existe o no. La asimetria con las otras dos es a proposito.
+ *
+ * @param {unknown} code Numero de cliente, con sus ceros ("003566")
+ * @param {IspcubeConfig} config
+ * @param {{ fetchImpl?: typeof fetch }} [options]
+ * @returns {Promise<CustomerResult>}
+ */
+export async function getCustomerByCode(code, config, options = {}) {
+	// Se corta antes de llamar a `getAutenticado`, que valida credenciales y
+	// pediria un token: un code mal formado no debe ni gastar esa llamada.
+	if (typeof code !== 'string' || !CODE_PATTERN.test(code)) {
+		return { ok: false, reason: 'not_found' };
+	}
+
+	const r = await getAutenticado(
+		`/api/customer?code=${encodeURIComponent(code)}`,
+		config,
+		options
+	);
+
+	if (!r.ok) return { ok: false, reason: r.reason };
+
+	// `getAutenticado` ya cubrio "la respuesta no es JSON" bajo su propio
+	// 'invalid'. Esto suma el otro caso de "no entiendo la respuesta": JSON
+	// valido pero sin el campo que necesitamos. Que compartan el nombre del
+	// reason es intencional -las dos significan lo mismo de cara a quien
+	// llama-, no una colision accidental.
+	if (!r.data || typeof r.data.name !== 'string') {
+		console.error('[ispcube] respuesta sin el campo name:', r.data);
+		return { ok: false, reason: 'invalid' };
+	}
+
+	return {
+		ok: true,
+		customer: {
+			code: typeof r.data.code === 'string' ? r.data.code : code,
+			name: r.data.name,
+			status: typeof r.data.status === 'string' ? r.data.status : ''
+		}
+	};
 }
 
 /**

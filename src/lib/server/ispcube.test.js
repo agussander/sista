@@ -237,6 +237,16 @@ describe('getCustomerByCode', () => {
 			ok: false,
 			reason: 'not_found'
 		});
+		// `null` y un numero (no-string) tambien son "mal formado": el check de
+		// tipo es lo primero que mira la funcion, antes que el regex.
+		expect(await getCustomerByCode(null, CONFIG, { fetchImpl })).toEqual({
+			ok: false,
+			reason: 'not_found'
+		});
+		expect(await getCustomerByCode(3566, CONFIG, { fetchImpl })).toEqual({
+			ok: false,
+			reason: 'not_found'
+		});
 		expect(calls).toHaveLength(0);
 	});
 
@@ -306,6 +316,25 @@ describe('getCustomerByCode', () => {
 		});
 
 		expect(out).toEqual({ ok: false, reason: 'network' });
+	});
+
+	// Este es el punto de la unificacion sobre getAutenticado: el token
+	// cacheado 23 h puede llegar revocado, y antes de este cambio
+	// getCustomerByCode no tenia forma de recuperarse en la misma request.
+	it('reintenta una vez con token nuevo ante un 401, igual que getTickets', async () => {
+		const calls = [];
+		const fetchImpl = fakeFetch(
+			[AUTH_OK, res(401, {}), res(200, { token: 'tok-2' }), CLIENTE_OK],
+			calls
+		);
+		const out = await getCustomerByCode('003566', CONFIG, { fetchImpl });
+
+		expect(out).toEqual({
+			ok: true,
+			customer: { code: '003566', name: 'TALONE SANDRA ELIZABETH', status: 'enabled' }
+		});
+		expect(calls).toHaveLength(4);
+		expect(calls[3].init.headers.Authorization).toBe('Bearer tok-2');
 	});
 });
 
