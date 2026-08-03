@@ -306,3 +306,129 @@ Con vitest, siguiendo lo que ya hay.
 3. Leer `entities_list` de Sista para saber qué entidades corresponden a tarjeta y poder cargar `cartera_config`.
 
 Ninguno bloquea el arranque: los tres son pasos tempranos del plan de implementación.
+
+## Resultados del sondeo (2026-08-03)
+
+Sondeo de solo lectura contra la API de producción de IspCube (`GET /api/customer/summary`, `GET /api/customers/customers_list`, `GET /api/cash/entities_list`, `GET /api/tickets/areas_list`, `GET /api/tickets/status_list`, `GET /api/cash/cash_list`, más el `POST` de autenticación). Script temporal, borrado después de este sondeo.
+
+### Tamaño de la base y cuota
+
+`GET /api/customer/summary`:
+
+```json
+{ "customers": 8325, "customers_with_active_connection": 8437, "connections": 10554 }
+```
+
+- **Cuota mensual = 2,5 × conexiones = 2,5 × 10554 ≈ 26.385 requests/mes**, compartida por todas las integraciones de Sista (no solo la Cartera).
+- Dato curioso sin impacto en el diseño: `customers_with_active_connection` (8437) es mayor que `customers` (8325). Probablemente `summary` cuenta conexiones activas de clientes dados de baja, o clientes con más de una conexión se computan distinto en cada campo. No se investigó más porque no condiciona ninguna decisión de este documento.
+
+### `limit` máximo de `customers_list`
+
+Se probaron los límites 25, 100, 500 y 1000: los cuatro devolvieron exactamente esa cantidad de registros, sin error ni truncamiento.
+
+```
+customers_list limit=25:   status=200 devolvió=25
+customers_list limit=100:  status=200 devolvió=100
+customers_list limit=500:  status=200 devolvió=500
+customers_list limit=1000: status=200 devolvió=1000
+```
+
+**No se probaron límites mayores a 1000** para no gastar cuota de más en un sondeo — la consigna era medir si la estrategia en bloque es viable, y con 1000 ya alcanza para la decisión. El límite real podría ser mayor; **1000 es una cota inferior confirmada**, no el máximo exacto.
+
+### Decisión: estrategia de sincronización
+
+Con `limit=1000` confirmado, traer **toda la base** de clientes por `customers_list` toma `ceil(8325 / 1000) = 9` requests. Sumando `cash_list` (1 request) y `tickets_list` (no se probó en este sondeo, se asume del mismo orden que `cash_list` por estar igual de cacheado del lado de IspCube) más algún request de catálogos, la estrategia en bloque queda en **~10-12 requests, prácticamente constante sin importar cuántos clientes tenga la cartera** (porque no se puede filtrar por cartera: siempre se trae la base entera y se filtra localmente).
+
+Comparado con la de por-cliente (~3 requests × tamaño de la cartera), el punto de equilibrio es una cartera de apenas **~3-4 clientes**. Dado que el supuesto del spec es que cada asesor ronda **~100+ clientes** en un año (ver "Supuestos explícitos", punto 3), **la estrategia en bloque es la que conviene, y por un margen amplio** — no es un empate técnico. Esto confirma la estimación original del spec (~7 requests) dentro del mismo orden de magnitud.
+
+**Recomendación:** implementar directamente la estrategia en bloque en vez de arrancar por la de por-cliente. La sección "Estrategia de sincronización" de este documento debería actualizarse en la task de implementación correspondiente para reflejar esto (no se edita acá para no mezclar el sondeo con una decisión de arquitectura que toca otra sección).
+
+### Entidades de cobranza (`entities_list`) — cuáles son tarjeta
+
+La respuesta trae 280 entidades; la mayoría son series históricas deshabilitadas (`enabled=0`, ej. `galicia1..5`, `frances1..5`, `icbc1..5`, etc.). Estas no importan para configurar `cartera_config` porque ningún cliente activo puede estar cobrándose por una entidad deshabilitada hoy. La tabla siguiente cubre **todas las entidades con `enabled=1`** (38 de 280):
+
+**Claramente tarjeta:**
+
+| id | name |
+|---|---|
+| 152 | `tarjeta de credito` |
+| 64 | `visaprismacredito1` |
+
+**Dudosas — necesito que confirmes:**
+
+| id | name | Por qué es dudosa |
+|---|---|---|
+| 153 | `Tarjeta de debito` | Es tarjeta, pero **débito**, no crédito. El spec dice que a "tarjeta" se le controla el pago cerca del día 21 (por la demora de acreditación); no sé si esa regla es solo para crédito o para cualquier tarjeta. |
+| 59 | `visaprismadebito1` | Mismo caso: débito vía Prisma. |
+| 54 | `mastercardprisma1` | No dice si es crédito o débito (a diferencia de la serie Visa, que sí distingue `visaprismacredito` de `visaprismadebito`). Hay una serie separada `mastercarddebito1..5` (ids 262-266) pero está deshabilitada, lo que sugiere que `mastercardprisma1` podría ser la única activa y cubrir ambos casos, o ser específicamente crédito. No lo puedo inferir del nombre. |
+| 99 / 199 | `mercadopago1` / `MERCADO PAGO (PP)` | Billetera virtual: puede acreditar pagos hechos con tarjeta dentro de Mercado Pago, pero como entidad de cobranza es un canal aparte, no una tarjeta. |
+| 89 | `siro1` | SIRO es una red de débito automático bancario en Argentina, no tarjeta — pero lo marco dudosa porque no estoy seguro de cómo lo usa Sista puntualmente. |
+| 69 | `pagomiscuentasbanelco1` | Pago de cuentas vía Banelco (red de cajeros/homebanking) — probablemente no es tarjeta, pero no es un "no" tan claro como caja o transferencia. |
+| 109 | `linkpagos1` | Agregador de pagos (Red Link) — mismo caso que Banelco/SIRO. |
+| 114 / 124 / 129 | `rapipagoconbaseengire1` / `pagofacilsantanderrio1` / `pagofacil1` | Puntos de cobro en efectivo (Rapipago, Pago Fácil) — probablemente `ventanilla`, no tarjeta, pero los marco por las dudas dado que no son un "no" evidente como `EFECTIVO` o `CAJA NICOLAS`. |
+
+**Claramente NO tarjeta** (cajas, transferencias, depósitos bancarios, retenciones, ajustes contables internos):
+
+`Cobranzas`(1), `Caja`(2), `Proveedores`(3), `CAJA NICOLAS`(136), `CAJA MAXIMILIANO`(147), `CAJA MARCELA`(148), `OTRAS CAJAS A RENDIR`(149), `DEBITOS BANCARIOS`(150), `TRANSFERENCIA BANCARIA`(151), `INGRESOS VARIOS`(154), `TESTA NICOLAS`(155), `BANCO`(156), `PAGOS VARIOS`(157), `RETENCION MUNCIPAL`(169), `BANCO CREDICOOP`(175), `BANCO NACIÓN`(176), `BANCO PROVINCIA`(177), `BANCO GALICIA`(178), `BANCO CIUDAD`(179), `CHEQUE`(181), `EFECTIVO`(187), `AJUSTE DE CENTAVOS`(198), `RETENCIÓN IIBB 2`(200), `CAJA KAREN`(201), `CAJA FELIPE M.`(202), `Celina Lasserre`(214, parece caja de una persona), `CAJA F. TAGLIA`(215), `FONDO DE REPARO MUNICIPALIDAD DE ENSENADA`(236).
+
+**Pendiente de tu confirmación:** con la lista de dudosas de arriba, decime cuáles entran en `entidades_tarjeta`. Mientras tanto `cartera_config.entidades_tarjeta` puede arrancar solo con `[152, 64]` (las dos inequívocas) y ajustarse después sin migrar datos.
+
+### Áreas de tickets (`areas_list`) — cuál es soporte
+
+```
+id=1  Soporte
+id=2  Ventas
+id=3  Administracion
+id=12 OBRAS
+```
+
+Sin ambigüedad: **`areas_soporte = [1]`**.
+
+### Estados de ticket (`status_list`) — cuáles significan cerrado
+
+Acá encontré un problema que no puedo resolver solo. `status_list` devuelve 26 estados que mezclan claramente **varios flujos distintos** (tickets de soporte, altas/obras, gestión de bajas), no solo el de soporte:
+
+```
+id=1  Abierto
+id=2  Pendiente
+id=3  Cerrado
+id=4  RECOORDINAR
+id=6  FINALIZADO
+id=7  EN EJECUCION
+id=8  ANULADO
+id=9  PENDIENTE DE FACTURACION
+id=10 PENDIENTE DE FIRMA
+id=11 JN-VISTO PARA DESPUES DEL 20
+id=12 CORTE POR BAJA ULTIMO DIA DEL MES
+id=13 RESERVA PARA INSTALADOR
+id=14 EN OBRAS-PENDIENTE
+id=15 ANULADO POR AGENDA BOOT
+id=16 NAP PENDIENTE DE ACTIVAR
+id=17 CHECK BAJA TV -ULTIMO DIA DEL MES
+id=20 IMPOSIBILIDAD DE CONTACTO
+id=21 EQUIPO RETIRADO/ENTREGADO EN OFICINA
+id=22 EN GESTION DE COBRANZA
+id=23 RETENCION
+id=24 BOCA A LIBERAR
+id=26 SUSPENDIDO EN ANTINA
+id=28 DEVUELTO
+id=31 pendiente  de facturar
+id=32 pendiente de aceptacion del cliente
+id=33 pendiente de presentar presupuesto
+```
+
+- **Claramente cerrado:** `Cerrado` (3) — es el único cuyo nombre es inequívoco.
+- **Dudosos, probablemente también "cerrado" en el sentido de "ticket ya no está activo":** `FINALIZADO` (6) y `ANULADO` (8). Si un ticket anulado o finalizado no cuenta como cerrado para la alerta de tickets, un ticket viejo en ese estado seguiría contando como "nuevo" indefinidamente.
+- **El resto** (`RESERVA PARA INSTALADOR`, `EN OBRAS-PENDIENTE`, `NAP PENDIENTE DE ACTIVAR`, `CORTE POR BAJA...`, `CHECK BAJA TV...`, etc.) tiene toda la pinta de pertenecer a otros flujos (instalación/obras, gestión de bajas), no a tickets de soporte. Este sondeo no filtra `status_list` por área, así que **no puedo confirmar si esos estados siquiera aparecen alguna vez en tickets del área Soporte (id=1)**.
+
+**Pendiente de tu confirmación:** qué ids además de `3` (Cerrado) cuentan como cerrado para tickets de **Soporte** específicamente. Si hace falta, un sondeo de seguimiento acotado (`GET /api/tickets/tickets_list?area=1&limit=...` o similar, filtrando por área) podría mostrar qué subconjunto de estados aparece realmente ahí — no se hizo en este sondeo porque no estaba en el guion original y para no gastar cuota de más sin que me confirmes que hace falta.
+
+Mientras tanto, `cartera_config.estados_cerrados` puede arrancar con `[3]` y sumar `6` y `8` si confirmás que corresponden.
+
+### `cash_list`
+
+```
+cash_list: status=200, 7780 movimientos
+```
+
+Confirma que `cash_list` devuelve un volumen grande en un solo request (consistente con "últimos 30 días de toda la empresa" que asume el spec) — barato en términos de requests, aunque la respuesta en sí es pesada. No se investigó la ventana de tiempo exacta que cubre porque no estaba en el guion del sondeo y no condiciona la decisión de estrategia (que ya está tomada arriba).
