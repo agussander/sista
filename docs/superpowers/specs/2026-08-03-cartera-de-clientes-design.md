@@ -476,3 +476,42 @@ cobranzas del mes en 1). **Conviene migrar cuando haya varios asesores con
 carteras grandes**, porque ahí el gasto por-cliente se multiplica por asesor y
 se acerca al techo. El cambio queda contenido en `snapshotDe` dentro de
 `/api/cartera/sync`, sin tocar el contrato del endpoint.
+
+---
+
+## Ajustes a las reglas (confirmados 2026-08-03, tras revisión)
+
+Una revisión por mutación de los módulos puros encontró dos casos donde las
+reglas escritas daban un resultado que el asesor leería como incorrecto.
+Agustín resolvió los dos.
+
+### El mes de la instalación es `pendiente`, no `rojo`
+
+Un cliente instalado el 2 de julio, al 25 de julio y sin pagar, **no** dispara
+alerta de mora: recién se instaló y todavía no le facturaron nada. Pero
+`puntosPorMes` le pintaba julio en rojo.
+
+Los dos módulos se contradecían sobre el mismo hecho del mundo, y el asesor mira
+el punto antes que la alerta. **El mes de la instalación, sin pago, ahora es
+`pendiente`.** Si hubo pago, se pinta verde o amarillo como cualquier otro mes.
+
+Los meses **anteriores** a la instalación siguen en `gris`.
+
+### La mora se corrobora contra `duedebt`
+
+Un cliente que paga $100 el día 5 y los $30.000 restantes el 25 quedaba verde y
+sin alerta, indistinguible de quien pagó todo en término: la regla solo miraba
+si existía *alguna* cobranza en el mes.
+
+`GET /api/customer` ya devuelve **`duedebt`** (deuda vencida), que es el dato
+autoritativo de IspCube sobre si el cliente debe algo exigible. La regla de mora
+pasa a ser:
+
+> Pasó el día de corte **y** (no hubo cobranza este mes **o** `duedebt > 0`).
+
+La compuerta por día se mantiene: nada salta antes del corte. Lo que cambia es
+que una cobranza en el mes ya no basta para apagar la alerta si IspCube sigue
+diciendo que hay deuda vencida.
+
+Los puntos de pago **no** cambian: siguen reflejando cuándo entró la primera
+cobranza del mes. Son un histórico de comportamiento, no un estado de cuenta.
