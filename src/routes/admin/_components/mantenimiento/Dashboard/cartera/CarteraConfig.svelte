@@ -15,6 +15,7 @@ import { onMount } from 'svelte';
 import Spinner from '$lib/components/ui/Spinner.svelte';
 import { pb } from '$lib/pocketbase';
 import { carteraStore } from './carteraStore.svelte.js';
+import { diaCorteValido, diaCorteONormal, CONFIG_DEFAULT } from '$lib/cartera/config.js';
 
 let { onCerrar } = $props();
 
@@ -51,9 +52,14 @@ async function cargar() {
         const c = carteraStore.config;
         tarjeta = new Set((c.entidades_tarjeta ?? []).map(String));
         soporte = new Set((c.areas_soporte ?? []).map(String));
-        corte1 = c.dia_corte_1 ?? 10;
-        corte2 = c.dia_corte_2 ?? 20;
-        corteTarjeta = c.dia_corte_tarjeta ?? 21;
+        // El store ya normaliza `carteraStore.config` al cargarlo (ver
+        // `cargarConfig` en carteraStore.svelte.js), pero se vuelve a pasar por
+        // `diaCorteONormal` aca: es la misma razon por la que un `?? 10` no
+        // alcanza (`0` no es un valor "vacio"), y esta pantalla no deberia
+        // confiar en que quien la abre siempre paso por esa normalizacion.
+        corte1 = diaCorteONormal(c.dia_corte_1, CONFIG_DEFAULT.dia_corte_1);
+        corte2 = diaCorteONormal(c.dia_corte_2, CONFIG_DEFAULT.dia_corte_2);
+        corteTarjeta = diaCorteONormal(c.dia_corte_tarjeta, CONFIG_DEFAULT.dia_corte_tarjeta);
     } catch (e) {
         console.error(e);
         error = 'No se pudieron leer los catálogos de IspCube.';
@@ -63,8 +69,26 @@ async function cargar() {
 }
 
 async function guardar() {
-    guardando = true;
     error = '';
+
+    const cortes = {
+        dia_corte_1: Number(corte1),
+        dia_corte_2: Number(corte2),
+        dia_corte_tarjeta: Number(corteTarjeta)
+    };
+    // Sin esta validacion, vaciar un input numerico deja `corteN` en
+    // `undefined` -> `Number(undefined)` es `NaN` -> PocketBase lo guarda
+    // como `0`. Con un corte en 0, `alertas.js` dispara mora TODOS los dias
+    // del mes para TODOS los clientes de la cartera (ver config.js). Se
+    // rechaza el guardado ANTES de tocar PocketBase, con un mensaje que dice
+    // que campo esta mal.
+    const invalido = Object.entries(cortes).find(([, v]) => !diaCorteValido(v));
+    if (invalido) {
+        error = 'Los días de corte tienen que ser un número entero entre 1 y 31.';
+        return;
+    }
+
+    guardando = true;
     try {
         const lista = await pb.collection('cartera_config').getList(1, 1);
         const datos = {
@@ -73,9 +97,7 @@ async function guardar() {
             // No se edita en esta pantalla (ver comentario arriba): se reenvia
             // tal cual esta en el store para no pisarlo con [].
             estados_cerrados: carteraStore.config.estados_cerrados ?? [],
-            dia_corte_1: Number(corte1),
-            dia_corte_2: Number(corte2),
-            dia_corte_tarjeta: Number(corteTarjeta)
+            ...cortes
         };
 
         if (lista.items.length > 0) await pb.collection('cartera_config').update(lista.items[0].id, datos);

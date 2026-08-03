@@ -11,19 +11,11 @@ import { fusionarPagos } from '$lib/cartera/pagos.js';
 import { alertasDe, TIPOS_CONTACTO } from '$lib/cartera/alertas.js';
 import { perfilDe } from '$lib/cartera/normalizar.js';
 import { partesFecha } from '$lib/cartera/fechas.js';
+import { CONFIG_DEFAULT, normalizarConfig } from '$lib/cartera/config.js';
 
 const CLIENTES = 'cartera_clientes';
 const NOTAS = 'cartera_notas';
 const CONFIG = 'cartera_config';
-
-const CONFIG_DEFAULT = {
-	entidades_tarjeta: [],
-	areas_soporte: [],
-	estados_cerrados: [],
-	dia_corte_1: 10,
-	dia_corte_2: 20,
-	dia_corte_tarjeta: 21
-};
 
 // Mensajes de los dos codigos de error que devuelven todos los endpoints de
 // /api/cartera: 401 (sesion invalida, no sabemos quien es) y 403 (sabemos
@@ -73,7 +65,12 @@ function hoyISO() {
 async function cargarConfig() {
 	try {
 		const lista = await pb.collection(CONFIG).getList(1, 1);
-		if (lista.items.length > 0) config = { ...CONFIG_DEFAULT, ...lista.items[0] };
+		// `normalizarConfig` (no un `{ ...CONFIG_DEFAULT, ...record }` a mano)
+		// porque un dia de corte en 0 -invalido, pero no "vacio"- pasaria un
+		// spread o un `?? 10` sin que nadie lo note, y `alertas.js` lo usaria
+		// tal cual: `hoy.dia > 0` es cierto todos los dias, para todos los
+		// clientes de la cartera.
+		if (lista.items.length > 0) config = normalizarConfig(lista.items[0]);
 	} catch (e) {
 		// Sin config el panel funciona con los defaults: todos ventanilla, todas
 		// las areas cuentan como soporte.
