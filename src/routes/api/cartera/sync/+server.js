@@ -16,6 +16,7 @@ import { ispcubeConfig, pocketbaseUrl } from '$lib/server/ispcubeDeps.js';
 import { verificarAsesor } from '$lib/server/adminAuth.js';
 import { normalizarCliente, resumenTickets } from '$lib/cartera/normalizar.js';
 import { pagosDeCobranzas } from '$lib/cartera/pagos.js';
+import { idsFinitos } from '$lib/cartera/ids.js';
 
 export const prerender = false;
 export const trailingSlash = 'ignore';
@@ -26,7 +27,13 @@ export const trailingSlash = 'ignore';
  */
 const MAX_CODIGOS = 20;
 
-/** Cuantos clientes se consultan en paralelo, para no ametrallar a IspCube. */
+/**
+ * Cuantos clientes se consultan en paralelo, para no ametrallar a IspCube.
+ * OJO: no es el pico real de requests concurrentes. Cada worker hace
+ * `getCustomerByCode` y despues `Promise.all([getTickets, getCobranzas])`,
+ * asi que en el peor caso (los 4 workers en esa segunda etapa a la vez) hay
+ * 8 requests en vuelo, el doble de este numero.
+ */
 const CONCURRENCIA = 4;
 
 /** @type {import('./$types').RequestHandler} */
@@ -42,12 +49,25 @@ export async function POST({ request }) {
 		return json({ error: 'body_invalido' }, { status: 400 });
 	}
 
-	const codes = Array.isArray(body?.codes) ? body.codes.filter((c) => typeof c === 'string') : [];
-	if (codes.length === 0) return json({ error: 'sin_codigos' }, { status: 400 });
-	if (codes.length > MAX_CODIGOS) return json({ error: 'demasiados_codigos' }, { status: 400 });
+	// El tope se chequea sobre el array crudo, ANTES de filtrar por tipo: si se
+	// chequeara despues, `{"codes": [1,2,...,10000, "003566", ...20 strings]}`
+	// pasaria el tope (el filtro deja solo los 20 strings) y el servidor
+	// parsearia y filtraria un array de 10000 elementos por request. La cuota
+	// de IspCube sigue acotada a 60 de cualquier forma (son los 20 codigos los
+	// que la determinan), pero el trabajo de CPU por pedido no.
+	const codesCrudo = Array.isArray(body?.codes) ? body.codes : [];
+	if (codesCrudo.length > MAX_CODIGOS) return json({ error: 'demasiados_codigos' }, { status: 400 });
 
-	const areasSoporte = Array.isArray(body?.areasSoporte) ? body.areasSoporte : [];
-	const estadosCerrados = Array.isArray(body?.estadosCerrados) ? body.estadosCerrados : [];
+	const codes = codesCrudo.filter((c) => typeof c === 'string');
+	if (codes.length === 0) return json({ error: 'sin_codigos' }, { status: 400 });
+
+	// Se coerciona a numero aca, en el borde: `areasSoporte` y
+	// `estadosCerrados` vienen del body, controlado por quien llama. Sin esto
+	// un item hostil como `{"toString":1,"valueOf":1}` termina en `String()`
+	// dentro de `resumenTickets` y tira `TypeError: Cannot convert object to
+	// primitive value`.
+	const areasSoporte = Array.isArray(body?.areasSoporte) ? idsFinitos(body.areasSoporte) : [];
+	const estadosCerrados = Array.isArray(body?.estadosCerrados) ? idsFinitos(body.estadosCerrados) : [];
 	const cfg = ispcubeConfig();
 
 	const resultados = await enTandas(codes, CONCURRENCIA, (code) =>
@@ -62,27 +82,43 @@ export async function POST({ request }) {
  * `{ok: false, reason}` para que un cliente roto no tumbe la sincronizacion de
  * los demas.
  *
+ * El try/catch no es cosmetico, es lo que hace cierta esa promesa. Los datos
+ * de aca abajo (`normalizarCliente`, `resumenTickets`, `pagosDeCobranzas`)
+ * hacen `String()`/`Number()` sobre campos que IspCube controla
+ * (`ticket_area_id`, `debt`, `duedebt`, `total`). Si IspCube alguna vez
+ * devuelve uno de esos campos como un objeto sin `toString` ni `valueOf`
+ * invocables -algo fuera de nuestro control-, `String()`/`Number()` tiran
+ * `TypeError` en vez de devolver texto o `NaN`. Sin este catch, ese
+ * `TypeError` sube hasta `enTandas`, tumba el `Promise.all` del batch entero
+ * y se pierden tambien los requests de IspCube ya pagados de los demas
+ * clientes del lote.
+ *
  * @param {string} code
  * @param {import('$lib/server/ispcube.js').IspcubeConfig} cfg
- * @param {{areasSoporte: unknown[], estadosCerrados: unknown[]}} opciones
+ * @param {{areasSoporte: number[], estadosCerrados: number[]}} opciones
  */
 async function snapshotDe(code, cfg, { areasSoporte, estadosCerrados }) {
-	const cliente = await getCustomerByCode(code, cfg);
-	if (!cliente.ok) return { code, ok: false, reason: cliente.reason };
+	try {
+		const cliente = await getCustomerByCode(code, cfg);
+		if (!cliente.ok) return { code, ok: false, reason: cliente.reason };
 
-	const [tickets, cobranzas] = await Promise.all([getTickets(code, cfg), getCobranzas(code, cfg)]);
+		const [tickets, cobranzas] = await Promise.all([getTickets(code, cfg), getCobranzas(code, cfg)]);
 
-	return {
-		code,
-		ok: true,
-		datos: {
-			...normalizarCliente(cliente.customer.crudo ?? cliente.customer),
-			tickets: tickets.ok
-				? resumenTickets(tickets.tickets, { areasSoporte, estadosCerrados })
-				: null,
-			pagos: cobranzas.ok ? pagosDeCobranzas(cobranzas.cobranzas) : null
-		}
-	};
+		return {
+			code,
+			ok: true,
+			datos: {
+				...normalizarCliente(cliente.customer.crudo ?? cliente.customer),
+				tickets: tickets.ok
+					? resumenTickets(tickets.tickets, { areasSoporte, estadosCerrados })
+					: null,
+				pagos: cobranzas.ok ? pagosDeCobranzas(cobranzas.cobranzas) : null
+			}
+		};
+	} catch (error) {
+		console.error(`[cartera/sync] fallo el snapshot de ${code}:`, error);
+		return { code, ok: false, reason: 'error' };
+	}
 }
 
 /**

@@ -14,6 +14,7 @@ import { ispcubeConfig, pocketbaseUrl } from '$lib/server/ispcubeDeps.js';
 import { verificarAsesor } from '$lib/server/adminAuth.js';
 import { normalizarCliente, resumenTickets } from '$lib/cartera/normalizar.js';
 import { pagosDeCobranzas } from '$lib/cartera/pagos.js';
+import { parseIds } from '$lib/cartera/ids.js';
 
 export const prerender = false;
 export const trailingSlash = 'ignore';
@@ -50,18 +51,4 @@ export async function GET({ request, params, url }) {
 			: { error: tickets.reason },
 		pagos: cobranzas.ok ? pagosDeCobranzas(cobranzas.cobranzas) : { error: cobranzas.reason }
 	});
-}
-
-/**
- * `"6,9"` -> `[6, 9]`. Una lista vacia significa "sin filtro".
- *
- * @param {string | null} valor
- * @returns {number[]}
- */
-function parseIds(valor) {
-	if (!valor) return [];
-	return valor
-		.split(',')
-		.map((v) => Number(v.trim()))
-		.filter((n) => Number.isFinite(n));
 }
