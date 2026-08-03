@@ -432,3 +432,47 @@ cash_list: status=200, 7780 movimientos
 ```
 
 Confirma que `cash_list` devuelve un volumen grande en un solo request (consistente con "últimos 30 días de toda la empresa" que asume el spec) — barato en términos de requests, aunque la respuesta en sí es pesada. No se investigó la ventana de tiempo exacta que cubre porque no estaba en el guion del sondeo y no condiciona la decisión de estrategia (que ya está tomada arriba).
+
+---
+
+## Valores definitivos de `cartera_config` (confirmados 2026-08-03)
+
+Agustín resolvió las ambigüedades que dejó el sondeo. Estos son los valores a
+cargar en el registro único de `cartera_config`:
+
+| Campo | Valor | Por qué |
+|---|---|---|
+| `entidades_tarjeta` | `[152, 64, 153, 59, 54]` | Crédito **y débito automático** |
+| `areas_soporte` | `[1]` | Área "Soporte" |
+| `estados_cerrados` | `[3, 6, 8]` | Cerrado, FINALIZADO, ANULADO |
+| `dia_corte_1` | `10` | |
+| `dia_corte_2` | `20` | |
+| `dia_corte_tarjeta` | `21` | |
+
+**Por qué el débito automático entra junto con el crédito:** la ventana del 21
+no existe por ser "tarjeta", existe porque a esos clientes se les debita en una
+fecha fija y no van a pagar por ventanilla. Juzgarlos por el día 10 daría mora
+falsa igual que con crédito. Entran entonces `153 Tarjeta de debito`,
+`59 visaprismadebito1` y `54 mastercardprisma1` además de las dos de crédito.
+
+**Qué queda como `ventanilla`:** efectivo, cajas, y también los agregadores donde
+el cliente va y paga (Rapipago, Pago Fácil) o decide cuándo pagar (MercadoPago,
+Siro, Link Pagos, Banelco). En todos esos el día del pago lo elige el cliente,
+que es justo lo que la ventana del 1 al 10 mide.
+
+**`ANULADO` cuenta como cerrado** porque un ticket anulado no está pendiente:
+contarlo como abierto inflaría el número que ve el asesor.
+
+## Decisión de estrategia de sincronización
+
+Con 10.554 conexiones la cuota es de **~26.385 requests/mes**, bastante más
+holgada de lo que asumía el diseño. Se mantiene la **estrategia por-cliente**
+para la primera versión: está verificada y una cartera de 100 clientes con
+refresco diario gasta ~9.000 requests/mes, cómodo dentro de la cuota.
+
+La estrategia en bloque quedó confirmada como viable (`customers_list` acepta
+`limit=1000`, así que la base entra en 9 requests, y `cash_list` trae todas las
+cobranzas del mes en 1). **Conviene migrar cuando haya varios asesores con
+carteras grandes**, porque ahí el gasto por-cliente se multiplica por asesor y
+se acerca al techo. El cambio queda contenido en `snapshotDe` dentro de
+`/api/cartera/sync`, sin tocar el contrato del endpoint.
