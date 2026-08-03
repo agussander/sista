@@ -337,7 +337,7 @@ describe('cache del token', () => {
 		expect(calls).toHaveLength(2);
 	});
 
-	it('no cachea un fallo de autenticación', async () => {
+	it('no cachea una respuesta sin token (el 401 es incidental: getAuthToken no mira el status)', async () => {
 		const calls = [];
 		const fetchImpl = fakeFetch([res(401, { message: 'no' })], calls);
 
@@ -355,5 +355,53 @@ describe('cache del token', () => {
 		await getAuthToken({ ...CONFIG, username: 'otro' }, { fetchImpl });
 
 		expect(calls).toHaveLength(2);
+	});
+
+	it('dedupe pedidos concurrentes: dos llamadas sin await entre medio hacen un solo request', async () => {
+		const calls = [];
+		/** @type {Array<(value: unknown) => void>} */
+		const resolvers = [];
+		// No resuelve enseguida: si la deduplicacion fallara y las dos llamadas
+		// dispararan su propio fetch, las dos quedarian colgadas hasta que este
+		// test las resuelva a mano, exponiendo la concurrencia real en vez de
+		// depender del orden en que corren las microtasks.
+		const fetchImpl = (url, init) => {
+			calls.push({ url, init });
+			return new Promise((resolve) => resolvers.push(resolve));
+		};
+
+		const a = getAuthToken(CONFIG, { fetchImpl });
+		const b = getAuthToken(CONFIG, { fetchImpl });
+
+		resolvers.forEach((resolve) => resolve(res(200, { token: 'tok-1' })));
+
+		const [tokenA, tokenB] = await Promise.all([a, b]);
+
+		expect(tokenA).toBe('tok-1');
+		expect(tokenB).toBe('tok-1');
+		expect(calls).toHaveLength(1);
+	});
+
+	it('con forzar: true no se cuelga de un pedido en vuelo: dispara el suyo', async () => {
+		const calls = [];
+		/** @type {Array<(value: unknown) => void>} */
+		const resolvers = [];
+		const fetchImpl = (url, init) => {
+			calls.push({ url, init });
+			return new Promise((resolve) => resolvers.push(resolve));
+		};
+
+		// La primera queda en vuelo (no se resuelve todavia).
+		const enVuelo = getAuthToken(CONFIG, { fetchImpl });
+		// forzar dispara la suya en vez de colgarse de la anterior.
+		const forzada = getAuthToken(CONFIG, { fetchImpl, forzar: true });
+
+		expect(calls).toHaveLength(2);
+
+		resolvers[0](res(200, { token: 'tok-viejo' }));
+		resolvers[1](res(200, { token: 'tok-nuevo' }));
+
+		expect(await enVuelo).toBe('tok-viejo');
+		expect(await forzada).toBe('tok-nuevo');
 	});
 });

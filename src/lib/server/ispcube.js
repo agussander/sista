@@ -63,33 +63,32 @@ const TOKEN_TTL_MS = 23 * 60 * 60 * 1000;
 const cacheToken = new Map();
 
 /**
+ * Pedidos de token en vuelo, por clave. Sin esto, dos llamadas concurrentes
+ * con el cache frio (arranque, redeploy, TTL vencido) disparan cada una su
+ * propio POST al endpoint de token -que se factura- en vez de compartir uno.
+ *
+ * @type {Map<string, Promise<string | null>>}
+ */
+const pedidosEnVuelo = new Map();
+
+/**
  * Vacia el cache de tokens. Existe para los tests: sin esto, un token cacheado
  * en un test se filtra al siguiente y las cuentas de llamadas dan mal.
  */
 export function limpiarCacheToken() {
 	cacheToken.clear();
+	pedidosEnVuelo.clear();
 }
 
 /**
- * Obtiene un bearer token de IspCube, cacheado en memoria del proceso.
- *
- * El cache no es una optimizacion cosmetica: la API de IspCube se factura por
- * request (2,5 x conexiones activas por mes, ver `docs/ispcube-api.md`), y sin
- * el cada consulta de datos costaba dos llamadas en vez de una.
+ * Pega al endpoint de sanctum y, si la respuesta trae token, lo cachea.
  *
  * @param {IspcubeConfig} config
- * @param {{ fetchImpl?: typeof fetch, now?: () => number, forzar?: boolean }} [options]
- *   `forzar` saltea el cache: lo usan los reintentos ante un 401, porque un
- *   token revocado del lado de IspCube seguiria cacheado hasta 23 h.
- * @returns {Promise<string | null>} `null` si no se pudo obtener
+ * @param {string} clave
+ * @param {{ fetchImpl: typeof fetch, now: () => number }} options
+ * @returns {Promise<string | null>}
  */
-export async function getAuthToken(config, { fetchImpl = fetch, now = Date.now, forzar = false } = {}) {
-	const clave = `${trimBase(config.baseUrl)}|${config.username}`;
-	if (!forzar) {
-		const guardado = cacheToken.get(clave);
-		if (guardado && guardado.expira > now()) return guardado.token;
-	}
-
+async function pedirToken(config, clave, { fetchImpl, now }) {
 	const url = `${trimBase(config.baseUrl)}/api/sanctum/token`;
 	try {
 		const res = await fetchImpl(url, {
@@ -114,6 +113,45 @@ export async function getAuthToken(config, { fetchImpl = fetch, now = Date.now, 
 		console.error('[ispcube] fallo la autenticacion:', error);
 		return null;
 	}
+}
+
+/**
+ * Obtiene un bearer token de IspCube, cacheado en memoria del proceso.
+ *
+ * El cache no es una optimizacion cosmetica: la API de IspCube se factura por
+ * request (2,5 x conexiones activas por mes, ver `docs/ispcube-api.md`), y sin
+ * el cada consulta de datos costaba dos llamadas en vez de una. Ademas de
+ * cachear el token resuelto, dos llamadas concurrentes con el cache frio se
+ * cuelgan del mismo pedido en vuelo en lugar de disparar cada una el suyo.
+ *
+ * @param {IspcubeConfig} config
+ * @param {{ fetchImpl?: typeof fetch, now?: () => number, forzar?: boolean }} [options]
+ *   `forzar` saltea el cache -pensado para los reintentos ante un 401, porque
+ *   un token revocado del lado de IspCube seguiria cacheado hasta 23 h-, y
+ *   tambien saltea el pedido en vuelo: quien pide `forzar` sabe que el token
+ *   que hay (o el que ya esta en camino) esta podrido, asi que necesita uno
+ *   nuevo de verdad, no colgarse de un fetch que arranco antes de saberlo.
+ * @returns {Promise<string | null>} `null` si no se pudo obtener
+ */
+export async function getAuthToken(config, { fetchImpl = fetch, now = Date.now, forzar = false } = {}) {
+	const clave = `${trimBase(config.baseUrl)}|${config.username}`;
+	if (!forzar) {
+		const guardado = cacheToken.get(clave);
+		if (guardado && guardado.expira > now()) return guardado.token;
+
+		const enVuelo = pedidosEnVuelo.get(clave);
+		if (enVuelo) return enVuelo;
+	}
+
+	const pedido = pedirToken(config, clave, { fetchImpl, now });
+	if (!forzar) {
+		pedidosEnVuelo.set(clave, pedido);
+		// Se limpia tanto si resuelve como si rechaza: `pedirToken` hoy siempre
+		// resuelve (atrapa sus propios errores), pero si en el futuro dejara de
+		// ser asi, un rechazo no debe envenenar la clave para siempre.
+		pedido.finally(() => pedidosEnVuelo.delete(clave));
+	}
+	return pedido;
 }
 
 /**
