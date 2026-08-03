@@ -54,16 +54,42 @@ function trimBase(baseUrl) {
 }
 
 /**
- * Obtiene un bearer token de IspCube.
+ * Vida del token cacheado. La API lo emite con 24 h de validez; se guarda por
+ * 23 para no quedar del lado equivocado del vencimiento.
+ */
+const TOKEN_TTL_MS = 23 * 60 * 60 * 1000;
+
+/** @type {Map<string, {token: string, expira: number}>} */
+const cacheToken = new Map();
+
+/**
+ * Vacia el cache de tokens. Existe para los tests: sin esto, un token cacheado
+ * en un test se filtra al siguiente y las cuentas de llamadas dan mal.
+ */
+export function limpiarCacheToken() {
+	cacheToken.clear();
+}
+
+/**
+ * Obtiene un bearer token de IspCube, cacheado en memoria del proceso.
  *
- * Solo se usa como fallback: el cliente normalmente manda el token que ya tiene
- * de haber consultado los datos del abonado en un paso anterior del wizard.
+ * El cache no es una optimizacion cosmetica: la API de IspCube se factura por
+ * request (2,5 x conexiones activas por mes, ver `docs/ispcube-api.md`), y sin
+ * el cada consulta de datos costaba dos llamadas en vez de una.
  *
  * @param {IspcubeConfig} config
- * @param {{ fetchImpl?: typeof fetch }} [options]
+ * @param {{ fetchImpl?: typeof fetch, now?: () => number, forzar?: boolean }} [options]
+ *   `forzar` saltea el cache: lo usan los reintentos ante un 401, porque un
+ *   token revocado del lado de IspCube seguiria cacheado hasta 23 h.
  * @returns {Promise<string | null>} `null` si no se pudo obtener
  */
-export async function getAuthToken(config, { fetchImpl = fetch } = {}) {
+export async function getAuthToken(config, { fetchImpl = fetch, now = Date.now, forzar = false } = {}) {
+	const clave = `${trimBase(config.baseUrl)}|${config.username}`;
+	if (!forzar) {
+		const guardado = cacheToken.get(clave);
+		if (guardado && guardado.expira > now()) return guardado.token;
+	}
+
 	const url = `${trimBase(config.baseUrl)}/api/sanctum/token`;
 	try {
 		const res = await fetchImpl(url, {
@@ -80,7 +106,9 @@ export async function getAuthToken(config, { fetchImpl = fetch } = {}) {
 		const token = data?.data?.token ?? data?.token ?? null;
 		if (!token) {
 			console.error('[ispcube] el auth respondio sin token:', data?.message ?? data);
+			return null;
 		}
+		cacheToken.set(clave, { token, expira: now() + TOKEN_TTL_MS });
 		return token;
 	} catch (error) {
 		console.error('[ispcube] fallo la autenticacion:', error);

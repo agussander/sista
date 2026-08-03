@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { getAuthToken, createTicket, getCustomerByCode } from './ispcube.js';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { getAuthToken, createTicket, getCustomerByCode, limpiarCacheToken } from './ispcube.js';
 
 const CONFIG = {
 	baseUrl: 'https://sista.ispcube.online',
@@ -8,6 +8,11 @@ const CONFIG = {
 	apiKey: 'k',
 	clientId: '734'
 };
+
+// El cache de token es un Map a nivel de modulo: sin limpiarlo entre tests, un
+// token cacheado en un test se filtra al siguiente y las cuentas de llamadas
+// (`calls`) dan mal.
+beforeEach(() => limpiarCacheToken());
 
 const TICKET = {
 	nro_cliente: '1234',
@@ -293,5 +298,62 @@ describe('getCustomerByCode', () => {
 		});
 
 		expect(out).toEqual({ ok: false, reason: 'network' });
+	});
+});
+
+describe('cache del token', () => {
+	it('reusa el token en la segunda llamada, sin volver a pedirlo', async () => {
+		const calls = [];
+		const fetchImpl = fakeFetch([res(200, { token: 'tok-1' })], calls);
+
+		const a = await getAuthToken(CONFIG, { fetchImpl });
+		const b = await getAuthToken(CONFIG, { fetchImpl });
+
+		expect(a).toBe('tok-1');
+		expect(b).toBe('tok-1');
+		expect(calls).toHaveLength(1);
+	});
+
+	it('pide uno nuevo cuando el cacheado venció', async () => {
+		const calls = [];
+		const fetchImpl = fakeFetch([res(200, { token: 'tok-1' })], calls);
+		let ahora = 1_000_000;
+		const now = () => ahora;
+
+		await getAuthToken(CONFIG, { fetchImpl, now });
+		ahora += 24 * 60 * 60 * 1000;
+		await getAuthToken(CONFIG, { fetchImpl, now });
+
+		expect(calls).toHaveLength(2);
+	});
+
+	it('con forzar: true ignora el cache', async () => {
+		const calls = [];
+		const fetchImpl = fakeFetch([res(200, { token: 'tok-1' })], calls);
+
+		await getAuthToken(CONFIG, { fetchImpl });
+		await getAuthToken(CONFIG, { fetchImpl, forzar: true });
+
+		expect(calls).toHaveLength(2);
+	});
+
+	it('no cachea un fallo de autenticación', async () => {
+		const calls = [];
+		const fetchImpl = fakeFetch([res(401, { message: 'no' })], calls);
+
+		await getAuthToken(CONFIG, { fetchImpl });
+		await getAuthToken(CONFIG, { fetchImpl });
+
+		expect(calls).toHaveLength(2);
+	});
+
+	it('separa el cache por usuario', async () => {
+		const calls = [];
+		const fetchImpl = fakeFetch([res(200, { token: 'tok-1' })], calls);
+
+		await getAuthToken(CONFIG, { fetchImpl });
+		await getAuthToken({ ...CONFIG, username: 'otro' }, { fetchImpl });
+
+		expect(calls).toHaveLength(2);
 	});
 });
