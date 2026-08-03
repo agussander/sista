@@ -81,13 +81,22 @@ export function alertasDe(cliente, hoy, config) {
 	const pagoDelMes = (Array.isArray(cliente?.pagos) ? cliente.pagos : []).some(
 		(p) => p?.mes === mesActual
 	);
+	// `duedebt` es la deuda vencida que informa IspCube (GET /api/customer),
+	// ya convertida a numero por normalizarCliente. Corrobora al recibo: un
+	// cliente que pago $100 el 5 y debe $30000 desde el 25 tiene "un pago este
+	// mes" pero IspCube sigue diciendo que debe, y la mora tiene que verlo.
+	const duedebt = Number(cliente?.duedebt) || 0;
 
 	// El mes de la instalacion no cuenta: todavia no le facturaron nada. Una
 	// instalacion FUTURA (fecha mal cargada o alta programada) tampoco puede
 	// estar en mora: por eso es `>=` y no `===`.
 	const recienInstalado = instalacion && claveMes(instalacion) >= mesActual;
 
-	if (!pagoDelMes && !recienInstalado) {
+	// Deliberadamente asimetrico con los puntos de pago (`puntosPorMes`): ahi
+	// el punto sigue reflejando cuando llego el primer recibo del mes, sin
+	// mirar duedebt, porque es historial de comportamiento, no un estado de
+	// cuenta. Que no se "corrija" para que combine con esto.
+	if (!recienInstalado && (!pagoDelMes || duedebt > 0)) {
 		const corte1 = diaCorteDe(perfil, config);
 		if (hoy.dia > corte1) {
 			alertas.push({ tipo: 'mora_1', desde: mesActual });

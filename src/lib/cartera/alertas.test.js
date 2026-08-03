@@ -178,6 +178,61 @@ describe('alertas de mora', () => {
 		expect(tipos(r)).not.toContain('mora_1');
 	});
 
+	it('mora_1 si pago este mes pero IspCube todavia reporta duedebt', () => {
+		// Pago $100 el 5 y debe $30000 desde el 25: el recibo existe pero la
+		// deuda vencida de IspCube sigue en pie, y la mora tiene que verlo.
+		const r = alertasDe(
+			{
+				...base,
+				pagos: [{ mes: '2026-07', dia: 5, monto: 100 }],
+				duedebt: 30000
+			},
+			{ anio: 2026, mes: 7, dia: 25 },
+			CONFIG
+		);
+
+		expect(tipos(r)).toContain('mora_1');
+	});
+
+	it('sin mora si pago este mes y duedebt es 0', () => {
+		const r = alertasDe(
+			{
+				...base,
+				pagos: [{ mes: '2026-07', dia: 5, monto: 12000 }],
+				duedebt: 0
+			},
+			{ anio: 2026, mes: 7, dia: 25 },
+			CONFIG
+		);
+
+		expect(tipos(r)).not.toContain('mora_1');
+	});
+
+	it('sin mora si hay duedebt pero todavia no paso el corte', () => {
+		// El gate del dia sigue mandando: duedebt no lo saltea.
+		const r = alertasDe(
+			{ ...sinPagos, duedebt: 30000 },
+			{ anio: 2026, mes: 7, dia: 9 },
+			CONFIG
+		);
+
+		expect(tipos(r)).not.toContain('mora_1');
+	});
+
+	it('duedebt ausente se comporta como 0, sin explotar', () => {
+		const r = alertasDe(
+			{
+				...base,
+				pagos: [{ mes: '2026-07', dia: 5, monto: 12000 }]
+				// sin campo duedebt
+			},
+			{ anio: 2026, mes: 7, dia: 25 },
+			CONFIG
+		);
+
+		expect(tipos(r)).not.toContain('mora_1');
+	});
+
 	it('no hay mora si la instalacion es en un mes futuro', () => {
 		// Bug: el guard comparaba con `===`, asi que una instalacion futura
 		// (fecha mal cargada o alta programada) no lo alcanzaba y la mora

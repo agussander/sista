@@ -137,6 +137,8 @@ describe('puntosPorMes', () => {
 
 	it('gris para los meses anteriores a la instalacion', () => {
 		// Sin esto, un cliente de dos meses aparece con seis puntos rojos.
+		// El mes del medio (2026-06) es el de la instalacion: sin pago da
+		// `pendiente`, no `rojo` (ver el describe de mas abajo).
 		const puntos = puntosPorMes([], {
 			perfil: 'ventanilla',
 			diaCorte: 10,
@@ -145,7 +147,36 @@ describe('puntosPorMes', () => {
 			meses: 3
 		});
 
-		expect(puntos.map((p) => p.estado)).toEqual(['gris', 'rojo', 'rojo']);
+		expect(puntos.map((p) => p.estado)).toEqual(['gris', 'pendiente', 'rojo']);
+	});
+
+	it('pendiente en el mes de la instalacion sin pago', () => {
+		// Regla: el mes de la instalacion nunca es rojo, todavia no le
+		// facturaron nada. Antes de este cambio pintaba rojo y contradecia a
+		// alertasDe, que no dispara mora ese mismo mes por la misma razon.
+		const puntos = puntosPorMes([], {
+			perfil: 'ventanilla',
+			diaCorte: 10,
+			instalacion: { anio: 2026, mes: 7, dia: 2 },
+			hoy: { anio: 2026, mes: 7, dia: 28 },
+			meses: 1
+		});
+
+		expect(puntos[0].estado).toBe('pendiente');
+	});
+
+	it('verde en el mes de la instalacion si hubo pago en ventana', () => {
+		// Si hubo pago ese mes, pinta como cualquier otro mes: verde o
+		// amarillo, no un estado especial.
+		const puntos = puntosPorMes([{ mes: '2026-07', dia: 5, monto: 1 }], {
+			perfil: 'ventanilla',
+			diaCorte: 10,
+			instalacion: { anio: 2026, mes: 7, dia: 2 },
+			hoy: { anio: 2026, mes: 7, dia: 28 },
+			meses: 1
+		});
+
+		expect(puntos[0].estado).toBe('verde');
 	});
 
 	it('el mes en curso no es rojo si todavia no vencio el corte', () => {

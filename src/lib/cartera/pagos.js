@@ -99,7 +99,9 @@ export function fusionarPagos(guardados, nuevos, hoy) {
  *   - `verde`     pago dentro de su ventana (<= dia de corte)
  *   - `amarillo`  pago despues de la ventana, dentro del mes
  *   - `rojo`      no hubo pago y la ventana ya vencio
- *   - `pendiente` mes en curso, la ventana todavia no vencio
+ *   - `pendiente` mes en curso sin pago (la ventana todavia no vencio), o el
+ *     mes de la instalacion sin pago (todavia no le facturaron nada, igual
+ *     que en alertasDe: nunca puede ser rojo)
  *   - `gris`      mes anterior a la instalacion: el cliente no era cliente
  *
  * `gris` no es cosmetico: sin el, un cliente de dos meses aparece con seis
@@ -130,6 +132,13 @@ export function puntosPorMes(pagos, { perfil, diaCorte, instalacion, hoy, meses 
 				dia: pago.dia,
 				monto: pago.monto
 			};
+		}
+
+		// Sin pago, el mes de la instalacion nunca es rojo: todavia no le
+		// facturaron nada. Antes pintaba rojo y contradecia a alertasDe, que
+		// no dispara mora ese mes por la misma razon.
+		if (mes === mesInstalacion) {
+			return { mes, estado: 'pendiente', dia: null, monto: null };
 		}
 
 		// Sin pago: solo es mora si la ventana ya vencio. En el mes en curso
