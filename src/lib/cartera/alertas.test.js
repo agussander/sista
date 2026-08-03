@@ -136,7 +136,15 @@ describe('alertas de mora', () => {
 			CONFIG
 		);
 
-		expect(tipos(r)).toEqual([]);
+		// Es dia 15 y no pago: a un cliente de ventanilla ya le habria saltado
+		// mora_1. Al de tarjeta no, porque su ventana llega hasta el 21.
+		//
+		// Se afirma la ausencia de las dos moras y no `toEqual([])`, porque el
+		// cliente base de este bloque lleva 18 meses instalado y sin contacto:
+		// su alerta de seguimiento salta con razon y no tiene nada que ver con
+		// lo que este test mide.
+		expect(tipos(r)).not.toContain('mora_1');
+		expect(tipos(r)).not.toContain('mora_2');
 	});
 
 	it('a un cliente de tarjeta le salta la mora pasado el 21', () => {
