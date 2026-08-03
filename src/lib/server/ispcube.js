@@ -422,3 +422,59 @@ export async function getTickets(code, config, options = {}) {
 
 	return { ok: true, tickets: Array.isArray(r.data) ? r.data : [] };
 }
+
+/**
+ * Ultimas cobranzas de un cliente. Solo lectura.
+ *
+ * OJO: el endpoint devuelve las ultimas 6 COBRANZAS, no seis meses. Un cliente
+ * que paga dos veces por mes deja tres meses de historia. Por eso el snapshot
+ * de la Cartera acumula en vez de reemplazar (ver `cartera/pagos.js`).
+ *
+ * @param {unknown} code Numero de cliente, con sus ceros
+ * @param {IspcubeConfig} config
+ * @param {{ fetchImpl?: typeof fetch }} [options]
+ * @returns {Promise<{ok: true, cobranzas: any[]} | {ok: false, reason: string}>}
+ */
+export async function getCobranzas(code, config, options = {}) {
+	if (typeof code !== 'string' || !CODE_PATTERN.test(code)) {
+		return { ok: false, reason: 'invalid' };
+	}
+
+	const r = await getAutenticado(
+		`/api/cash/cash_last_six_monts?code=${encodeURIComponent(code)}`,
+		config,
+		options
+	);
+
+	if (!r.ok) {
+		if (r.reason === 'not_found') return { ok: true, cobranzas: [] };
+		return { ok: false, reason: r.reason };
+	}
+
+	return { ok: true, cobranzas: Array.isArray(r.data) ? r.data : [] };
+}
+
+/**
+ * Catalogos que la Cartera necesita para configurarse: las entidades de
+ * cobranza (que en IspCube ES el medio de pago) y las areas de tickets.
+ *
+ * Son estables: quien llame a esto deberia cachear el resultado en vez de
+ * pedirlo en cada apertura de pantalla.
+ *
+ * @param {IspcubeConfig} config
+ * @param {{ fetchImpl?: typeof fetch }} [options]
+ * @returns {Promise<{ok: true, entidades: any[], areas: any[]} | {ok: false, reason: string}>}
+ */
+export async function getCatalogos(config, options = {}) {
+	const entidades = await getAutenticado('/api/cash/entities_list', config, options);
+	if (!entidades.ok) return { ok: false, reason: entidades.reason };
+
+	const areas = await getAutenticado('/api/tickets/areas_list', config, options);
+	if (!areas.ok) return { ok: false, reason: areas.reason };
+
+	return {
+		ok: true,
+		entidades: Array.isArray(entidades.data) ? entidades.data : [],
+		areas: Array.isArray(areas.data) ? areas.data : []
+	};
+}

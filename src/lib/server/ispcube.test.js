@@ -1,5 +1,13 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { getAuthToken, createTicket, getCustomerByCode, getTickets, limpiarCacheToken } from './ispcube.js';
+import {
+	getAuthToken,
+	createTicket,
+	getCustomerByCode,
+	getTickets,
+	getCobranzas,
+	getCatalogos,
+	limpiarCacheToken
+} from './ispcube.js';
 
 const CONFIG = {
 	baseUrl: 'https://sista.ispcube.online',
@@ -478,5 +486,72 @@ describe('getTickets', () => {
 		});
 
 		expect(r).toEqual({ ok: false, reason: 'network' });
+	});
+});
+
+describe('getCobranzas', () => {
+	beforeEach(() => limpiarCacheToken());
+	const okAuth = res(200, { token: 'tok' });
+
+	it('pega al endpoint de las ultimas 6 cobranzas', async () => {
+		const calls = [];
+		await getCobranzas('003566', CONFIG, {
+			fetchImpl: fakeFetch([okAuth, res(200, [])], calls)
+		});
+
+		expect(calls[1].url).toBe(
+			'https://sista.ispcube.online/api/cash/cash_last_six_monts?code=003566'
+		);
+	});
+
+	it('devuelve las cobranzas', async () => {
+		const cobranzas = [{ id: 1, total: '12000.00', real_date: '2026-07-08 10:00:00' }];
+		const r = await getCobranzas('003566', CONFIG, {
+			fetchImpl: fakeFetch([okAuth, res(200, cobranzas)])
+		});
+
+		expect(r).toEqual({ ok: true, cobranzas });
+	});
+
+	it('trata un cliente sin cobranzas como lista vacia', async () => {
+		const r = await getCobranzas('003566', CONFIG, {
+			fetchImpl: fakeFetch([okAuth, res(404, {})])
+		});
+
+		expect(r).toEqual({ ok: true, cobranzas: [] });
+	});
+
+	it('rechaza un code mal formado sin gastar un request', async () => {
+		const calls = [];
+		const r = await getCobranzas('', CONFIG, { fetchImpl: fakeFetch([okAuth], calls) });
+
+		expect(r).toEqual({ ok: false, reason: 'invalid' });
+		expect(calls).toHaveLength(0);
+	});
+});
+
+describe('getCatalogos', () => {
+	beforeEach(() => limpiarCacheToken());
+	const okAuth = res(200, { token: 'tok' });
+
+	it('trae entidades y areas en dos requests', async () => {
+		const calls = [];
+		const entidades = [{ id: 1, name: 'Caja' }];
+		const areas = [{ id: 6, name: 'Soporte Tecnico' }];
+		const r = await getCatalogos(CONFIG, {
+			fetchImpl: fakeFetch([okAuth, res(200, entidades), res(200, areas)], calls)
+		});
+
+		expect(r).toEqual({ ok: true, entidades, areas });
+		expect(calls[1].url).toBe('https://sista.ispcube.online/api/cash/entities_list');
+		expect(calls[2].url).toBe('https://sista.ispcube.online/api/tickets/areas_list');
+	});
+
+	it('falla si alguno de los dos catalogos falla', async () => {
+		const r = await getCatalogos(CONFIG, {
+			fetchImpl: fakeFetch([okAuth, res(200, []), res(500, {})])
+		});
+
+		expect(r).toEqual({ ok: false, reason: 'api' });
 	});
 });
