@@ -386,7 +386,16 @@ export async function getTickets(code, config, options = {}) {
 		return { ok: false, reason: r.reason };
 	}
 
-	return { ok: true, tickets: Array.isArray(r.data) ? r.data : [] };
+	// Un 200 que no trae un array no es "sin tickets": IspCube a veces contesta
+	// un objeto de error (`{"status":false,"message":"..."}`) con HTTP 200. Si
+	// eso se lavara en lista vacia quedaria indistinguible de un cliente sin
+	// tickets. El 404 (arriba) sigue siendo el unico camino legitimo a [].
+	if (!Array.isArray(r.data)) {
+		console.error('[ispcube] la respuesta de tickets no es un array:', r.data);
+		return { ok: false, reason: 'invalid' };
+	}
+
+	return { ok: true, tickets: r.data };
 }
 
 /**
@@ -417,7 +426,17 @@ export async function getCobranzas(code, config, options = {}) {
 		return { ok: false, reason: r.reason };
 	}
 
-	return { ok: true, cobranzas: Array.isArray(r.data) ? r.data : [] };
+	// Mismo motivo que en `getTickets`, pero aca importa mas: la Cartera calcula
+	// las alertas de mora sobre esta lista. Si un payload que no es un array se
+	// lavara en [], "la API contesto cualquier cosa" quedaria indistinguible de
+	// "este cliente no pago este mes", y el asesor terminaria llamando a
+	// alguien que si pago.
+	if (!Array.isArray(r.data)) {
+		console.error('[ispcube] la respuesta de cobranzas no es un array:', r.data);
+		return { ok: false, reason: 'invalid' };
+	}
+
+	return { ok: true, cobranzas: r.data };
 }
 
 /**

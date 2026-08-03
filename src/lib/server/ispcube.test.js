@@ -516,6 +516,14 @@ describe('getTickets', () => {
 
 		expect(r).toEqual({ ok: false, reason: 'network' });
 	});
+
+	it('devuelve invalid si un 200 no trae un array (no lo confunde con lista vacia)', async () => {
+		const r = await getTickets('003566', CONFIG, {
+			fetchImpl: fakeFetch([okAuth, res(200, { status: false, message: 'algo raro' })])
+		});
+
+		expect(r).toEqual({ ok: false, reason: 'invalid' });
+	});
 });
 
 describe('getCobranzas', () => {
@@ -556,6 +564,14 @@ describe('getCobranzas', () => {
 
 		expect(r).toEqual({ ok: false, reason: 'invalid' });
 		expect(calls).toHaveLength(0);
+	});
+
+	it('devuelve invalid si un 200 no trae un array (no lo confunde con "no pago")', async () => {
+		const r = await getCobranzas('003566', CONFIG, {
+			fetchImpl: fakeFetch([okAuth, res(200, { status: false, message: 'algo raro' })])
+		});
+
+		expect(r).toEqual({ ok: false, reason: 'invalid' });
 	});
 });
 
