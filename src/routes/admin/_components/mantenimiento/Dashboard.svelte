@@ -147,7 +147,7 @@ $effect(() => {
                 </div>
             </div>
         {:else}
-            <Content {selected} />
+            <Content {selected} record={$record} />
         {/if}
     </main>
 </section>

@@ -1,5 +1,6 @@
 <script>
 import { slide } from 'svelte/transition';
+import { seccionPermitida } from '$lib/adminPermisos.js';
 let {
     record,
     logout,
@@ -33,6 +34,11 @@ const mainItems = [
         title: 'Quiero que me llamen',
         content: 'llamenme',
         icon: '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>'
+    },
+    {
+        title: 'Cartera de clientes',
+        content: 'cartera',
+        icon: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'
     }
 ];
 
@@ -69,6 +75,27 @@ const expandableContent = [
     }
 ];
 
+// Filtro por permiso: es conveniencia de interfaz, no seguridad (el servidor
+// vuelve a chequear en cada endpoint de la Cartera y las reglas de coleccion
+// rigen todo lo demas). Un grupo expandible se oculta entero si ninguno de
+// sus hijos quedo habilitado, no solo si el grupo en si no tiene permiso
+// propio (no lo tiene: son sus hijos los que lo tienen).
+const permisos = $derived(record?.permisos);
+const mainItemsPermitidos = $derived(
+    mainItems.filter((item) => seccionPermitida(item.content, permisos))
+);
+const expandableContentPermitido = $derived(
+    expandableContent
+        .map((c) => ({ ...c, childs: c.childs.filter((ch) => seccionPermitida(ch.content, permisos)) }))
+        .filter((c) => c.childs.length > 0)
+);
+// Un usuario sin ninguna seccion habilitada se queda con un panel vacio si no
+// se dice nada: mejor un mensaje explicito que invite a pedir permisos que un
+// sidebar en blanco que parece roto.
+const sinPermisos = $derived(
+    mainItemsPermitidos.length === 0 && expandableContentPermitido.length === 0
+);
+
 let opened = $state(null)
 
 const switch_ = (c) =>{
@@ -84,8 +111,16 @@ const handleMainItemClick = (item) => {
 
 <div class="wrap sidebar-content" class:collapsed>
     <div>
+        {#if sinPermisos}
+            {#if !collapsed}
+                <p class="sin-permisos">
+                    Todavía no tenés secciones habilitadas. Pedile a un administrador que te asigne
+                    permisos en tu usuario.
+                </p>
+            {/if}
+        {:else}
         <div class="folders">
-            {#each mainItems as item}
+            {#each mainItemsPermitidos as item}
                 <button class='main-item'
                 class:selected={selected==item.content}
                 onclick={() => handleMainItemClick(item)}
@@ -104,7 +139,7 @@ const handleMainItemClick = (item) => {
             {#if !collapsed}
             <div class="separator"></div>
 
-            {#each expandableContent as c}
+            {#each expandableContentPermitido as c}
                 <button class='content'
                 onclick={() => switch_(c)}
                 >
@@ -130,6 +165,7 @@ const handleMainItemClick = (item) => {
             {/each}
             {/if}
         </div>
+        {/if}
     </div>
     <button class="btn logout-btn" onclick={logout} title={collapsed ? 'Cerrar sesión' : null}>
         <svg class="logout-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
@@ -153,6 +189,16 @@ const handleMainItemClick = (item) => {
     display: flex;
     flex-direction: column;
     gap: 0.6em;
+}
+.sin-permisos {
+    margin-top: 1.5em;
+    padding: 1em 1.1em;
+    background: #fff;
+    border: 1.5px dashed #d9cbef;
+    border-radius: 1em;
+    color: #6b7280;
+    font-size: 0.92em;
+    line-height: 1.4;
 }
 .main-item {
     padding: 0.7em 1em;
