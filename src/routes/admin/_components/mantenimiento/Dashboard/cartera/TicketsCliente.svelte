@@ -109,7 +109,7 @@ onMount(cargar);
                            comportarse como en cualquier div. -->
                       <span class="cuerpo">
                         <span class="fila-alta">
-                            <span class="numero">#{t.numero}</span>
+                            <span class="numero">{t.numero}</span>
                             <span class="estado" class:cerrado={t.cerrado}>
                                 {nombreO(t.estado, 'estado')}
                             </span>
@@ -135,7 +135,7 @@ onMount(cargar);
             {#if detalle}
                 <div class="detalle">
                     <div class="cabecera">
-                        <strong>#{detalle.numero}</strong>
+                        <strong>{detalle.numero}</strong>
                         <span class="estado" class:cerrado={detalle.cerrado}>
                             {nombreO(detalle.estado, 'estado')}
                         </span>
