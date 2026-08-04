@@ -512,3 +512,39 @@ export async function getCatalogos(config, options = {}) {
 		areas: Array.isArray(areas.data) ? areas.data : []
 	};
 }
+
+/**
+ * Catalogos que hacen legible un ticket: sus categorias, estados, prioridades
+ * y areas. En la API los cuatro campos del ticket son ids sueltos
+ * (`ticket_category_id: 3`), asi que sin esto la pantalla solo puede mostrar
+ * numeros.
+ *
+ * Aparte de `getCatalogos` (que sirve a la pantalla de configuracion con
+ * entidades + areas) a proposito: juntarlos haria que abrir la configuracion
+ * gaste cinco requests facturados en vez de dos, y que ver los tickets gaste
+ * uno en entidades que no mira nadie.
+ *
+ * Son estables: quien llame a esto deberia cachear el resultado.
+ *
+ * @param {IspcubeConfig} config
+ * @param {{ fetchImpl?: typeof fetch }} [options]
+ * @returns {Promise<{ok: true, categorias: any[], estados: any[], prioridades: any[], areas: any[]} | {ok: false, reason: string}>}
+ */
+export async function getCatalogosTickets(config, options = {}) {
+	// Serial y con corte al primer fallo, igual que `getCatalogos`: si el
+	// primero no responde, los otros tres requests se gastan para tirar el
+	// resultado igual.
+	const partes = {};
+	for (const [clave, path] of [
+		['categorias', '/api/tickets/category_list'],
+		['estados', '/api/tickets/status_list'],
+		['prioridades', '/api/tickets/priority_list'],
+		['areas', '/api/tickets/areas_list']
+	]) {
+		const r = await getAutenticado(path, config, options);
+		if (!r.ok) return { ok: false, reason: r.reason };
+		partes[clave] = Array.isArray(r.data) ? r.data : [];
+	}
+
+	return { ok: true, ...partes };
+}

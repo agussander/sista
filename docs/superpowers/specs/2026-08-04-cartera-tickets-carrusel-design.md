@@ -1,7 +1,7 @@
 # Tickets en tarjetas dentro del detalle de cliente
 
 Fecha: 2026-08-04
-Estado: aprobado, sin implementar
+Estado: implementado
 
 ## El problema
 
@@ -73,7 +73,7 @@ endpoint cachea el resultado en memoria del proceso con TTL de 1 h, replicando
 el patrón que ya usa `src/routes/api/cartera/catalogos/+server.js`.
 
 Un fallo de catálogos **no** rompe el endpoint: se responde con los tickets y
-`catalogos: null`, y la UI cae a mostrar `#id` — exactamente lo que se ve hoy.
+`catalogos: false`, y la UI cae a mostrar `#id` — exactamente lo que se ve hoy.
 Perder los nombres degrada la pantalla; no traer los tickets la vacía.
 
 ### 3. `normalizarTickets(crudos, catalogos)` en `src/lib/cartera/tickets.js`
@@ -114,14 +114,19 @@ Reglas:
 
 ### 4. `GET /api/cartera/tickets/[code]`
 
-Solo lectura, permiso `cartera`, misma forma que `/api/cartera/cliente/[code]`:
-401 si no sabemos quién es, 403 si sabemos y no puede, 404 si el code no existe,
-502 si IspCube no responde.
+Solo lectura, permiso `cartera`: 401 si no sabemos quién es, 403 si sabemos y no
+puede, 502 si IspCube no responde.
+
+Sin 404, a diferencia de `/api/cartera/cliente/[code]`: para `getTickets` un 404
+de IspCube significa "este cliente no tiene tickets" y vuelve como lista vacía,
+así que no queda ningún caso de "no existe" que informar.
 
 Query params: `cerrados` (ids de estado que cuentan como cerrado), parseado con
 `parseIds()` como en el endpoint de cliente.
 
-Respuesta: `{tickets: [...], catalogos: true | null}`.
+Respuesta: `{tickets: [...], catalogos: boolean}`, donde `catalogos: false`
+significa "los nombres no se pudieron traducir" y es lo que dispara el aviso en
+la UI.
 
 ### 5. `TicketsCliente.svelte`
 
@@ -134,9 +139,15 @@ Props: `code`, `resumen` (el `actual.tickets` del snapshot). Los
 igual que `ClienteDetalle` ya lee los días de corte.
 
 **Carrusel.** `display: flex` + `overflow-x: auto` + `scroll-snap-type: x
-proximity`, tarjetas de ancho fijo (~15em) con `scroll-snap-align: start`. Cada
+proximity`, tarjetas de ancho fijo (14em) con `scroll-snap-align: start`. Cada
 tarjeta es un `<button>` — así el teclado y los lectores de pantalla funcionan
 sin trabajo extra — con `aria-expanded` y `aria-controls` apuntando al panel.
+
+El contenido de la tarjeta va dentro de un `<span>` propio, no directo en el
+`<button>`: un botón usado como contenedor flex no limita el ancho de sus hijos
+(el navegador lo mide por su contenido), y una categoría larga estiraba la fila
+hasta desbordar el borde de la tarjeta en vez de recortarse con puntos
+suspensivos.
 
 Contenido de la tarjeta:
 
@@ -165,7 +176,7 @@ Una sola tarjeta abierta a la vez; volver a clickear la abierta la cierra.
 | Cargando | El resumen del snapshot + spinner |
 | Error de red o 502 | El resumen del snapshot + "No pudimos traer el detalle de los tickets" |
 | `tickets: []` | "Sin tickets registrados." |
-| `catalogos: null` | Las tarjetas con `#3` en vez del nombre |
+| `catalogos: false` | Las tarjetas con `#3` en vez del nombre |
 
 Nunca se queda en blanco: el resumen del snapshot ya está en memoria y no
 depende de este fetch.
@@ -200,13 +211,23 @@ cuando hay tickets de otras áreas, el encabezado aclara que el conteo es de las
 - `cerrado` respeta `estados_cerrados`; con la lista vacía, todo abierto
 - ticket sin `items[]` → `hilo: []`
 - entrada que no es array → `[]`
+- un `color` que no es hexadecimal se descarta (se pinta con un `style:`
+  inline, y un `url(...)` sería una petición a un servidor ajeno disparada por
+  un dato de la API)
+
+También vive ahí `fechaLegible()`, la única función de `cartera/` que construye
+un `Date`, y solo para formatear. Lo arma con las partes ya extraídas por texto
+—`new Date("2026-07-01 10:00:00")` falla en Safari— y usa el sufijo `Z` para
+decidir si son UTC o no. Sus tests fijan `TZ` en `vite.config.js`: sin eso
+pasan en las máquinas del equipo y fallan en cualquier CI que corra en UTC.
 
 `src/routes/api/cartera/tickets/[code]/server.test.js`:
 
-- 401 sin token, 403 sin permiso
-- 404 cuando `getTickets` da `not_found`, 502 cuando da otro fallo
-- catálogos caídos + tickets ok → 200 con `catalogos: null`
-- el cache no vuelve a pedir catálogos dentro del TTL
+- 401 sin token, 403 sin permiso, y en los dos casos ninguna llamada a IspCube
+- 502 cuando `getTickets` falla, sin gastar los requests de catálogos
+- un cliente sin tickets no pide catálogos
+- catálogos caídos + tickets ok → 200 con `catalogos: false`
+- el cache no vuelve a pedir catálogos dentro del TTL, y un fallo no se cachea
 
 ## Fuera de alcance
 
