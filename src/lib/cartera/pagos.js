@@ -84,6 +84,25 @@ export function fusionarPagos(guardados, nuevos, hoy) {
 }
 
 /**
+ * Primer mes que se le factura al cliente.
+ *
+ * Una instalacion a mitad de mes no genera una cuota mensual: lo que se cobra
+ * ese mes es la instalacion o un proporcional, y el ciclo de facturacion
+ * arranca el 1 del mes siguiente. La unica excepcion es instalar el dia 1: ahi
+ * el mes se factura entero y ya cuenta.
+ *
+ * Es el corte que usan tanto los puntos (`puntosPorMes`) como la mora
+ * (`alertasDe`): antes de este mes el cliente no debe nada y no se lo mide.
+ *
+ * @param {import('./fechas.js').Partes | null | undefined} instalacion
+ * @returns {string | null} Clave de mes, o `null` sin fecha de instalacion
+ */
+export function primerMesFacturable(instalacion) {
+	if (!instalacion) return null;
+	return claveMes(instalacion.dia === 1 ? instalacion : sumarMeses(instalacion, 1));
+}
+
+/**
  * @typedef {object} OpcionesPuntos
  * @property {'ventanilla' | 'tarjeta'} perfil todavia sin usar: la ventana la define diaCorte
  * @property {number} diaCorte Ultimo dia de la ventana de pago del cliente
@@ -99,13 +118,13 @@ export function fusionarPagos(guardados, nuevos, hoy) {
  *   - `verde`     pago dentro de su ventana (<= dia de corte)
  *   - `amarillo`  pago despues de la ventana, dentro del mes
  *   - `rojo`      no hubo pago y la ventana ya vencio
- *   - `pendiente` mes en curso sin pago (la ventana todavia no vencio), o el
- *     mes de la instalacion sin pago (todavia no le facturaron nada, igual
- *     que en alertasDe: nunca puede ser rojo)
- *   - `gris`      mes anterior a la instalacion: el cliente no era cliente
+ *   - `pendiente` mes en curso sin pago: la ventana todavia no vencio
+ *   - `gris`      mes anterior al primer mes facturable: al cliente todavia no
+ *     le corresponde una cuota (ver `primerMesFacturable`)
  *
  * `gris` no es cosmetico: sin el, un cliente de dos meses aparece con seis
- * puntos rojos y parece un moroso cronico.
+ * puntos rojos y parece un moroso cronico. Las dos vistas directamente no lo
+ * dibujan.
  *
  * @param {Pago[]} pagos
  * @param {OpcionesPuntos} opciones
@@ -115,13 +134,16 @@ export function puntosPorMes(pagos, { perfil, diaCorte, instalacion, hoy, meses 
 	const claves = mesesEntre(hoy, meses);
 	const porMes = new Map((Array.isArray(pagos) ? pagos : []).map((p) => [p.mes, p]));
 
-	const mesInstalacion = claveMes(instalacion);
+	const primerMes = primerMesFacturable(instalacion);
 	const mesActual = claveMes(hoy);
 
 	return claves.map((mes) => {
 		const pago = porMes.get(mes) ?? null;
 
-		if (mesInstalacion && mes < mesInstalacion) {
+		// Antes del primer mes facturable no se muestra nada, ni siquiera si
+		// hubo cobranza: lo que se cobra el mes de la instalacion no es una
+		// cuota mensual y mezclarlo con el historial confunde.
+		if (primerMes && mes < primerMes) {
 			return { mes, estado: 'gris', dia: null, monto: null };
 		}
 
@@ -132,13 +154,6 @@ export function puntosPorMes(pagos, { perfil, diaCorte, instalacion, hoy, meses 
 				dia: pago.dia,
 				monto: pago.monto
 			};
-		}
-
-		// Sin pago, el mes de la instalacion nunca es rojo: todavia no le
-		// facturaron nada. Antes pintaba rojo y contradecia a alertasDe, que
-		// no dispara mora ese mes por la misma razon.
-		if (mes === mesInstalacion) {
-			return { mes, estado: 'pendiente', dia: null, monto: null };
 		}
 
 		// Sin pago: solo es mora si la ventana ya vencio. En el mes en curso

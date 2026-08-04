@@ -192,7 +192,7 @@ describe('alertas de mora', () => {
 	});
 
 	it('no hay mora en el mes de la instalacion', () => {
-		// Recien instalado: todavia no le facturaron nada.
+		// Recien instalado: se le factura recien desde el 1 del mes siguiente.
 		const r = alertasDe(
 			{ ...sinPagos, fecha_instalacion: '2026-07-02' },
 			{ anio: 2026, mes: 7, dia: 25 },
@@ -200,6 +200,28 @@ describe('alertas de mora', () => {
 		);
 
 		expect(tipos(r)).not.toContain('mora_1');
+	});
+
+	it('instalado el 1: ese mismo mes ya puede tener mora', () => {
+		// La excepcion de la regla: el mes se factura entero.
+		const r = alertasDe(
+			{ ...sinPagos, fecha_instalacion: '2026-07-01' },
+			{ anio: 2026, mes: 7, dia: 25 },
+			CONFIG
+		);
+
+		expect(tipos(r)).toContain('mora_1');
+	});
+
+	it('hay mora en el mes siguiente a la instalacion', () => {
+		// Instalado el 20 de junio: julio ya es un mes exigible.
+		const r = alertasDe(
+			{ ...sinPagos, fecha_instalacion: '2026-06-20' },
+			{ anio: 2026, mes: 7, dia: 25 },
+			CONFIG
+		);
+
+		expect(tipos(r)).toContain('mora_1');
 	});
 
 	it('mora_1 si pago este mes pero IspCube todavia reporta duedebt', () => {

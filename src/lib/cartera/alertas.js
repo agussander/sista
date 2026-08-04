@@ -15,6 +15,7 @@ import {
 	compararFechas,
 	compararFechaHora
 } from './fechas.js';
+import { primerMesFacturable } from './pagos.js';
 
 /** Meses desde la instalacion hasta el llamado de seguimiento. */
 const MESES_SEGUIMIENTO = 2;
@@ -87,10 +88,12 @@ export function alertasDe(cliente, hoy, config) {
 	// mes" pero IspCube sigue diciendo que debe, y la mora tiene que verlo.
 	const duedebt = Number(cliente?.duedebt) || 0;
 
-	// El mes de la instalacion no cuenta: todavia no le facturaron nada. Una
+	// Al cliente se le factura recien desde `primerMesFacturable`: el mes de la
+	// instalacion no cuenta (salvo que se haya instalado el dia 1) y una
 	// instalacion FUTURA (fecha mal cargada o alta programada) tampoco puede
-	// estar en mora: por eso es `>=` y no `===`.
-	const recienInstalado = instalacion && claveMes(instalacion) >= mesActual;
+	// estar en mora, porque su primer mes queda todavia mas adelante.
+	const primerMes = primerMesFacturable(instalacion);
+	const recienInstalado = primerMes && mesActual < primerMes;
 
 	// Deliberadamente asimetrico con los puntos de pago (`puntosPorMes`): ahi
 	// el punto sigue reflejando cuando llego el primer recibo del mes, sin

@@ -163,8 +163,8 @@ Un punto por mes, últimos 6:
 | Verde | Pagó dentro de su ventana (≤ día 10 en ventanilla, ≤ día 21 en tarjeta) |
 | Amarillo | Pagó después de su ventana pero dentro del mes |
 | Rojo | No hubo cobranza y la ventana ya venció |
-| Pendiente | Mes en curso con la ventana sin vencer, o el mes de la instalación |
-| Gris | El mes es anterior a la fecha de instalación |
+| Pendiente | Mes en curso con la ventana sin vencer |
+| Gris | El mes es anterior al primer mes facturable (ver más abajo) |
 
 Son **cinco** estados, no cuatro: `pendiente` distingue "todavía no debe nada" de "no pagó". Sin él, todo cliente aparecería en rojo desde el día 1 de cada mes hasta que pague.
 
@@ -294,7 +294,7 @@ Con vitest, siguiendo lo que ya hay.
 
 - Pago exactamente el día del corte (día 10 y día 21).
 - Cliente de tarjeta: que el corte del día 20 **no** se le aplique.
-- Meses anteriores a la instalación → gris, no rojo.
+- Meses anteriores al primer mes facturable → gris, no rojo.
 - Cliente de menos de dos meses → sin alerta de seguimiento.
 - Nota de tipo `nota` → **no** apaga la alerta de los 2 meses; `llamada` sí.
 - Nota de contacto anterior a la fecha de instalación → no cuenta.
@@ -510,6 +510,10 @@ el punto antes que la alerta. **El mes de la instalación, sin pago, ahora es
 
 Los meses **anteriores** a la instalación siguen en `gris`.
 
+> **Superado el 2026-08-04** por "El historial arranca el 1 del mes siguiente a
+> la instalación" (más abajo): el mes de la instalación ya no es `pendiente`,
+> pasó a ser `gris`.
+
 ### La mora se corrobora contra `duedebt`
 
 Un cliente que paga $100 el día 5 y los $30.000 restantes el 25 quedaba verde y
@@ -528,3 +532,33 @@ diciendo que hay deuda vencida.
 
 Los puntos de pago **no** cambian: siguen reflejando cuándo entró la primera
 cobranza del mes. Son un histórico de comportamiento, no un estado de cuenta.
+
+## El historial arranca el 1 del mes siguiente a la instalación (2026-08-04)
+
+Una instalación a mitad de mes no genera una cuota mensual: lo que se cobra ese
+mes es la instalación o un proporcional, y el ciclo de facturación arranca el 1
+del mes siguiente. **Única excepción:** si la instalación cae el día 1, ese mes
+se factura entero y ya cuenta.
+
+Ese corte es `primerMesFacturable(instalacion)` en `pagos.js`, y lo usan los dos
+módulos:
+
+| | Antes | Ahora |
+|---|---|---|
+| Mes de la instalación (día ≠ 1), sin pago | `pendiente` | `gris` |
+| Mes de la instalación (día ≠ 1), con cobranza | verde/amarillo | `gris` |
+| Mes de la instalación instalado el día 1 | `pendiente` | mes normal (puede ser rojo) |
+| Mes siguiente a la instalación | mes normal | mes normal (sin cambios) |
+| Mora en el mes de la instalación | no dispara | no dispara, salvo instalado el día 1 |
+
+**El mes de la instalación no muestra punto**, ni siquiera si hubo cobranza: las
+dos vistas filtran los `gris` antes de dibujar. Fue decisión explícita —
+mostrarlo mezclaría el cobro de instalación con el historial de cuotas, que es
+lo que el punto está diciendo.
+
+**No hay mes extra de gracia.** El primer mes facturable es un mes como
+cualquier otro: pasa el corte sin pago y es rojo y mora.
+
+Como efecto colateral, el guard de instalación futura sale gratis: si la fecha
+está mal cargada o el alta es programada, su primer mes facturable queda por
+delante del mes actual y nunca hay mora.

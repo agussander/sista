@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { pagosDeCobranzas, fusionarPagos, puntosPorMes } from './pagos.js';
+import { pagosDeCobranzas, fusionarPagos, puntosPorMes, primerMesFacturable } from './pagos.js';
 
 const cobranza = (real_date, total = '12000.00') => ({ real_date, date: '2020-01-01', total });
 
@@ -71,6 +71,26 @@ describe('fusionarPagos', () => {
 	});
 });
 
+describe('primerMesFacturable', () => {
+	it('es el mes siguiente cuando la instalacion no cae el dia 1', () => {
+		expect(primerMesFacturable({ anio: 2026, mes: 6, dia: 20 })).toBe('2026-07');
+		expect(primerMesFacturable({ anio: 2026, mes: 6, dia: 2 })).toBe('2026-07');
+	});
+
+	it('es el mismo mes cuando la instalacion cae el dia 1', () => {
+		expect(primerMesFacturable({ anio: 2026, mes: 6, dia: 1 })).toBe('2026-06');
+	});
+
+	it('cruza el año', () => {
+		expect(primerMesFacturable({ anio: 2026, mes: 12, dia: 15 })).toBe('2027-01');
+	});
+
+	it('sin fecha de instalacion no hay primer mes', () => {
+		expect(primerMesFacturable(null)).toBe(null);
+		expect(primerMesFacturable(undefined)).toBe(null);
+	});
+});
+
 describe('puntosPorMes', () => {
 	const hoy = { anio: 2026, mes: 7, dia: 15 };
 	const instalacion = { anio: 2025, mes: 1, dia: 10 };
@@ -135,10 +155,10 @@ describe('puntosPorMes', () => {
 		expect(puntos[0].estado).toBe('rojo');
 	});
 
-	it('gris para los meses anteriores a la instalacion', () => {
-		// Sin esto, un cliente de dos meses aparece con seis puntos rojos.
-		// El mes del medio (2026-06) es el de la instalacion: sin pago da
-		// `pendiente`, no `rojo` (ver el describe de mas abajo).
+	it('gris hasta el mes de la instalacion inclusive', () => {
+		// Sin el gris, un cliente de dos meses aparece con seis puntos rojos.
+		// El mes del medio (2026-06) es el de la instalacion y tambien es gris:
+		// se le factura recien desde el 1 del mes siguiente.
 		const puntos = puntosPorMes([], {
 			perfil: 'ventanilla',
 			diaCorte: 10,
@@ -147,13 +167,10 @@ describe('puntosPorMes', () => {
 			meses: 3
 		});
 
-		expect(puntos.map((p) => p.estado)).toEqual(['gris', 'pendiente', 'rojo']);
+		expect(puntos.map((p) => p.estado)).toEqual(['gris', 'gris', 'rojo']);
 	});
 
-	it('pendiente en el mes de la instalacion sin pago', () => {
-		// Regla: el mes de la instalacion nunca es rojo, todavia no le
-		// facturaron nada. Antes de este cambio pintaba rojo y contradecia a
-		// alertasDe, que no dispara mora ese mismo mes por la misma razon.
+	it('gris en el mes de la instalacion sin pago', () => {
 		const puntos = puntosPorMes([], {
 			perfil: 'ventanilla',
 			diaCorte: 10,
@@ -162,12 +179,13 @@ describe('puntosPorMes', () => {
 			meses: 1
 		});
 
-		expect(puntos[0].estado).toBe('pendiente');
+		expect(puntos[0].estado).toBe('gris');
 	});
 
-	it('verde en el mes de la instalacion si hubo pago en ventana', () => {
-		// Si hubo pago ese mes, pinta como cualquier otro mes: verde o
-		// amarillo, no un estado especial.
+	it('gris en el mes de la instalacion aunque haya cobranza', () => {
+		// Una cobranza del mes de la instalacion (instalacion, proporcional,
+		// primer recibo) no es una cuota mensual: el historial arranca el mes
+		// siguiente y el punto no se muestra.
 		const puntos = puntosPorMes([{ mes: '2026-07', dia: 5, monto: 1 }], {
 			perfil: 'ventanilla',
 			diaCorte: 10,
@@ -176,7 +194,47 @@ describe('puntosPorMes', () => {
 			meses: 1
 		});
 
-		expect(puntos[0].estado).toBe('verde');
+		expect(puntos[0].estado).toBe('gris');
+	});
+
+	it('instalado el 1: ese mismo mes ya cuenta', () => {
+		// Unica excepcion: si la instalacion cae el dia 1, el mes se factura
+		// entero y es el primer mes del historial.
+		const puntos = puntosPorMes([], {
+			perfil: 'ventanilla',
+			diaCorte: 10,
+			instalacion: { anio: 2026, mes: 7, dia: 1 },
+			hoy: { anio: 2026, mes: 7, dia: 28 },
+			meses: 1
+		});
+
+		expect(puntos[0].estado).toBe('rojo');
+	});
+
+	it('el primer mes facturable se trata como cualquier otro', () => {
+		// Instalado el 20 de junio: julio es el primer mes exigible y, sin pago
+		// pasado el corte, es rojo. No hay mes extra de gracia.
+		const puntos = puntosPorMes([], {
+			perfil: 'ventanilla',
+			diaCorte: 10,
+			instalacion: { anio: 2026, mes: 6, dia: 20 },
+			hoy: { anio: 2026, mes: 7, dia: 28 },
+			meses: 1
+		});
+
+		expect(puntos[0].estado).toBe('rojo');
+	});
+
+	it('el primer mes facturable sigue siendo pendiente antes del corte', () => {
+		const puntos = puntosPorMes([], {
+			perfil: 'ventanilla',
+			diaCorte: 10,
+			instalacion: { anio: 2026, mes: 6, dia: 20 },
+			hoy: { anio: 2026, mes: 7, dia: 5 },
+			meses: 1
+		});
+
+		expect(puntos[0].estado).toBe('pendiente');
 	});
 
 	it('el mes en curso no es rojo si todavia no vencio el corte', () => {
