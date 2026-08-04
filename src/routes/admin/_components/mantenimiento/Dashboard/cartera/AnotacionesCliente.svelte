@@ -12,7 +12,9 @@ let { cliente } = $props();
 
 let notas = $state([]);
 let cargando = $state(true);
-let tipo = $state('llamada');
+// Sin tipo por defecto: es una etiqueta opcional, y preseleccionar uno hacia
+// que el asesor guardara notas categorizadas sin haberlo decidido.
+let tipo = $state('');
 let texto = $state('');
 let guardando = $state(false);
 let error = $state('');
@@ -66,7 +68,7 @@ onMount(cargar);
                 <button
                     type="button"
                     class:activo={tipo === t.value}
-                    onclick={() => (tipo = t.value)}
+                    onclick={() => (tipo = tipo === t.value ? '' : t.value)}
                 >{t.label}</button>
             {/each}
         </div>
@@ -92,7 +94,9 @@ onMount(cargar);
             {#each notas as n (n.id)}
                 <li>
                     <div class="meta">
-                        <span class="tipo {n.tipo}">{TIPOS.find((t) => t.value === n.tipo)?.label ?? n.tipo}</span>
+                        {#if n.tipo}
+                            <span class="tipo {n.tipo}">{TIPOS.find((t) => t.value === n.tipo)?.label ?? n.tipo}</span>
+                        {/if}
                         <span class="cuando">{fmt(n.created)}</span>
                     </div>
                     <p>{n.texto}</p>
