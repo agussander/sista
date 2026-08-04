@@ -75,10 +75,6 @@ async function guardar() {
 
             <label for="fecha">Fecha de instalación</label>
             <input id="fecha" type="date" bind:value={fecha} disabled={guardando} />
-            <p class="ayuda">
-                Desde acá se cuentan los dos meses para el llamado de seguimiento. No uses la fecha de
-                alta de IspCube: ahí todas caen el día 1.
-            </p>
 
             {#if error}<p class="error">{error}</p>{/if}
 
@@ -97,7 +93,7 @@ async function guardar() {
 <style>
 .fondo {
     position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45);
-    display: flex; align-items: center; justify-content: center; padding: 1.5em; z-index: 50;
+    display: flex; align-items: center; justify-content: center; padding: 1.5em; z-index: 1100;
 }
 .modal {
     background: #fff; border-radius: 1.2em; padding: 2em; width: 100%; max-width: 26em;

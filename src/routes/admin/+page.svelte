@@ -39,7 +39,7 @@ onMount(async () => {
 });
 </script>
 
-<main>
+<main class="admin-root">
     {#if !ready}
         <!-- Esperamos a validar la sesión real antes de decidir qué mostrar. -->
     {:else if !$token || !$record || !pb.authStore.isValid}
@@ -52,5 +52,17 @@ onMount(async () => {
 <style>
     main{
         min-height: 100vh;
+    }
+
+    /*
+      El sitio público usa 'nexa' (fuente de marca, muy fina en peso 300) que
+      queda poco legible en una UI densa de tablas/formularios. El admin usa
+      la stack de fuentes nativas del sistema en su lugar, sin tocar la fuente
+      del sitio público. `:global(*)` pisa las reglas de global.css (incluido
+      el `input,textarea{font-family:'nexa'}` explícito) para todo lo que
+      cuelga de acá, incluyendo componentes hijos como Login y Dashboard.
+    */
+    main.admin-root, main.admin-root :global(*) {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     }
 </style>

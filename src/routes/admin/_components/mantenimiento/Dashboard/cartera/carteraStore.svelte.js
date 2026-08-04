@@ -85,7 +85,7 @@ async function cargar() {
 		await cargarConfig();
 		const res = await pb.collection(CLIENTES).getList(1, 500, {
 			filter: 'archivado = false',
-			sort: 'nombre'
+			sort: '-created'
 		});
 		clientes = res.items;
 	} catch (e) {
@@ -278,7 +278,7 @@ async function agregar(code, fechaInstalacion) {
 			const restaurado = await pb
 				.collection(CLIENTES)
 				.update(existente.id, { archivado: false, fecha_instalacion: fechaInstalacion });
-			clientes = [...clientes, restaurado].sort((a, b) => a.nombre.localeCompare(b.nombre));
+			clientes = [restaurado, ...clientes];
 			return { ok: true, cliente: restaurado };
 		}
 
@@ -315,7 +315,7 @@ async function agregar(code, fechaInstalacion) {
 		};
 
 		const creado = await pb.collection(CLIENTES).create(registro);
-		clientes = [...clientes, creado].sort((a, b) => a.nombre.localeCompare(b.nombre));
+		clientes = [creado, ...clientes];
 		return { ok: true, cliente: creado };
 	} catch (e) {
 		console.error(e);

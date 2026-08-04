@@ -4,6 +4,7 @@
 // alerta de tickets nuevos) y refresca su snapshot contra IspCube.
 import { onMount } from 'svelte';
 import Spinner from '$lib/components/ui/Spinner.svelte';
+import TicketsCliente from './TicketsCliente.svelte';
 import { carteraStore } from './carteraStore.svelte.js';
 import { puntosPorMes } from '$lib/cartera/pagos.js';
 import { diaCorteDe, TIPOS_CONTACTO } from '$lib/cartera/alertas.js';
@@ -45,6 +46,10 @@ const puntos = $derived.by(() => {
 
 const alertas = $derived(carteraStore.alertasDeCliente(actual));
 
+// IspCube informa `debt` en su propio signo: positivo = debe, negativo =
+// saldo a favor. Se respeta tal cual, sin invertir.
+const cuenta = $derived(actual.debt ?? 0);
+
 const ETIQUETA_ALERTA = {
     seguimiento: 'Contactar: pasaron 2 meses de la instalación',
     mora_1: 'No registró pago este mes',
@@ -85,13 +90,15 @@ const plata = (n) => (Number(n) || 0).toLocaleString('es-AR', { style: 'currency
 
 // Cuanto hace que se sincronizo este registro con IspCube: es lo que hace
 // honesto el diseño de snapshot ("esto no es en vivo, es de hace X").
-function desdeCuando(iso) {
-    if (!iso) return 'nunca';
+// Devuelve la frase completa, no un fragmento: pegarle un "Datos del" delante
+// a un `recién` o a un `nunca` daba textos rotos ("Datos del recién").
+function datosDe(iso) {
+    if (!iso) return 'Datos sin sincronizar';
     const horas = Math.floor((Date.now() - Date.parse(iso)) / 3600_000);
-    if (!Number.isFinite(horas)) return 'nunca';
-    if (horas < 1) return 'recién';
-    if (horas < 24) return `hace ${horas} h`;
-    return `hace ${Math.floor(horas / 24)} d`;
+    if (!Number.isFinite(horas)) return 'Datos sin sincronizar';
+    if (horas < 1) return 'Datos actualizados recién';
+    if (horas < 24) return `Datos de hace ${horas} h`;
+    return `Datos de hace ${Math.floor(horas / 24)} d`;
 }
 
 onMount(async () => {
@@ -133,9 +140,10 @@ onMount(async () => {
         <header>
             <div>
                 <h3>{actual.nombre}</h3>
-                <span class="code">#{actual.code} · {actual.estado || 'sin estado'}</span>
+                <span class="code">{actual.code} · {actual.estado || 'sin estado'}</span>
+                <span class="instalacion">instalado {fmt(actual.fecha_instalacion)}</span>
                 <p class="datos-de">
-                    Datos del {desdeCuando(actual.sincronizado)}
+                    {datosDe(actual.sincronizado)}
                     {#if carteraStore.sincronizando}· actualizando…{/if}
                 </p>
                 {#if !carteraStore.sincronizando && carteraStore.refrescoFallido(actual.code)}
@@ -156,41 +164,20 @@ onMount(async () => {
         {/if}
 
         <dl class="datos">
-            <div><dt>Instalación</dt><dd>{fmt(actual.fecha_instalacion)}</dd></div>
-            <div><dt>Alta en IspCube</dt><dd>{fmt(actual.start_date)}</dd></div>
-            <div><dt>Medio de pago</dt><dd>{actual.entity_nombre || '—'} <span class="perfil">({actual.perfil_pago})</span></dd></div>
-            <div><dt>Deuda</dt><dd>{plata(actual.debt)}</dd></div>
-            <div><dt>Deuda vencida</dt><dd>{plata(actual.duedebt)}</dd></div>
-            <div>
-                <dt>Tickets</dt>
-                {#if actual.tickets}
-                    <dd>
-                        {actual.tickets.abiertos ?? 0} abiertos · {actual.tickets.cerrados ?? 0} cerrados
-                        {#if actual.tickets.ultimo}
-                            <span class="ultimo-ticket">
-                                Último: {fmt(actual.tickets.ultimo.fecha)}
-                                {#if actual.tickets.ultimo.categoria != null}· categoría #{actual.tickets.ultimo.categoria}{/if}
-                                {#if actual.tickets.ultimo.estado != null}· estado #{actual.tickets.ultimo.estado}{/if}
-                            </span>
-                        {:else}
-                            <span class="ultimo-ticket">Sin tickets registrados.</span>
-                        {/if}
-                    </dd>
-                {:else}
-                    <!-- `tickets` null: la llamada a IspCube fallo en la ultima
-                         sincronizacion (ver comentario de resumenTickets en
-                         /api/cartera/sync). No hay abiertos/cerrados ni ultimo
-                         que mostrar, asi que se dice eso en vez de mostrar "0
-                         abiertos" como si supieramos que no hay ninguno. -->
-                    <dd class="tickets-desconocido">No se pudo leer tickets en la última sincronización.</dd>
-                {/if}
-            </div>
+            <div><dt>Medio de pago</dt><dd>{actual.entity_nombre || 'Caja'}{#if actual.entity_nombre} <span class="perfil">({actual.perfil_pago})</span>{/if}</dd></div>
+            <div><dt>Cuenta</dt><dd class:negativa={cuenta > 0}>{plata(cuenta)}</dd></div>
         </dl>
 
+        <!-- Los tickets salieron del `<dl>` de arriba: ahi eran una celda mas,
+             compitiendo por ancho con la deuda, y solo entraba un resumen de una
+             linea con los ids crudos de categoria y estado. `TicketsCliente` los
+             pide en vivo y los muestra uno por uno. -->
+        <TicketsCliente code={actual.code} resumen={actual.tickets} />
+
         <section class="bloque">
-            <h4>Pagos (últimos 6 meses)</h4>
+            <h4>Pagos <span class="rango">(últimos 6 meses)</span></h4>
             <div class="pagos">
-                {#each puntos as p}
+                {#each puntos.filter((p) => p.estado !== 'gris') as p}
                     <div class="mes">
                         <span class="punto {p.estado}"></span>
                         <span class="etiqueta">{p.mes.slice(5)}</span>
@@ -199,11 +186,10 @@ onMount(async () => {
                 {/each}
             </div>
             <p class="leyenda">
-                <span class="punto verde"></span> pagó en término (hasta el día {diaCorteDe(actual.perfil_pago, config)}) ·
-                <span class="punto amarillo"></span> pagó tarde ·
-                <span class="punto rojo"></span> sin pago ·
-                <span class="punto pendiente"></span> mes en curso, todavía no vence ·
-                <span class="punto gris"></span> anterior a la instalación
+                <span class="item"><span class="punto verde"></span> pagó en término</span>
+                <span class="item"><span class="punto amarillo"></span> pagó tarde</span>
+                <span class="item"><span class="punto rojo"></span> sin pago</span>
+                <span class="item"><span class="punto pendiente"></span> mes en curso</span>
             </p>
         </section>
 
@@ -269,7 +255,7 @@ onMount(async () => {
 .fondo {
     position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45);
     display: flex; align-items: flex-start; justify-content: center;
-    padding: 2em 1.5em; overflow-y: auto; z-index: 50;
+    padding: 2em 1.5em; overflow-y: auto; z-index: 1100;
 }
 .panel {
     background: #fff; border-radius: 1.2em; padding: 2em; width: 100%; max-width: 42em;
@@ -278,6 +264,7 @@ onMount(async () => {
 header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1em; }
 h3 { margin: 0; color: var(--violeta2); }
 .code { color: #9ca3af; font-size: 0.88em; }
+.instalacion { color: #c1c7d0; font-size: 0.78em; margin-left: 0.6em; }
 .datos-de { color: #b9a7d9; font-size: 0.78em; margin: 0.3em 0 0; }
 /* Mismo tono que las alertas de mora (amber), no rojo: el snapshot desactualizado
    es el modo degradado esperado del diseño, no un error. */
@@ -293,11 +280,11 @@ h3 { margin: 0; color: var(--violeta2); }
 .datos div { display: flex; flex-direction: column; gap: 0.2em; }
 dt { color: #6b7280; font-size: 0.8em; text-transform: uppercase; letter-spacing: 0.03em; }
 dd { margin: 0; font-weight: 600; color: #374151; }
+dd.negativa { color: #dc2626; }
 .perfil { font-weight: 400; color: #9ca3af; font-size: 0.9em; }
-.ultimo-ticket { display: block; font-weight: 400; color: #9ca3af; font-size: 0.82em; margin-top: 0.2em; }
-.tickets-desconocido { font-weight: 400; color: #9ca3af; }
 .bloque { border-top: 1px solid #ececec; padding-top: 1.5em; margin-top: 1.5em; }
 h4 { margin: 0 0 1em; color: var(--violeta2); font-size: 1.05em; }
+.rango { font-weight: 400; font-size: 0.75em; color: #9ca3af; }
 .pagos { display: flex; gap: 1.2em; flex-wrap: wrap; }
 .mes { display: flex; flex-direction: column; align-items: center; gap: 0.3em; }
 /* Mismas cinco combinaciones de forma + borde que en la lista: el color nunca
@@ -315,8 +302,9 @@ h4 { margin: 0 0 1em; color: var(--violeta2); font-size: 1.05em; }
 .dia { font-size: 0.72em; color: #9ca3af; }
 .leyenda {
     color: #9ca3af; font-size: 0.82em; margin: 1em 0 0; display: flex; flex-wrap: wrap;
-    align-items: center; gap: 0.4em;
+    align-items: center; gap: 0.4em 1em;
 }
+.leyenda .item { display: inline-flex; align-items: center; gap: 0.4em; white-space: nowrap; }
 .leyenda .punto { width: 0.8em; height: 0.8em; }
 .ayuda { color: #9ca3af; font-size: 0.82em; margin: 1em 0 0; }
 .tipos { display: flex; gap: 0.4em; flex-wrap: wrap; margin-bottom: 0.8em; }

@@ -102,7 +102,7 @@ const ETIQUETA_ESTADO_PUNTO = {
     amarillo: 'Pagó fuera de término',
     rojo: 'Sin pago, vencido',
     pendiente: 'Todavía no vence este mes',
-    gris: 'Antes de la instalación'
+    gris: 'Todavía no se le facturaba'
 };
 
 function puntosDe(cliente) {
@@ -169,7 +169,6 @@ onMount(() => carteraStore.cargar());
             >
                 {carteraStore.sincronizando ? 'Actualizando…' : '↻ Actualizar'}
             </button>
-            <button class="config" onclick={() => (configurando = true)} title="Configuración">⚙</button>
             <button class="agregar" onclick={() => (agregando = true)}>+ Agregar cliente</button>
         </div>
     </header>
@@ -212,11 +211,11 @@ onMount(() => carteraStore.cargar());
                     <button class="fila" onclick={() => (abierto = cliente)}>
                         <div class="quien">
                             <strong>{cliente.nombre}</strong>
-                            <span class="code">#{cliente.code}</span>
+                            <span class="code">{cliente.code}</span>
                         </div>
 
                         <div class="pagos" title="Últimos 6 meses">
-                            {#each puntosDe(cliente) as p}
+                            {#each puntosDe(cliente).filter((p) => p.estado !== 'gris') as p}
                                 <span class="punto {p.estado}" title={tituloPunto(p)}>
                                     <span class="sr-only">{ETIQUETA_ESTADO_PUNTO[p.estado] ?? p.estado}</span>
                                 </span>

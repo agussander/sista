@@ -208,7 +208,7 @@ onMount(cargar);
 .fondo {
     position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45);
     display: flex; align-items: flex-start; justify-content: center;
-    padding: 2em 1.5em; overflow-y: auto; z-index: 50;
+    padding: 2em 1.5em; overflow-y: auto; z-index: 1100;
 }
 .panel {
     background: #fff; border-radius: 1.2em; padding: 2em; width: 100%; max-width: 34em;
