@@ -179,7 +179,15 @@ async function crear(definicion) {
 async function ponerCampoOpcional(nombreColeccion, nombreCampo) {
 	const res = await api(`/api/collections/${nombreColeccion}`);
 	if (!res.ok) {
-		console.error(`- ${nombreColeccion}: no se pudo leer (${res.status})`, res.data);
+		// Igual que en idDe(): solo un 404 cuenta como "no existe". En --dry-run
+		// sobre una instancia nueva, crear() no crea nada de verdad, asi que la
+		// coleccion nunca llego a existir; no hay nada que migrar. Cualquier otro
+		// status (403, 500, ...) es un fallo real y corta el script.
+		if (res.status === 404) {
+			console.log(`- ${nombreColeccion}.${nombreCampo}: la coleccion no existe, nada que migrar.`);
+			return;
+		}
+		console.error(`- ${nombreColeccion}: no se pudo leer para migrar (${res.status})`, res.data);
 		process.exit(1);
 	}
 
