@@ -123,6 +123,28 @@ function tituloPunto(p) {
     return p.dia ? `${base} (día ${p.dia})` : base;
 }
 
+// Refresco manual. El automatico solo corre al montar y solo toca snapshots de
+// mas de 12 h, asi que un asesor que acaba de cobrarle a alguien tendria que
+// esperar hasta medio dia para verlo reflejado. Este boton le da la salida.
+//
+// Refresca lo que el asesor esta mirando -la lista ya filtrada- y no la cartera
+// entera, por dos razones: es lo que espera que pase, y el endpoint de sync
+// rechaza mas de 20 codigos por llamada. El tope se aplica sobre los mas
+// desactualizados, que son los que mas ganan con el refresco.
+const MAX_REFRESCO_MANUAL = 20;
+
+const puedeRefrescar = $derived(visibles.length > 0 && !carteraStore.sincronizando);
+
+function refrescarVisibles() {
+    const codes = visibles
+        .map(({ cliente }) => cliente)
+        .sort((a, b) => (Date.parse(a.sincronizado) || 0) - (Date.parse(b.sincronizado) || 0))
+        .slice(0, MAX_REFRESCO_MANUAL)
+        .map((c) => c.code);
+
+    carteraStore.sincronizar(codes);
+}
+
 function desdeCuando(iso) {
     if (!iso) return 'nunca';
     const horas = Math.floor((Date.now() - Date.parse(iso)) / 3600_000);
@@ -139,6 +161,14 @@ onMount(() => carteraStore.cargar());
     <header>
         <h2>Cartera de clientes</h2>
         <div class="acciones-header">
+            <button
+                class="refrescar"
+                onclick={refrescarVisibles}
+                disabled={!puedeRefrescar}
+                title="Volver a consultar IspCube para los clientes que estás viendo"
+            >
+                {carteraStore.sincronizando ? 'Actualizando…' : '↻ Actualizar'}
+            </button>
             <button class="config" onclick={() => (configurando = true)} title="Configuración">⚙</button>
             <button class="agregar" onclick={() => (agregando = true)}>+ Agregar cliente</button>
         </div>
@@ -231,6 +261,13 @@ section { padding: 1.5em 2em; }
 header { display: flex; align-items: center; justify-content: space-between; gap: 1em; }
 h2 { color: var(--violeta2); margin: 0; }
 .acciones-header { display: flex; gap: 0.6em; align-items: center; }
+.refrescar {
+    background: #fff; border: 1.5px solid #e0e0e0; color: var(--violeta2);
+    border-radius: 2em; padding: 0.6em 1.1em; font-size: 0.95em; cursor: pointer;
+    transition: background 0.18s, border-color 0.18s;
+}
+.refrescar:hover:not(:disabled) { background: #f5f2fa; border-color: #d1c4e9; }
+.refrescar:disabled { opacity: 0.55; cursor: not-allowed; }
 .agregar {
     background: var(--violeta2); color: #fff; border: none; border-radius: 2em;
     padding: 0.7em 1.4em; font-size: 1em; font-weight: 600; cursor: pointer;
