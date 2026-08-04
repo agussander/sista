@@ -81,8 +81,9 @@ describe('alerta de seguimiento a los 2 meses', () => {
 	});
 
 	it('un ultimo_contacto vacio no la apaga', () => {
-		// El store solo escribe este campo con notas de tipo contacto: una nota
-		// interna lo deja como estaba, y por eso no apaga la alerta.
+		// Vacio es como nace el campo: solo lo escribe `marcarContactado`, o sea
+		// el asesor apretando el boton. Mientras nadie lo apriete, la alerta
+		// sigue encendida por mas anotaciones que haya en la bitacora.
 		const r = alertasDe(
 			{ ...base, fecha_instalacion: '2026-05-10', ultimo_contacto: '' },
 			{ anio: 2026, mes: 7, dia: 15 },

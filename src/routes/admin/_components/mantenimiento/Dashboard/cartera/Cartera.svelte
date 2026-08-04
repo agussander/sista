@@ -231,9 +231,18 @@ onMount(() => carteraStore.cargar());
                                     class="chip {a.tipo}"
                                     title={a.tipo === 'recordatorio' ? a.texto : null}
                                 >
-                                    {a.tipo === 'recordatorio'
-                                        ? a.texto || ETIQUETAS.recordatorio
-                                        : ETIQUETAS[a.tipo]}
+                                    {#if a.tipo === 'recordatorio'}
+                                        <!-- El "Recordatorio:" va oculto y no escrito como en
+                                             el detalle: aca el chip esta recortado a 14em y el
+                                             prefijo se comeria la mitad del texto util. Pero
+                                             sin el, un lector de pantalla lee "Llamar por el
+                                             router" sin decir que es un recordatorio, y el
+                                             color no le sirve de nada. -->
+                                        <span class="sr-only">Recordatorio:</span>
+                                        {a.texto || ETIQUETAS.recordatorio}
+                                    {:else}
+                                        {ETIQUETAS[a.tipo]}
+                                    {/if}
                                 </span>
                             {/each}
                         </div>

@@ -1,5 +1,9 @@
 /**
- * Las cuatro alertas de la Cartera.
+ * Las alertas de la Cartera.
+ *
+ * Cuatro las deduce el sistema del snapshot del cliente (`seguimiento`,
+ * `mora_1`, `mora_2`, `tickets`); la quinta, `recordatorio`, la escribio el
+ * asesor a mano y entra por parametro.
  *
  * Se calculan sobre el snapshot local, sin red: por eso la lista es instantanea
  * y sigue funcionando con IspCube caido. La contracara es que una alerta de
