@@ -290,11 +290,14 @@ h3 { margin: 0; color: var(--violeta2); }
 .cerrar { background: none; border: none; font-size: 1.8em; line-height: 1; cursor: pointer; color: #9ca3af; }
 .alertas { display: flex; flex-wrap: wrap; gap: 0.5em; margin: 1.2em 0; }
 .chip { font-size: 0.85em; padding: 0.4em 0.9em; border-radius: 1em; font-weight: 600; }
-.chip.seguimiento { background: #ede7f6; color: #5a1e7a; }
+/* El unico chip que ademas alinea un boton adentro. */
+.chip.seguimiento {
+    background: #ede7f6; color: #5a1e7a;
+    display: inline-flex; align-items: center; gap: 0.6em;
+}
 .chip.mora_1 { background: #fef3c7; color: #92400e; }
 .chip.mora_2 { background: #fee2e2; color: #991b1b; }
 .chip.tickets { background: #dbeafe; color: #1e40af; }
-.chip.seguimiento { display: inline-flex; align-items: center; gap: 0.6em; }
 .marcar {
     background: var(--violeta2); color: #fff; border: none; border-radius: 1em;
     padding: 0.25em 0.8em; font-size: 0.88em; font-weight: 600; cursor: pointer;
