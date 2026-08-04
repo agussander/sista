@@ -7,7 +7,7 @@ import Spinner from '$lib/components/ui/Spinner.svelte';
 import TicketsCliente from './TicketsCliente.svelte';
 import { carteraStore } from './carteraStore.svelte.js';
 import { puntosPorMes } from '$lib/cartera/pagos.js';
-import { diaCorteDe, TIPOS_CONTACTO } from '$lib/cartera/alertas.js';
+import { diaCorteDe } from '$lib/cartera/alertas.js';
 import { partesFecha } from '$lib/cartera/fechas.js';
 
 let { cliente, onCerrar } = $props();
@@ -56,6 +56,19 @@ const ETIQUETA_ALERTA = {
     mora_2: 'Mora: pasó el segundo vencimiento',
     tickets: 'Tiene tickets de soporte nuevos'
 };
+
+let marcando = $state(false);
+let errorAlerta = $state('');
+
+// Apagar la alerta de seguimiento es una accion propia, no un efecto de guardar
+// una nota. Si falla, la alerta queda encendida: es el lado seguro del error.
+async function marcarContactado() {
+    marcando = true;
+    errorAlerta = '';
+    const ok = await carteraStore.marcarContactado(actual);
+    if (!ok) errorAlerta = 'No se pudo marcar el contacto. Probá de nuevo.';
+    marcando = false;
+}
 
 async function cargarNotas() {
     cargandoNotas = true;
@@ -158,9 +171,19 @@ onMount(async () => {
         {#if alertas.length > 0}
             <div class="alertas">
                 {#each alertas as a}
-                    <span class="chip {a.tipo}">{ETIQUETA_ALERTA[a.tipo] ?? a.tipo}</span>
+                    {#if a.tipo === 'seguimiento'}
+                        <span class="chip seguimiento">
+                            {ETIQUETA_ALERTA.seguimiento}
+                            <button class="marcar" onclick={marcarContactado} disabled={marcando}>
+                                {marcando ? 'Guardando…' : 'Marcar contactado'}
+                            </button>
+                        </span>
+                    {:else}
+                        <span class="chip {a.tipo}">{ETIQUETA_ALERTA[a.tipo] ?? a.tipo}</span>
+                    {/if}
                 {/each}
             </div>
+            {#if errorAlerta}<p class="error-alerta">{errorAlerta}</p>{/if}
         {/if}
 
         <dl class="datos">
@@ -212,11 +235,6 @@ onMount(async () => {
                     rows="3"
                     disabled={guardando}
                 ></textarea>
-                <p class="ayuda">
-                    {TIPOS_CONTACTO.includes(tipo)
-                        ? 'Cuenta como contacto: apaga la alerta de los 2 meses.'
-                        : 'Nota interna: no apaga la alerta de los 2 meses.'}
-                </p>
                 <button type="submit" class="guardar" disabled={guardando || !texto.trim()}>
                     {guardando ? 'Guardando…' : 'Guardar anotación'}
                 </button>
@@ -276,6 +294,13 @@ h3 { margin: 0; color: var(--violeta2); }
 .chip.mora_1 { background: #fef3c7; color: #92400e; }
 .chip.mora_2 { background: #fee2e2; color: #991b1b; }
 .chip.tickets { background: #dbeafe; color: #1e40af; }
+.chip.seguimiento { display: inline-flex; align-items: center; gap: 0.6em; }
+.marcar {
+    background: var(--violeta2); color: #fff; border: none; border-radius: 1em;
+    padding: 0.25em 0.8em; font-size: 0.88em; font-weight: 600; cursor: pointer;
+}
+.marcar:disabled { opacity: 0.6; cursor: not-allowed; }
+.error-alerta { color: #dc2626; font-size: 0.85em; margin: -0.8em 0 1.2em; }
 .datos { display: grid; grid-template-columns: repeat(auto-fit, minmax(11em, 1fr)); gap: 1em; margin: 1.5em 0; }
 .datos div { display: flex; flex-direction: column; gap: 0.2em; }
 dt { color: #6b7280; font-size: 0.8em; text-transform: uppercase; letter-spacing: 0.03em; }
@@ -306,7 +331,6 @@ h4 { margin: 0 0 1em; color: var(--violeta2); font-size: 1.05em; }
 }
 .leyenda .item { display: inline-flex; align-items: center; gap: 0.4em; white-space: nowrap; }
 .leyenda .punto { width: 0.8em; height: 0.8em; }
-.ayuda { color: #9ca3af; font-size: 0.82em; margin: 1em 0 0; }
 .tipos { display: flex; gap: 0.4em; flex-wrap: wrap; margin-bottom: 0.8em; }
 .tipos button {
     border: 1.5px solid #e0e0e0; background: #fff; color: var(--violeta2);

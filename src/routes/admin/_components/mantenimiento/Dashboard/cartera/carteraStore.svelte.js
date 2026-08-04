@@ -8,7 +8,7 @@
 import { pb } from '$lib/pocketbase';
 import { aRefrescar } from '$lib/cartera/refresco.js';
 import { fusionarPagos } from '$lib/cartera/pagos.js';
-import { alertasDe, TIPOS_CONTACTO } from '$lib/cartera/alertas.js';
+import { alertasDe } from '$lib/cartera/alertas.js';
 import { perfilDe } from '$lib/cartera/normalizar.js';
 import { partesFecha } from '$lib/cartera/fechas.js';
 import { CONFIG_DEFAULT, normalizarConfig } from '$lib/cartera/config.js';
@@ -52,7 +52,7 @@ function hoyPartes() {
 /**
  * Fecha de hoy como `YYYY-MM-DD`, sin pasar por toISOString (que es UTC).
  *
- * No se exporta: hoy por hoy solo lo usa `agregarNota` para sellar
+ * No se exporta: hoy por hoy solo lo usa `marcarContactado` para sellar
  * `ultimo_contacto`, y no depende de datos de IspCube (a diferencia de
  * `fechas.js`, que solo parsea fechas que vienen de la API). Si otra pantalla
  * llega a necesitar "hoy en YYYY-MM-DD", se exporta entonces.
@@ -335,34 +335,41 @@ async function notasDe(clienteId) {
 }
 
 /**
- * Guarda una nota y, si es de tipo contacto, actualiza `ultimo_contacto`.
+ * Guarda una anotacion en la bitacora del cliente.
  *
- * Esa marca es lo que apaga la alerta de los 2 meses. Existe desnormalizada
- * porque la lista muestra hasta 500 clientes y calcular la alerta leyendo las
- * notas seria una consulta a PocketBase por fila.
+ * `tipo` es solo una etiqueta descriptiva y puede venir vacio: apagar la alerta
+ * de seguimiento es `marcarContactado`, una decision explicita del asesor, no
+ * una consecuencia de elegir una etiqueta en el formulario.
  */
 async function agregarNota(clienteId, tipo, texto) {
-	const nota = await pb.collection(NOTAS).create({
+	return await pb.collection(NOTAS).create({
 		cliente: clienteId,
 		autor: pb.authStore.record.id,
 		tipo,
 		texto
 	});
+}
 
-	if (TIPOS_CONTACTO.includes(tipo)) {
-		try {
-			const guardado = await pb
-				.collection(CLIENTES)
-				.update(clienteId, { ultimo_contacto: hoyISO() });
-			clientes = clientes.map((c) => (c.id === guardado.id ? guardado : c));
-		} catch (e) {
-			// La nota ya quedo guardada; solo falla la marca. La alerta seguiria
-			// encendida, que es el lado seguro del error.
-			console.error('[cartera] no se pudo actualizar ultimo_contacto:', e);
-		}
+/**
+ * Marca al cliente como contactado hoy: apaga la alerta de seguimiento.
+ *
+ * `ultimo_contacto` existe desnormalizado en el registro del cliente porque la
+ * lista muestra hasta 500 clientes y deducirlo de la bitacora costaria una
+ * consulta por fila.
+ *
+ * @returns {Promise<boolean>} si se pudo guardar
+ */
+async function marcarContactado(cliente) {
+	try {
+		const guardado = await pb
+			.collection(CLIENTES)
+			.update(cliente.id, { ultimo_contacto: hoyISO() });
+		clientes = clientes.map((c) => (c.id === guardado.id ? guardado : c));
+		return true;
+	} catch (e) {
+		console.error('[cartera] no se pudo marcar el contacto:', e);
+		return false;
 	}
-
-	return nota;
 }
 
 /** Marca los tickets del cliente como vistos: apaga la alerta de tickets. */
@@ -412,6 +419,7 @@ export const carteraStore = {
 	agregar,
 	notasDe,
 	agregarNota,
+	marcarContactado,
 	marcarTicketsVistos,
 	archivar,
 	refrescoFallido,

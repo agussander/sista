@@ -21,12 +21,6 @@ import { primerMesFacturable } from './pagos.js';
 const MESES_SEGUIMIENTO = 2;
 
 /**
- * Tipos de nota que cuentan como contacto con el cliente. `nota` queda afuera
- * a proposito: sirve para dejar contexto sin cerrar el pendiente.
- */
-export const TIPOS_CONTACTO = ['llamada', 'whatsapp', 'visita'];
-
-/**
  * @typedef {object} ConfigCartera
  * @property {number} dia_corte_1
  * @property {number} dia_corte_2
@@ -50,8 +44,8 @@ export function diaCorteDe(perfil, config) {
  * Toma SOLO el registro del cliente, sin las notas: la lista muestra hasta 500
  * clientes y pedir las notas de cada uno para saber si alguien ya llamo seria
  * una consulta por fila. En su lugar, `cartera_notas` sigue siendo la bitacora
- * completa y `cliente.ultimo_contacto` es la marca desnormalizada que mantiene
- * el store cada vez que se guarda una nota de tipo contacto.
+ * completa y `cliente.ultimo_contacto` es la marca que escribe el store cuando
+ * el asesor aprieta «Marcar contactado».
  *
  * @param {any} cliente Registro de `cartera_clientes`
  * @param {import('./fechas.js').Partes} hoy

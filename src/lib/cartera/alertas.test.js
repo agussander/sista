@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { alertasDe, diaCorteDe, TIPOS_CONTACTO } from './alertas.js';
+import { alertasDe, diaCorteDe } from './alertas.js';
 
 const CONFIG = {
 	dia_corte_1: 10,
@@ -385,11 +385,5 @@ describe('alerta de tickets nuevos', () => {
 		);
 
 		expect(tipos(r)).not.toContain('tickets');
-	});
-});
-
-describe('TIPOS_CONTACTO', () => {
-	it('nota no es un tipo de contacto', () => {
-		expect(TIPOS_CONTACTO).toEqual(['llamada', 'whatsapp', 'visita']);
 	});
 });
