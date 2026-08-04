@@ -352,13 +352,13 @@ Y exportarla en el objeto `carteraStore` del final, después de `agregarNota,`:
 
 - [ ] **Step 6: Sacar el import y el texto de ayuda de `ClienteDetalle.svelte`**
 
-Línea 9:
+Línea 10:
 
 ```js
 import { diaCorteDe } from '$lib/cartera/alertas.js';
 ```
 
-Borrar el párrafo de ayuda (líneas 231-235), que describe un comportamiento que ya no existe:
+Borrar el párrafo de ayuda (líneas 215-219), que describe un comportamiento que ya no existe:
 
 ```svelte
                 <p class="ayuda">
@@ -368,7 +368,7 @@ Borrar el párrafo de ayuda (líneas 231-235), que describe un comportamiento qu
                 </p>
 ```
 
-Y su regla de CSS (línea 328):
+Y su regla de CSS (línea 309):
 
 ```css
 .ayuda { color: #9ca3af; font-size: 0.82em; margin: 1em 0 0; }
@@ -376,7 +376,7 @@ Y su regla de CSS (línea 328):
 
 - [ ] **Step 7: Agregar el botón «Marcar contactado»**
 
-En el `<script>` de `ClienteDetalle.svelte`, después de `const cuenta = $derived(...)`:
+En el `<script>` de `ClienteDetalle.svelte`, después de `const ETIQUETA_ALERTA = { … };`:
 
 ```js
 let marcando = $state(false);
@@ -393,7 +393,7 @@ async function marcarContactado() {
 }
 ```
 
-Reemplazar el bloque de alertas (líneas 155-161) por:
+Reemplazar el bloque de alertas (líneas 158-164) por:
 
 ```svelte
         {#if alertas.length > 0}
