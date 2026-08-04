@@ -63,10 +63,14 @@ onMount(cargar);
     <h4>Anotaciones</h4>
 
     <form onsubmit={(e) => { e.preventDefault(); guardar(); }}>
+        <!-- `aria-pressed` y no un grupo de radios: son toggles de verdad -que
+             el activo se pueda apagar es justamente el punto- y ninguno viene
+             elegido. Sin esto, cual esta activo se cuenta solo por color. -->
         <div class="tipos">
             {#each TIPOS as t}
                 <button
                     type="button"
+                    aria-pressed={tipo === t.value}
                     class:activo={tipo === t.value}
                     onclick={() => (tipo = tipo === t.value ? '' : t.value)}
                 >{t.label}</button>
