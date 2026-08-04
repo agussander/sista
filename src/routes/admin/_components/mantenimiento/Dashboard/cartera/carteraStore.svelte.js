@@ -16,6 +16,7 @@ import { CONFIG_DEFAULT, normalizarConfig } from '$lib/cartera/config.js';
 const CLIENTES = 'cartera_clientes';
 const NOTAS = 'cartera_notas';
 const CONFIG = 'cartera_config';
+const RECORDATORIOS = 'cartera_recordatorios';
 
 // Mensajes de los dos codigos de error que devuelven todos los endpoints de
 // /api/cartera: 401 (sesion invalida, no sabemos quien es) y 403 (sabemos
@@ -38,6 +39,14 @@ let error = $state('');
 // hace `$state` profundo sobre Map/Set): `.add`/`.delete` alcanzan sin
 // reasignar.
 let fallosRefresco = $state(new Set());
+
+// clienteId -> recordatorios pendientes (`hecho = false`), ordenados por fecha.
+//
+// Se traen de una sola vez para toda la cartera, no por cliente: la lista
+// muestra hasta 500 filas y una consulta por fila seria inviable. Es el mismo
+// motivo por el que `ultimo_contacto` esta desnormalizado, con la diferencia de
+// que aca una sola consulta alcanza y no hace falta mantener una copia.
+let recordatorios = $state(new Map());
 
 // Codigos con un sync en vuelo ahora mismo. No es reactivo a proposito: solo
 // lo lee `sincronizar` para no duplicar trabajo, ninguna vista lo muestra.
@@ -88,6 +97,7 @@ async function cargar() {
 			sort: '-created'
 		});
 		clientes = res.items;
+		await cargarRecordatorios();
 	} catch (e) {
 		console.error(e);
 		error = 'No se pudieron cargar los clientes.';
@@ -102,12 +112,72 @@ async function cargar() {
 	refrescarVencidos().catch((e) => console.error('[cartera] fallo el refresco automatico:', e));
 }
 
+async function cargarRecordatorios() {
+	try {
+		const res = await pb.collection(RECORDATORIOS).getList(1, 500, {
+			// Sin filtrar por asesor a proposito: la listRule de la coleccion ya
+			// limita el resultado a los clientes del asesor autenticado. Es la
+			// misma propiedad de la que depende `notasDe`.
+			filter: 'hecho = false',
+			sort: 'fecha'
+		});
+
+		const porCliente = new Map();
+		for (const r of res.items) {
+			const lista = porCliente.get(r.cliente) ?? [];
+			lista.push(r);
+			porCliente.set(r.cliente, lista);
+		}
+		recordatorios = porCliente;
+	} catch (e) {
+		// La Cartera funciona sin recordatorios: no es motivo para romper la
+		// carga entera y dejar al asesor sin lista.
+		console.error('[cartera] no se pudieron cargar los recordatorios:', e);
+		recordatorios = new Map();
+	}
+}
+
+/** Recordatorios pendientes de un cliente. Siempre un array. */
+function recordatoriosDe(clienteId) {
+	return recordatorios.get(clienteId) ?? [];
+}
+
+async function crearRecordatorio(clienteId, fecha, texto) {
+	const creado = await pb.collection(RECORDATORIOS).create({
+		cliente: clienteId,
+		autor: pb.authStore.record.id,
+		fecha,
+		texto,
+		hecho: false
+	});
+
+	// El Map se reasigna en vez de mutarse: es lo que hace que la lista de la
+	// Cartera recalcule las alertas de esta fila.
+	const copia = new Map(recordatorios);
+	copia.set(
+		clienteId,
+		[...recordatoriosDe(clienteId), creado].sort((a, b) => a.fecha.localeCompare(b.fecha))
+	);
+	recordatorios = copia;
+	return creado;
+}
+
+async function completarRecordatorio(recordatorio) {
+	await pb.collection(RECORDATORIOS).update(recordatorio.id, { hecho: true });
+
+	const lista = recordatoriosDe(recordatorio.cliente).filter((r) => r.id !== recordatorio.id);
+	const copia = new Map(recordatorios);
+	if (lista.length > 0) copia.set(recordatorio.cliente, lista);
+	else copia.delete(recordatorio.cliente);
+	recordatorios = copia;
+}
+
 // No se exporta suelta: como el resto de la logica del store, solo se expone
 // a traves del objeto `carteraStore` de mas abajo (junto con `cargar`,
 // `sincronizar`, etc.), para que consumirla desde un componente sea siempre
 // `carteraStore.alertasDeCliente(...)`.
 function alertasDeCliente(cliente) {
-	return alertasDe(cliente, hoyPartes(), config);
+	return alertasDe(cliente, hoyPartes(), config, recordatoriosDe(cliente.id));
 }
 
 async function refrescarVencidos() {
@@ -420,6 +490,9 @@ export const carteraStore = {
 	notasDe,
 	agregarNota,
 	marcarContactado,
+	recordatoriosDe,
+	crearRecordatorio,
+	completarRecordatorio,
 	marcarTicketsVistos,
 	archivar,
 	refrescoFallido,
