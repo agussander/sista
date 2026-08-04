@@ -50,9 +50,10 @@ export function diaCorteDe(perfil, config) {
  * @param {any} cliente Registro de `cartera_clientes`
  * @param {import('./fechas.js').Partes} hoy
  * @param {ConfigCartera} config
- * @returns {{tipo: string, desde: string | null}[]}
+ * @param {any[]} [recordatorios] Recordatorios PENDIENTES del cliente (`hecho = false`)
+ * @returns {{tipo: string, desde: string | null, texto?: string}[]}
  */
-export function alertasDe(cliente, hoy, config) {
+export function alertasDe(cliente, hoy, config, recordatorios = []) {
 	const alertas = [];
 
 	const instalacion = partesFecha(cliente?.fecha_instalacion);
@@ -117,6 +118,22 @@ export function alertasDe(cliente, hoy, config) {
 		if (!visto || compararFechaHora(ultimo, visto) > 0) {
 			alertas.push({ tipo: 'tickets', desde: cliente.tickets.ultimo.fecha });
 		}
+	}
+
+	// --- Recordatorios --------------------------------------------------------
+	// Una sola alerta aunque haya varios vencidos: la lista de la Cartera no gana
+	// nada con N chips iguales en la misma fila, y el detalle los muestra todos.
+	// Un recordatorio vencido NO se apaga con el paso del tiempo: sigue encendido
+	// hasta que alguien lo marque hecho, porque un pendiente viejo es mas
+	// urgente, no menos.
+	const vencidos = (Array.isArray(recordatorios) ? recordatorios : [])
+		.map((r) => ({ r, partes: partesFecha(r?.fecha) }))
+		.filter(({ partes }) => partes && compararFechas(hoy, partes) >= 0)
+		.sort((a, b) => compararFechas(a.partes, b.partes));
+
+	if (vencidos.length > 0) {
+		const primero = vencidos[0].r;
+		alertas.push({ tipo: 'recordatorio', desde: primero.fecha, texto: primero.texto });
 	}
 
 	return alertas;

@@ -387,3 +387,55 @@ describe('alerta de tickets nuevos', () => {
 		expect(tipos(r)).not.toContain('tickets');
 	});
 });
+
+describe('alerta de recordatorio', () => {
+	const hoy = { anio: 2026, mes: 8, dia: 4 };
+
+	it('un recordatorio con fecha pasada la enciende', () => {
+		const r = alertasDe(base, hoy, CONFIG, [
+			{ fecha: '2026-08-01', texto: 'Llamar por el router' }
+		]);
+
+		expect(tipos(r)).toContain('recordatorio');
+	});
+
+	it('un recordatorio con fecha de hoy la enciende', () => {
+		// El borde es >=: si me anote algo para hoy, hoy tengo que verlo.
+		const r = alertasDe(base, hoy, CONFIG, [{ fecha: '2026-08-04', texto: 'Es hoy' }]);
+
+		expect(tipos(r)).toContain('recordatorio');
+	});
+
+	it('un recordatorio futuro no la enciende', () => {
+		const r = alertasDe(base, hoy, CONFIG, [{ fecha: '2026-08-05', texto: 'Es mañana' }]);
+
+		expect(tipos(r)).not.toContain('recordatorio');
+	});
+
+	it('varios vencidos dan una sola alerta, la del mas viejo', () => {
+		// En la practica hay uno por cliente; si hay varios, N chips iguales en
+		// la fila de la lista solo hacen ruido. El detalle los lista a todos.
+		const r = alertasDe(base, hoy, CONFIG, [
+			{ fecha: '2026-08-03', texto: 'El nuevo' },
+			{ fecha: '2026-07-20', texto: 'El viejo' }
+		]);
+
+		const recordatorios = r.filter((a) => a.tipo === 'recordatorio');
+		expect(recordatorios).toHaveLength(1);
+		expect(recordatorios[0].texto).toBe('El viejo');
+		expect(recordatorios[0].desde).toBe('2026-07-20');
+	});
+
+	it('una fecha invalida o vacia se ignora', () => {
+		const r = alertasDe(base, hoy, CONFIG, [
+			{ fecha: '', texto: 'sin fecha' },
+			{ fecha: 'pronto', texto: 'fecha en prosa' }
+		]);
+
+		expect(tipos(r)).not.toContain('recordatorio');
+	});
+
+	it('sin el cuarto argumento no emite recordatorio', () => {
+		expect(tipos(alertasDe(base, hoy, CONFIG))).not.toContain('recordatorio');
+	});
+});
