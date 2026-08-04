@@ -75,13 +75,17 @@ Un registro por cliente en la cartera de un asesor. Es el snapshot local de IspC
 | `start_date` | date | IspCube | Alta administrativa, informativa |
 | `entity_id` | number | IspCube | El medio de pago |
 | `entity_nombre` | text | IspCube | Para mostrar sin resolver el catálogo |
-| `perfil_pago` | select | Derivado | `ventanilla` \| `tarjeta`, con override manual |
-| `debt`, `duedebt` | number | IspCube | Deuda total y vencida |
+| `perfil_pago` | select | Derivado | `ventanilla` \| `tarjeta` |
+| `perfil_manual` | bool | Cartera | Si está en `true`, la sincronización no vuelve a derivar `perfil_pago` desde la entidad |
+| `debt`, `duedebt` | number | IspCube | Deuda total y vencida. `duedebt` corrobora la mora |
 | `pagos` | json | IspCube | `[{mes: "2026-07", dia: 8, monto: 12000}]`, histórico acumulado (ver abajo) |
-| `tickets` | json | IspCube | `{abiertos, cerrados, ultimo: {fecha, categoria, estado}}` |
+| `tickets` | json | IspCube | `{abiertos, cerrados, ultimo: {id, fecha, categoria, estado}}` |
 | `tickets_vistos_hasta` | date | Cartera | Marca de "leído" para la alerta de tickets |
+| `ultimo_contacto` | date | Cartera | `YYYY-MM-DD` del último contacto real. Apaga la alerta de los 2 meses |
 | `sincronizado` | date | Cartera | Última sincronización con IspCube |
 | `archivado` | bool | Cartera | Saca al cliente de la vista sin borrar el historial |
+
+`ultimo_contacto` está desnormalizado a propósito: la bitácora completa vive en `cartera_notas`, pero la lista muestra hasta 500 clientes y calcular la alerta de seguimiento leyendo las notas sería una consulta a PocketBase por fila. El store lo escribe cada vez que se guarda una nota de tipo `llamada`, `whatsapp` o `visita`.
 
 **Índice único: `(asesor, code)`.**
 
@@ -158,8 +162,13 @@ Un punto por mes, últimos 6:
 |---|---|
 | Verde | Pagó dentro de su ventana (≤ día 10 en ventanilla, ≤ día 21 en tarjeta) |
 | Amarillo | Pagó después de su ventana pero dentro del mes |
-| Rojo | No hubo cobranza en el mes |
+| Rojo | No hubo cobranza y la ventana ya venció |
+| Pendiente | Mes en curso con la ventana sin vencer, o el mes de la instalación |
 | Gris | El mes es anterior a la fecha de instalación |
+
+Son **cinco** estados, no cuatro: `pendiente` distingue "todavía no debe nada" de "no pagó". Sin él, todo cliente aparecería en rojo desde el día 1 de cada mes hasta que pague.
+
+En la UI los cinco se distinguen **por forma además de por color** (círculo lleno, dona, rombo, círculo punteado, círculo pálido), porque el color solo no funciona para una persona daltónica.
 
 El gris importa: sin él, un cliente de dos meses aparece con diez meses en rojo.
 
@@ -222,7 +231,9 @@ Es dramáticamente más barata, pero depende de dos cosas que **hay que medir an
 | Abrir la lista de la cartera | **0**, más el refresco acotado (≤ 20 clientes) |
 | Abrir el detalle de un cliente | 3, y refresca su snapshot |
 | Agregar un cliente | 3 — la llamada que valida el número es la misma que arma el snapshot |
-| Botón "Actualizar cartera" | Según la estrategia vigente |
+| Botón "Actualizar" | 3 × n, con n ≤ 20 — refresca la lista que el asesor está viendo, priorizando los snapshots más viejos |
+
+El botón existe porque el refresco automático solo corre al montar y solo toca snapshots de más de 12 h: sin él, un asesor que acaba de cobrarle a un cliente esperaría hasta medio día para verlo reflejado. El tope de 20 no es arbitrario — es el mismo `MAX_CODIGOS` que rechaza el endpoint de sync, y está comentado en los dos lados para que nadie suba uno sin el otro.
 
 ### Módulos
 
@@ -257,7 +268,9 @@ Cada uno se entiende y se testea sin levantar nada. Siguen el patrón de `llamen
 | `ClienteDetalle.svelte` | Datos, puntos de pago, tickets, bitácora |
 | `carteraStore.svelte.js` | Estado y sincronización, siguiendo `llamenmeStore.svelte.js` |
 
-Más una entrada en `Sidebar.svelte` con punto de notificación cuando hay alertas, y una rama en `Content.svelte`.
+Más una entrada en `Sidebar.svelte` y una rama en `Content.svelte`.
+
+**Sin punto de notificación en el sidebar.** Se evaluó y se descartó: para saber cuántas alertas hay sin entrar a la sección, el store de la Cartera tendría que arrancar a nivel del `Dashboard`, como hace el de Llamenme. Eso cuesta una consulta a PocketBase —y potencialmente una sincronización contra IspCube, que se factura— en cada login al admin de **cada** usuario, incluidos los que no tienen el permiso `cartera`. No lo justifica un indicador decorativo.
 
 ## Manejo de errores
 
