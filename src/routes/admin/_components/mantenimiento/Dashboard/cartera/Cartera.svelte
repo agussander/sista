@@ -47,8 +47,9 @@ $effect(() => {
 
 // Peso de cada alerta para que la fila comunique urgencia de un vistazo: un
 // cliente con mora vencida se nota mas que uno que solo tiene el recordatorio
-// de seguimiento, aun antes de leer los chips.
-const PESO = { mora_2: 3, mora_1: 2, tickets: 2, seguimiento: 1 };
+// de seguimiento, aun antes de leer los chips. Un recordatorio propio pesa como
+// un ticket: lo puso el asesor a proposito, no lo dedujo el sistema.
+const PESO = { mora_2: 3, mora_1: 2, tickets: 2, recordatorio: 2, seguimiento: 1 };
 
 function urgenciaDe(alertas) {
     if (alertas.length === 0) return null;
@@ -75,7 +76,8 @@ const FILTROS = [
     { value: 'alerta', label: 'Con alerta' },
     { value: 'seguimiento', label: 'Seguimiento 2 meses' },
     { value: 'mora', label: 'En mora' },
-    { value: 'tickets', label: 'Tickets nuevos' }
+    { value: 'tickets', label: 'Tickets nuevos' },
+    { value: 'recordatorio', label: 'Recordatorios' }
 ];
 
 const visibles = $derived(
@@ -94,7 +96,8 @@ const ETIQUETAS = {
     seguimiento: 'Contactar (2 meses)',
     mora_1: 'No pagó',
     mora_2: 'Mora vencida',
-    tickets: 'Tickets nuevos'
+    tickets: 'Tickets nuevos',
+    recordatorio: 'Recordatorio'
 };
 
 const ETIQUETA_ESTADO_PUNTO = {
@@ -224,7 +227,14 @@ onMount(() => carteraStore.cargar());
 
                         <div class="alertas">
                             {#each alertas as a}
-                                <span class="chip {a.tipo}">{ETIQUETAS[a.tipo]}</span>
+                                <span
+                                    class="chip {a.tipo}"
+                                    title={a.tipo === 'recordatorio' ? a.texto : null}
+                                >
+                                    {a.tipo === 'recordatorio'
+                                        ? a.texto || ETIQUETAS.recordatorio
+                                        : ETIQUETAS[a.tipo]}
+                                </span>
                             {/each}
                         </div>
 
@@ -326,6 +336,14 @@ li.urgencia-alta { border-left: 4px solid #ef4444; box-shadow: 0 1px 8px rgba(23
 .chip.mora_1 { background: #fef3c7; color: #92400e; }
 .chip.mora_2 { background: #fee2e2; color: #991b1b; }
 .chip.tickets { background: #dbeafe; color: #1e40af; }
+/* Verde: distinto de las cuatro alertas que deduce el sistema, porque este lo
+   escribio el asesor. El texto se recorta -el completo va en el `title`- para
+   que un recordatorio largo no descuadre la fila. */
+.chip.recordatorio {
+    background: #d1fae5; color: #065f46;
+    display: inline-block; max-width: 14em;
+    overflow: hidden; text-overflow: ellipsis;
+}
 .sync { color: #9ca3af; font-size: 0.8em; white-space: nowrap; }
 /* Mismo tono amber que las alertas de mora, no rojo: un refresco fallido deja
    al cliente en el modo degradado esperado (snapshot viejo), no en un error. */
