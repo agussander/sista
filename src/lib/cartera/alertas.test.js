@@ -435,7 +435,36 @@ describe('alerta de recordatorio', () => {
 		expect(tipos(r)).not.toContain('recordatorio');
 	});
 
+	it('una entrada nula o sin fecha se ignora', () => {
+		const r = alertasDe(base, hoy, CONFIG, [null, undefined, { texto: 'sin campo fecha' }]);
+
+		expect(tipos(r)).not.toContain('recordatorio');
+	});
+
 	it('sin el cuarto argumento no emite recordatorio', () => {
 		expect(tipos(alertasDe(base, hoy, CONFIG))).not.toContain('recordatorio');
+	});
+
+	it('un cuarto argumento que no es array no rompe', () => {
+		// El store arma el array desde un Map; si alguna vez entrega un undefined
+		// o algo que no es array, la lista no puede caerse entera por eso.
+		expect(() => alertasDe(base, hoy, CONFIG, null)).not.toThrow();
+		expect(tipos(alertasDe(base, hoy, CONFIG, 'pronto'))).not.toContain('recordatorio');
+	});
+
+	it('no muta el array que recibe', () => {
+		// `alertasDe` la llama la lista una vez por cliente en cada recalculo, y
+		// el array que le pasa el store es el que este cachea: ordenarlo in situ
+		// le cambiaria el orden a la vista del detalle. `.sort()` tiene que caer
+		// sobre el array intermedio del `.map`, no sobre este.
+		const original = [
+			{ fecha: '2026-08-03', texto: 'El nuevo' },
+			{ fecha: '2026-07-20', texto: 'El viejo' }
+		];
+		const copia = [...original];
+
+		alertasDe(base, hoy, CONFIG, original);
+
+		expect(original).toEqual(copia);
 	});
 });
