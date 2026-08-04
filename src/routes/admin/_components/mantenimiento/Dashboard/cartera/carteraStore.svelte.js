@@ -118,6 +118,11 @@ async function cargarRecordatorios() {
 			// Sin filtrar por asesor a proposito: la listRule de la coleccion ya
 			// limita el resultado a los clientes del asesor autenticado. Es la
 			// misma propiedad de la que depende `notasDe`.
+			//
+			// El tope de 500 es sobre recordatorios pendientes de toda la cartera,
+			// no sobre clientes: comparte el limite de la consulta de clientes de
+			// mas arriba, pero como aca son recordatorios x clientes se llena mas
+			// rapido y no queda registrado si algo se trunca.
 			filter: 'hecho = false',
 			sort: 'fecha'
 		});
@@ -151,14 +156,10 @@ async function crearRecordatorio(clienteId, fecha, texto) {
 		hecho: false
 	});
 
-	// El Map se reasigna en vez de mutarse: es lo que hace que la lista de la
-	// Cartera recalcule las alertas de esta fila.
-	const copia = new Map(recordatorios);
-	copia.set(
+	recordatorios.set(
 		clienteId,
 		[...recordatoriosDe(clienteId), creado].sort((a, b) => a.fecha.localeCompare(b.fecha))
 	);
-	recordatorios = copia;
 	return creado;
 }
 
@@ -166,10 +167,8 @@ async function completarRecordatorio(recordatorio) {
 	await pb.collection(RECORDATORIOS).update(recordatorio.id, { hecho: true });
 
 	const lista = recordatoriosDe(recordatorio.cliente).filter((r) => r.id !== recordatorio.id);
-	const copia = new Map(recordatorios);
-	if (lista.length > 0) copia.set(recordatorio.cliente, lista);
-	else copia.delete(recordatorio.cliente);
-	recordatorios = copia;
+	if (lista.length > 0) recordatorios.set(recordatorio.cliente, lista);
+	else recordatorios.delete(recordatorio.cliente);
 }
 
 // No se exporta suelta: como el resto de la logica del store, solo se expone
