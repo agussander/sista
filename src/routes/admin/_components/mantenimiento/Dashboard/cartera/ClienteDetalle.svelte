@@ -5,6 +5,7 @@
 import { onMount } from 'svelte';
 import TicketsCliente from './TicketsCliente.svelte';
 import AnotacionesCliente from './AnotacionesCliente.svelte';
+import RecordatoriosCliente from './RecordatoriosCliente.svelte';
 import { carteraStore } from './carteraStore.svelte.js';
 import { puntosPorMes } from '$lib/cartera/pagos.js';
 import { diaCorteDe } from '$lib/cartera/alertas.js';
@@ -135,6 +136,8 @@ onMount(() => {
                                 {marcando ? 'Guardando…' : 'Marcar contactado'}
                             </button>
                         </span>
+                    {:else if a.tipo === 'recordatorio'}
+                        <span class="chip recordatorio">Recordatorio: {a.texto}</span>
                     {:else}
                         <span class="chip {a.tipo}">{ETIQUETA_ALERTA[a.tipo] ?? a.tipo}</span>
                     {/if}
@@ -173,6 +176,7 @@ onMount(() => {
             </p>
         </section>
 
+        <RecordatoriosCliente {cliente} />
         <AnotacionesCliente {cliente} />
 
         <footer>
@@ -212,6 +216,7 @@ h3 { margin: 0; color: var(--violeta2); }
 .chip.mora_1 { background: #fef3c7; color: #92400e; }
 .chip.mora_2 { background: #fee2e2; color: #991b1b; }
 .chip.tickets { background: #dbeafe; color: #1e40af; }
+.chip.recordatorio { background: #d1fae5; color: #065f46; }
 .marcar {
     background: var(--violeta2); color: #fff; border: none; border-radius: 1em;
     padding: 0.25em 0.8em; font-size: 0.88em; font-weight: 600; cursor: pointer;
