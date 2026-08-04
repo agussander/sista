@@ -17,16 +17,23 @@
  *
  * Uso:
  *
- *   PB_TOKEN='...' node scripts/crear-colecciones-cartera.js
- *   PB_TOKEN='...' node scripts/crear-colecciones-cartera.js --dry-run
+ *   node scripts/crear-colecciones-cartera.js --dry-run
+ *   node scripts/crear-colecciones-cartera.js
  *
- * El token sale de las devtools del admin de PocketBase ya logueado
- * (Application -> Local Storage -> la clave `pocketbase_superuser_auth`, campo
- * `token`). Alternativamente, `PB_SUPERUSER_EMAIL` + `PB_SUPERUSER_PASSWORD`.
- * Pasalos por env, no los escribas en el archivo ni los commitees.
+ * Pide el email y la contraseña del superuser de PocketBase por consola. La
+ * contraseña no se ve mientras se tipea, y ninguna de las dos se guarda ni
+ * queda en el historial del shell.
+ *
+ * Sin terminal (un CI, o la salida redirigida) no hay a quien preguntarle, y
+ * ahi si hacen falta por entorno: `PB_SUPERUSER_EMAIL` + `PB_SUPERUSER_PASSWORD`,
+ * o `PB_TOKEN` con un token de las devtools del admin ya logueado
+ * (Application -> Local Storage -> `pocketbase_superuser_auth`, campo `token`).
+ * En ningun caso se escriben en este archivo.
  *
  * Requiere PocketBase >= 0.23 (schema con `fields`, admins en `_superusers`).
  */
+
+import { createInterface } from 'node:readline';
 
 const PB_URL = (process.env.PB_URL || 'https://sista.pockethost.io').replace(/\/+$/, '');
 const DRY_RUN = process.argv.includes('--dry-run');
@@ -83,15 +90,63 @@ async function api(path, { method = 'GET', body } = {}) {
 	return { ok: res.ok, status: res.status, data };
 }
 
+/**
+ * Pregunta algo por consola y devuelve lo tipeado.
+ *
+ * Con `oculto`, lo que se escribe no aparece en pantalla: readline reescribe la
+ * linea entera en cada tecla, asi que se deja pasar solo la primera escritura
+ * -el prompt- y se traga el resto. Es la contraseña; que no quede a la vista de
+ * quien pase por atras, ni en un screenshot.
+ */
+function preguntar(texto, { oculto = false } = {}) {
+	return new Promise((resolve) => {
+		const rl = createInterface({ input: process.stdin, output: process.stdout, terminal: true });
+
+		if (oculto) {
+			let primera = true;
+			rl._writeToOutput = (s) => {
+				if (primera) {
+					process.stdout.write(s);
+					primera = false;
+				}
+			};
+		}
+
+		rl.question(texto, (respuesta) => {
+			if (oculto) process.stdout.write('\n');
+			rl.close();
+			resolve(respuesta.trim());
+		});
+	});
+}
+
 async function autenticar() {
 	if (!token) {
-		const identity = process.env.PB_SUPERUSER_EMAIL;
-		const password = process.env.PB_SUPERUSER_PASSWORD;
+		let identity = process.env.PB_SUPERUSER_EMAIL;
+		let password = process.env.PB_SUPERUSER_PASSWORD;
+
+		// Sin credenciales en el entorno se piden por consola. Es el camino
+		// normal: escribirlas en la linea de comando es incomodo y ademas las
+		// deja en el historial del shell. Por env solo tiene sentido cuando no
+		// hay nadie tipeando (un CI), y ahi no hay terminal donde preguntar.
 		if (!identity || !password) {
-			console.error(
-				'Falta autenticacion. Pasa PB_TOKEN, o PB_SUPERUSER_EMAIL + PB_SUPERUSER_PASSWORD.'
-			);
-			process.exit(1);
+			if (!process.stdin.isTTY) {
+				console.error(
+					'Falta autenticacion y no hay terminal para pedirla.\n' +
+						'Pasa PB_TOKEN, o PB_SUPERUSER_EMAIL + PB_SUPERUSER_PASSWORD.'
+				);
+				process.exit(1);
+			}
+
+			console.log('Credenciales del superuser de PocketBase (no se guardan en ningun lado):');
+			identity = identity || (await preguntar('  Email: '));
+			password = password || (await preguntar('  Contraseña (no se ve al tipear): ', { oculto: true }));
+			console.log('');
+
+			if (!identity || !password) {
+				console.error('Sin email o sin contraseña no se puede seguir.');
+				process.exit(1);
+			}
 		}
 
 		const res = await api('/api/collections/_superusers/auth-with-password', {
