@@ -21,7 +21,10 @@ const config = $derived(carteraStore.config);
 
 // Partes de "hoy" en hora local, compartido entre `puntos` y `activas` (las
 // promos activas de mas abajo): no hace falta una segunda fuente de "hoy" en
-// el mismo componente.
+// el mismo componente. Se calcula una sola vez al abrir el detalle (no
+// depende de nada reactivo, asi que no se recalcula despues) — aceptable
+// porque el modal es de corta duracion; no importa si sigue abierto al cruzar
+// la medianoche.
 const hoy = $derived.by(() => {
     const d = new Date();
     return { anio: d.getFullYear(), mes: d.getMonth() + 1, dia: d.getDate() };
