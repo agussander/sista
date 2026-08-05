@@ -283,6 +283,8 @@ async function guardarSnapshot(code, datos) {
 		perfil_pago: perfil,
 		debt: datos.debt,
 		duedebt: datos.duedebt,
+		connections: Array.isArray(datos.connections) ? datos.connections : [],
+		promos: Array.isArray(datos.promos) ? datos.promos : [],
 		sincronizado: new Date().toISOString()
 	};
 
@@ -375,6 +377,8 @@ async function agregar(code, fechaInstalacion) {
 			perfil_manual: false,
 			debt: datos.cliente.debt,
 			duedebt: datos.cliente.duedebt,
+			connections: Array.isArray(datos.cliente.connections) ? datos.cliente.connections : [],
+			promos: Array.isArray(datos.cliente.promos) ? datos.cliente.promos : [],
 			pagos: Array.isArray(datos.pagos) ? datos.pagos : [],
 			tickets: datos.tickets?.error ? null : datos.tickets,
 			tickets_vistos_hasta: '',
