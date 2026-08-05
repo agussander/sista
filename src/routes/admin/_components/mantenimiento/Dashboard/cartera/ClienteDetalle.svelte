@@ -5,11 +5,12 @@
 import { onMount } from 'svelte';
 import TicketsCliente from './TicketsCliente.svelte';
 import AnotacionesCliente from './AnotacionesCliente.svelte';
-import RecordatoriosCliente from './RecordatoriosCliente.svelte';
+import RecordatorioChip from './RecordatorioChip.svelte';
 import { carteraStore } from './carteraStore.svelte.js';
 import { puntosPorMes } from '$lib/cartera/pagos.js';
-import { diaCorteDe } from '$lib/cartera/alertas.js';
+import { diaCorteDe, promosActivas } from '$lib/cartera/alertas.js';
 import { partesFecha } from '$lib/cartera/fechas.js';
+import { nombreCortoPlan } from '$lib/cartera/planes.js';
 
 let { cliente, onCerrar } = $props();
 
@@ -18,20 +19,32 @@ let { cliente, onCerrar } = $props();
 const actual = $derived(carteraStore.clientes.find((c) => c.id === cliente.id) ?? cliente);
 const config = $derived(carteraStore.config);
 
+// Partes de "hoy" en hora local, compartido entre `puntos` y `activas` (las
+// promos activas de mas abajo): no hace falta una segunda fuente de "hoy" en
+// el mismo componente.
+const hoy = $derived.by(() => {
+    const d = new Date();
+    return { anio: d.getFullYear(), mes: d.getMonth() + 1, dia: d.getDate() };
+});
+
 const puntos = $derived.by(() => {
     const instalacion = partesFecha(actual.fecha_instalacion);
     if (!instalacion) return [];
-    const d = new Date();
     return puntosPorMes(actual.pagos ?? [], {
         perfil: actual.perfil_pago,
         diaCorte: diaCorteDe(actual.perfil_pago, config),
         instalacion,
-        hoy: { anio: d.getFullYear(), mes: d.getMonth() + 1, dia: d.getDate() },
+        hoy,
         meses: 6
     });
 });
 
-const alertas = $derived(carteraStore.alertasDeCliente(actual));
+const activas = $derived(promosActivas(actual.promos ?? [], hoy));
+
+// El recordatorio ya tiene su propio chip fijo en el header (RecordatorioChip),
+// asi que se lo excluye de esta fila para no mostrarlo dos veces cuando esta
+// vencido.
+const alertas = $derived(carteraStore.alertasDeCliente(actual).filter((a) => a.tipo !== 'recordatorio'));
 
 // IspCube informa `debt` en su propio signo: positivo = debe, negativo =
 // saldo a favor. Se respeta tal cual, sin invertir.
@@ -59,6 +72,17 @@ async function marcarContactado() {
 
 const fmt = (iso) => (iso ? new Date(iso).toLocaleDateString('es-AR') : '—');
 const plata = (n) => (Number(n) || 0).toLocaleString('es-AR', { style: 'currency', currency: 'ARS' });
+
+// Formateo por partes, sin `new Date(iso)`: un "2026-08-04" pasado por Date se
+// interpreta en UTC y en Argentina (UTC-3) se muestra como el 3. Mismo motivo
+// que el resto de fechas.js, y el mismo patron que ya usa RecordatorioChip.
+// Un solo fmtFecha para la rama de alerta promo_venciendo y la seccion de
+// promos activas de mas abajo.
+function fmtFecha(iso) {
+    const p = partesFecha(iso);
+    if (!p) return iso;
+    return `${String(p.dia).padStart(2, '0')}/${String(p.mes).padStart(2, '0')}/${p.anio}`;
+}
 
 // Cuanto hace que se sincronizo este registro con IspCube: es lo que hace
 // honesto el diseño de snapshot ("esto no es en vivo, es de hace X").
@@ -122,6 +146,7 @@ onMount(() => {
                         No pudimos actualizar contra IspCube ahora. Mostrando el último snapshot.
                     </p>
                 {/if}
+                <RecordatorioChip {cliente} />
             </div>
             <button class="cerrar" onclick={onCerrar} aria-label="Cerrar">×</button>
         </header>
@@ -136,14 +161,28 @@ onMount(() => {
                                 {marcando ? 'Guardando…' : 'Marcar contactado'}
                             </button>
                         </span>
-                    {:else if a.tipo === 'recordatorio'}
-                        <span class="chip recordatorio">Recordatorio: {a.texto}</span>
+                    {:else if a.tipo === 'promo_venciendo'}
+                        <span class="chip promo_venciendo">{a.texto} vence el {fmtFecha(a.desde)}</span>
                     {:else}
                         <span class="chip {a.tipo}">{ETIQUETA_ALERTA[a.tipo] ?? a.tipo}</span>
                     {/if}
                 {/each}
             </div>
             {#if errorAlerta}<p class="error-alerta">{errorAlerta}</p>{/if}
+        {/if}
+
+        {#if (actual.connections?.length ?? 0) > 0}
+            <div class="conexiones">
+                {#each actual.connections as cx}
+                    <span class="chip conexion" title={cx.plan_nombre}>
+                        {nombreCortoPlan(cx.plan_id, cx.plan_nombre)}
+                    </span>
+                {/each}
+            </div>
+        {:else}
+            <div class="conexiones">
+                <span class="chip conexion vacia">Sin conexiones</span>
+            </div>
         {/if}
 
         <dl class="datos">
@@ -176,7 +215,22 @@ onMount(() => {
             </p>
         </section>
 
-        <RecordatoriosCliente {cliente} />
+        {#if activas.length > 0}
+            <section class="bloque">
+                <h4>Promos activas</h4>
+                <ul class="promos">
+                    {#each activas as p}
+                        <li>
+                            <strong>{p.promo_nombre}</strong>
+                            {#if p.plan_nombre}<span class="plan">{p.plan_nombre}</span>{/if}
+                            {#if p.beneficio}<p class="beneficio">{p.beneficio}</p>{/if}
+                            <span class="vence">vence el {fmtFecha(p.fin)}</span>
+                        </li>
+                    {/each}
+                </ul>
+            </section>
+        {/if}
+
         <AnotacionesCliente {cliente} />
 
         <footer>
@@ -216,7 +270,8 @@ h3 { margin: 0; color: var(--violeta2); }
 .chip.mora_1 { background: #fef3c7; color: #92400e; }
 .chip.mora_2 { background: #fee2e2; color: #991b1b; }
 .chip.tickets { background: #dbeafe; color: #1e40af; }
-.chip.recordatorio { background: #d1fae5; color: #065f46; }
+/* Mismo amber que mora_1: "atender pronto", no una falla ya consumada. */
+.chip.promo_venciendo { background: #fef3c7; color: #92400e; }
 .marcar {
     background: var(--violeta2); color: #fff; border: none; border-radius: 1em;
     padding: 0.25em 0.8em; font-size: 0.88em; font-weight: 600; cursor: pointer;
@@ -258,4 +313,19 @@ footer { border-top: 1px solid #ececec; margin-top: 1.5em; padding-top: 1.2em; }
     background: #fff; border: 1.5px solid #e0e0e0; color: #6b7280;
     border-radius: 2em; padding: 0.6em 1.2em; cursor: pointer;
 }
+/* Indigo: distinto del violeta de .chip.seguimiento (#ede7f6/#5a1e7a), para
+   que un chip de plan no se confunda con la alerta de seguimiento. */
+.conexiones { display: flex; flex-wrap: wrap; gap: 0.5em; margin: 0.8em 0 0; }
+.chip.conexion {
+    background: #e0e7ff; color: #3730a3;
+    display: inline-block; max-width: 12em;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.chip.conexion.vacia { background: #f3f4f6; color: #6b7280; }
+.promos { list-style: none; padding: 0; margin: 1em 0 0; display: flex; flex-direction: column; gap: 0.8em; }
+.promos li { background: #ecfeff; border-radius: 0.8em; padding: 0.8em 1.1em; }
+.promos strong { color: #155e75; }
+.promos .plan { color: #6b7280; font-size: 0.85em; margin-left: 0.5em; }
+.promos .beneficio { margin: 0.3em 0 0; color: #374151; font-size: 0.9em; }
+.promos .vence { display: block; color: #9ca3af; font-size: 0.8em; margin-top: 0.3em; }
 </style>
