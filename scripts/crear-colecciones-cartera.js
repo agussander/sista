@@ -12,8 +12,10 @@
  * Es idempotente: una coleccion que ya existe se saltea, no se pisa. Correrlo
  * dos veces no rompe nada.
  *
- * La excepcion es `ponerCampoOpcional`, que SI modifica una coleccion existente
- * (con un PATCH), pero solo si el campo todavia no esta como corresponde.
+ * Las excepciones son `ponerCampoOpcional` y `agregarCampoSiFalta`, que SI
+ * modifican una coleccion existente (con un PATCH): la primera cambia
+ * `required` de un campo que ya esta, la segunda agrega un campo que todavia
+ * no esta.
  *
  * Uso:
  *
