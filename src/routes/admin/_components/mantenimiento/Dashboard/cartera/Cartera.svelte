@@ -435,12 +435,19 @@ li.urgencia-baja { border-left: 4px solid #b9a7d9; }
 li.urgencia-media { border-left: 4px solid #f0c674; }
 li.urgencia-alta { border-left: 4px solid #ef4444; box-shadow: 0 1px 8px rgba(239, 68, 68, 0.12); }
 .fila {
-    width: 100%; display: grid; grid-template-columns: 1fr auto auto auto;
+    width: 100%; display: grid;
+    /* minmax(0, 1fr) y no 1fr: con `1fr` la columna no puede achicarse por
+       debajo de su contenido, asi que un nombre largo empujaba a las demas
+       fuera de la fila. */
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, auto) auto;
     align-items: center; gap: 1.2em; padding: 0.9em 1.2em;
     background: none; border: none; cursor: pointer; text-align: left; font-size: 1em;
 }
 .fila:hover { background: #faf8fd; }
-.quien { display: flex; flex-direction: column; gap: 0.15em; }
+/* Con teclado no habia ninguna senial de donde estabas parado. */
+.fila:focus-visible { outline: 2px solid var(--violeta2); outline-offset: -2px; background: #faf8fd; }
+.quien { display: flex; flex-direction: column; gap: 0.15em; min-width: 0; }
+.quien strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .code { color: #9ca3af; font-size: 0.85em; }
 .pagos { display: flex; gap: 0.3em; }
 .sr-only {
@@ -459,7 +466,10 @@ li.urgencia-alta { border-left: 4px solid #ef4444; box-shadow: 0 1px 8px rgba(23
 .punto.rojo { border-radius: 0.2em; transform: rotate(45deg); background: #ef4444; border: 1.5px solid #b91c1c; }
 .punto.pendiente { border-radius: 50%; background: transparent; border: 1.5px dashed #9ca3af; }
 .punto.gris { border-radius: 50%; background: #f3f4f6; border: 1px solid #e5e7eb; }
-.alertas { display: flex; gap: 0.4em; flex-wrap: wrap; }
+/* Los chips coexisten: mora + ticket + recordatorio + promo pueden estar los
+   cuatro. Envuelven a una segunda linea antes que empujar o recortar las otras
+   columnas. */
+.alertas { display: flex; gap: 0.4em; flex-wrap: wrap; justify-content: flex-end; min-width: 0; }
 .chip { font-size: 0.78em; padding: 0.25em 0.7em; border-radius: 1em; white-space: nowrap; font-weight: 600; }
 .chip.seguimiento { background: #ede7f6; color: #5a1e7a; }
 .chip.mora_1 { background: #fef3c7; color: #92400e; }
@@ -488,7 +498,7 @@ li.urgencia-alta { border-left: 4px solid #ef4444; box-shadow: 0 1px 8px rgba(23
 .chip.rec-proximo { background: #d1fae5; color: #065f46; }
 .chip.rec-hoy { background: #fef3c7; color: #92400e; }
 .chip.rec-vencido { background: #fee2e2; color: #991b1b; }
-.sync { color: #9ca3af; font-size: 0.8em; white-space: nowrap; }
+.sync { color: #9ca3af; font-size: 0.8em; white-space: nowrap; min-width: 6.5em; text-align: right; }
 /* Mismo tono amber que las alertas de mora, no rojo: un refresco fallido deja
    al cliente en el modo degradado esperado (snapshot viejo), no en un error. */
 .sync-fallo { color: #92400e; }
@@ -504,6 +514,20 @@ li.urgencia-alta { border-left: 4px solid #ef4444; box-shadow: 0 1px 8px rgba(23
 }
 @media (max-width: 700px) {
     section { padding: 1em; }
-    .fila { grid-template-columns: 1fr; gap: 0.5em; }
+    /* Apilar las cuatro celdas sueltas dejaba una columna larguisima. Con
+       areas, el nombre toma el ancho completo y los puntos comparten linea con
+       la marca de sincronizacion. */
+    .fila {
+        grid-template-columns: 1fr auto;
+        grid-template-areas:
+            'quien quien'
+            'pagos sync'
+            'alertas alertas';
+        gap: 0.5em 0.8em;
+    }
+    .quien { grid-area: quien; }
+    .pagos { grid-area: pagos; }
+    .sync { grid-area: sync; }
+    .alertas { grid-area: alertas; justify-content: flex-start; }
 }
 </style>
