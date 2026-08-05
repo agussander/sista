@@ -10,7 +10,7 @@ import { carteraStore } from './carteraStore.svelte.js';
 import { puntosPorMes } from '$lib/cartera/pagos.js';
 import { diaCorteDe, promosActivas } from '$lib/cartera/alertas.js';
 import { partesFecha } from '$lib/cartera/fechas.js';
-import { nombreCortoPlan } from '$lib/cartera/planes.js';
+import { describirConexion } from '$lib/cartera/planes.js';
 
 let { cliente, onCerrar } = $props();
 
@@ -136,7 +136,7 @@ onMount(() => {
         onclick={(e) => e.stopPropagation()}
     >
         <header>
-            <div>
+            <div class="ident">
                 <h3>{actual.nombre}</h3>
                 <span class="code">{actual.code} · {actual.estado || 'sin estado'}</span>
                 <span class="instalacion">instalado {fmt(actual.fecha_instalacion)}</span>
@@ -149,9 +149,14 @@ onMount(() => {
                         No pudimos actualizar contra IspCube ahora. Mostrando el último snapshot.
                     </p>
                 {/if}
+            </div>
+            <!-- El recordatorio es la unica accion que el asesor toma "sobre el
+                 cliente" desde el header, asi que va como CTA arriba a la
+                 derecha, debajo del cierre. -->
+            <div class="acciones">
+                <button class="cerrar" onclick={onCerrar} aria-label="Cerrar">×</button>
                 <RecordatorioChip {cliente} />
             </div>
-            <button class="cerrar" onclick={onCerrar} aria-label="Cerrar">×</button>
         </header>
 
         {#if alertas.length > 0}
@@ -177,8 +182,30 @@ onMount(() => {
         {#if (actual.connections?.length ?? 0) > 0}
             <div class="conexiones">
                 {#each actual.connections as cx}
-                    <span class="chip conexion" title={cx.plan_nombre}>
-                        {nombreCortoPlan(cx.plan_id, cx.plan_nombre)}
+                    {@const { etiqueta, categoria } = describirConexion(cx.plan_nombre)}
+                    <span class="chip conexion {categoria}" title={cx.plan_nombre}>
+                        {#if categoria === 'internet'}
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M5 12.55a11 11 0 0 1 14.08 0" />
+                                <path d="M1.42 9a16 16 0 0 1 21.16 0" />
+                                <path d="M8.53 16.11a6 6 0 0 1 6.95 0" />
+                                <line x1="12" y1="20" x2="12.01" y2="20" />
+                            </svg>
+                        {:else if categoria === 'tv'}
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="2" y="7" width="20" height="15" rx="2" ry="2" />
+                                <polyline points="17 2 12 7 7 2" />
+                            </svg>
+                        {:else if categoria === 'telefonia'}
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <path
+                                    d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
+                            </svg>
+                        {/if}
+                        <span class="texto">{etiqueta}</span>
                     </span>
                 {/each}
             </div>
@@ -189,7 +216,17 @@ onMount(() => {
         {/if}
 
         <dl class="datos">
-            <div><dt>Medio de pago</dt><dd>{actual.entity_nombre || 'Caja'}{#if actual.entity_nombre} <span class="perfil">({actual.perfil_pago})</span>{/if}</dd></div>
+            <div><dt>Medio de pago</dt><dd>
+                {#if actual.entity_nombre}
+                    {actual.entity_nombre} <span class="perfil">({actual.perfil_pago})</span>
+                {:else}
+                    <!-- Sin `entity_nombre` (la API no siempre anida la entidad) no
+                         hay de donde sacar un nombre propio: se muestra la palabra
+                         que ya dice `perfil_pago`, sin repetirla entre parentesis
+                         -"Caja (tarjeta)" es contradictorio. -->
+                    {actual.perfil_pago === 'tarjeta' ? 'Tarjeta' : 'Caja'}
+                {/if}
+            </dd></div>
             <div><dt>Cuenta</dt><dd class:negativa={cuenta > 0}>{plata(cuenta)}</dd></div>
         </dl>
 
@@ -254,7 +291,26 @@ onMount(() => {
     background: #fff; border-radius: 1.2em; padding: 2em; width: 100%; max-width: 42em;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 }
-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1em; }
+header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 0.6em 1em; }
+/* `flex-basis: 0` y no `auto`: con `auto` el bloque pide su ancho de contenido
+   (el parrafo largo del aviso de refresco) y, al haber `flex-wrap`, el header
+   mandaba la columna de acciones a un renglon propio en cuanto el chip del
+   recordatorio se hacia ancho. Con basis 0 el nombre ocupa lo que sobra y el
+   wrap queda solo para el breakpoint de abajo. */
+.ident { flex: 1 1 0; min-width: 0; }
+/* El "x" arriba de todo y el CTA de recordatorio debajo, ambos pegados al
+   borde derecho. */
+.acciones { display: flex; flex-direction: column; align-items: flex-end; gap: 0.5em; flex-shrink: 0; }
+/* En pantallas angostas la columna de acciones le comia el ancho al nombre (se
+   partia en tres lineas): pasa a ser una fila propia arriba del nombre. El
+   `row-reverse` deja el CTA a la izquierda del "x" pero igual pegado al borde
+   derecho, que es de donde el popover del recordatorio se abre hacia adentro. */
+@media (max-width: 560px) {
+    .acciones {
+        order: -1; width: 100%; flex-direction: row-reverse;
+        align-items: center; justify-content: flex-start;
+    }
+}
 h3 { margin: 0; color: var(--violeta2); }
 .code { color: #9ca3af; font-size: 0.88em; }
 .instalacion { color: #c1c7d0; font-size: 0.78em; margin-left: 0.6em; }
@@ -262,7 +318,15 @@ h3 { margin: 0; color: var(--violeta2); }
 /* Mismo tono que las alertas de mora (amber), no rojo: el snapshot desactualizado
    es el modo degradado esperado del diseño, no un error. */
 .aviso-refresco { color: #92400e; font-size: 0.78em; margin: 0.2em 0 0; }
-.cerrar { background: none; border: none; font-size: 1.8em; line-height: 1; cursor: pointer; color: #9ca3af; }
+/* Cuadrado chico en vez de un "x" suelto de 1.8em: da area de click sin ocupar
+   mas lugar, y el hover se ve. */
+.cerrar {
+    background: none; border: none; cursor: pointer; color: #9ca3af;
+    font-size: 1.25em; line-height: 1; width: 1.6em; height: 1.6em;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 0.5em; padding: 0;
+}
+.cerrar:hover { background: #f3f4f6; color: #4b5563; }
 .alertas { display: flex; flex-wrap: wrap; gap: 0.5em; margin: 1.2em 0; }
 .chip { font-size: 0.85em; padding: 0.4em 0.9em; border-radius: 1em; font-weight: 600; }
 /* El unico chip que ademas alinea un boton adentro. */
@@ -275,10 +339,14 @@ h3 { margin: 0; color: var(--violeta2); }
 .chip.tickets { background: #dbeafe; color: #1e40af; }
 /* Mismo amber que mora_1: "atender pronto", no una falla ya consumada. */
 .chip.promo_venciendo { background: #fef3c7; color: #92400e; }
+/* Va adentro de un chip ya coloreado, asi que no compite con un segundo relleno:
+   fondo blanco, borde del mismo violeta del texto. */
 .marcar {
-    background: var(--violeta2); color: #fff; border: none; border-radius: 1em;
-    padding: 0.25em 0.8em; font-size: 0.88em; font-weight: 600; cursor: pointer;
+    background: #fff; color: var(--violeta2); border: 1px solid #d7c6e6;
+    border-radius: 0.5em; padding: 0.25em 0.7em; font-size: 0.85em;
+    font-weight: 600; cursor: pointer; font-family: inherit;
 }
+.marcar:hover:not(:disabled) { background: var(--violeta2); color: #fff; border-color: var(--violeta2); }
 .marcar:disabled { opacity: 0.6; cursor: not-allowed; }
 .error-alerta { color: #dc2626; font-size: 0.85em; margin: -0.8em 0 1.2em; }
 .datos { display: grid; grid-template-columns: repeat(auto-fit, minmax(11em, 1fr)); gap: 1em; margin: 1.5em 0; }
@@ -313,18 +381,23 @@ h4 { margin: 0 0 1em; color: var(--violeta2); font-size: 1.05em; }
 .leyenda .punto { width: 0.8em; height: 0.8em; }
 footer { border-top: 1px solid #ececec; margin-top: 1.5em; padding-top: 1.2em; }
 .archivar {
-    background: #fff; border: 1.5px solid #e0e0e0; color: #6b7280;
-    border-radius: 2em; padding: 0.6em 1.2em; cursor: pointer;
+    background: #fff; border: 1.5px solid #e5e7eb; color: #6b7280;
+    border-radius: 0.6em; padding: 0.55em 1.1em; cursor: pointer;
+    font-family: inherit; font-size: 0.9em; font-weight: 600;
 }
-/* Indigo: distinto del violeta de .chip.seguimiento (#ede7f6/#5a1e7a), para
-   que un chip de plan no se confunda con la alerta de seguimiento. */
+.archivar:hover { border-color: #fecaca; background: #fef2f2; color: #b91c1c; }
 .conexiones { display: flex; flex-wrap: wrap; gap: 0.5em; margin: 0.8em 0 0; }
+/* Sin color: ni fondo ni texto. Son un dato de referencia, no una alerta, asi
+   que el color queda reservado para los chips de arriba, que si piden atencion.
+   Que conexion es cada una se lee del icono (antena / tv / telefono) y del
+   nombre escrito al lado, no de un tono. */
 .chip.conexion {
-    background: #e0e7ff; color: #3730a3;
-    display: inline-block; max-width: 12em;
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    display: inline-flex; align-items: center; gap: 0.45em; max-width: 12em;
+    background: #fff; border: 1.5px solid #e5e7eb; color: #4b5563; font-weight: 500;
 }
-.chip.conexion.vacia { background: #f3f4f6; color: #6b7280; }
+.chip.conexion svg { width: 1em; height: 1em; flex-shrink: 0; color: #9ca3af; }
+.chip.conexion .texto { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chip.conexion.vacia { color: #9ca3af; }
 .promos { list-style: none; padding: 0; margin: 1em 0 0; display: flex; flex-direction: column; gap: 0.8em; }
 .promos li { background: #ecfeff; border-radius: 0.8em; padding: 0.8em 1.1em; }
 .promos strong { color: #155e75; }

@@ -2,14 +2,15 @@
  * Detalle en vivo de un cliente para la Cartera: datos, tickets y cobranzas.
  *
  * Cuesta 3 requests de la cuota de IspCube (mas 0 de auth gracias al cache de
- * token). Es la unica pantalla que consulta en vivo; la lista se sirve del
- * snapshot en PocketBase.
+ * token), mas el catalogo de planes (`getPlanCatalog`) — cacheado una hora, asi
+ * que en la practica es 0 casi siempre. Es la unica pantalla que consulta en
+ * vivo; la lista se sirve del snapshot en PocketBase.
  *
  * Solo lectura: no escribe en IspCube ni en PocketBase. Quien guarda el
  * snapshot actualizado es el navegador, con el token del propio asesor.
  */
 import { json } from '@sveltejs/kit';
-import { getCustomerByCode, getTickets, getCobranzas } from '$lib/server/ispcube.js';
+import { getCustomerByCode, getTickets, getCobranzas, getPlanCatalog } from '$lib/server/ispcube.js';
 import { ispcubeConfig, pocketbaseUrl } from '$lib/server/ispcubeDeps.js';
 import { verificarPermiso } from '$lib/server/adminAuth.js';
 import { normalizarCliente, resumenTickets } from '$lib/cartera/normalizar.js';
@@ -47,13 +48,17 @@ export async function GET({ request, params, url }) {
 	const areasSoporte = parseIds(url.searchParams.get('areas'));
 	const estadosCerrados = parseIds(url.searchParams.get('cerrados'));
 
-	const [tickets, cobranzas] = await Promise.all([
+	const [tickets, cobranzas, planes] = await Promise.all([
 		getTickets(params.code, cfg),
-		getCobranzas(params.code, cfg)
+		getCobranzas(params.code, cfg),
+		getPlanCatalog(cfg)
 	]);
 
 	return json({
-		cliente: normalizarCliente(cliente.customer.crudo ?? cliente.customer),
+		// Sin catalogo (`planes.ok === false`) `normalizarCliente` sigue
+		// funcionando igual que antes de que existiera: solo se pierde el
+		// respaldo de nombre para conexiones sin `plan` anidado.
+		cliente: normalizarCliente(cliente.customer.crudo ?? cliente.customer, planes.ok ? planes.porId : undefined),
 		// Solo el resumen: el payload crudo de tickets trae el texto completo de
 		// cada comentario y no lo lee nadie. Devolverlo entero terminaba
 		// guardado en PocketBase por `agregar()` en el store, sin cota de tamano

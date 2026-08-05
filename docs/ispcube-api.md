@@ -115,6 +115,7 @@ Los que importan para la Cartera:
 | `debt` / `duedebt` | Deuda total / **deuda vencida**, como string decimal. |
 | `block` / `block_date` | Bloqueo por mora. |
 | `entity_id` + `entity {id, name}` | **El medio de pago.** Ver abajo. |
+| `comercial_activity` | Texto libre dentro de "datos personales" (sí, con ese typo). Normalmente es la actividad comercial real, pero cuando dice exactamente `"FACTURA EN DEBITO AUTOMATICO"` es la marca de débito automático con tarjeta (sondeado en el cliente 003566). Vacío no cuenta como tarjeta. |
 | `first_expiration_date`, `second_expiration_date` | Días de vencimiento 1.º y 2.º. Pueden venir `0` o `null`. |
 | `expiration_type_id` | Esquema de vencimiento. |
 | `seller_id` | Vendedor asignado *en IspCube*. |
@@ -125,7 +126,10 @@ Los que importan para la Cartera:
 > confirma la descripción del `PUT /api/customers/:id` ("aquí puedes actualizar
 > el medio de pago…"), cuyo único campo de pago es `entity_id`. El catálogo de
 > entidades sale de `GET /api/cash/entities_list`. Para saber si un cliente paga
-> con tarjeta hay que mirar a qué entidad apunta, no inferirlo de otros campos.
+> con tarjeta hay que mirar a qué entidad apunta **o** si `comercial_activity`
+> trae la marca de débito automático — `perfilDe()` en
+> [`normalizar.js`](../src/lib/cartera/normalizar.js) usa cualquiera de las dos
+> señales, sin inferir nada más.
 
 #### `GET /api/nodes/:node_id/customers_list` devuelve más
 

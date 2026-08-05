@@ -17,27 +17,37 @@ import { partesFechaHora, compararFechaHora } from './fechas.js';
  * de baja.
  *
  * @param {any} crudo
+ * @param {Map<number, string>} [nombrePorId] Catalogo de `/api/plans/plans_list`
+ *   (`getPlanCatalog`), para resolver `plan_nombre` cuando la conexion no
+ *   trae `plan` anidado.
  * @returns {{
  *   connections: {plan_id: number|null, plan_nombre: string}[],
  *   promos: {conexion_id: number, plan_nombre: string, promo_nombre: string,
  *     beneficio: string, inicio: string, fin: string}[]
  * }}
  */
-function conexionesDe(crudo) {
+function conexionesDe(crudo, nombrePorId) {
 	const vivas = (Array.isArray(crudo?.connections) ? crudo.connections : []).filter(
 		(c) => c && !c.delete_date && !c.deleted_in_provider
 	);
 
+	// Solo las conexiones de internet (conntype "pppoe") traen `plan` anidado
+	// con `name`. Las de TV/telefonia por reventa (conntype "nc") solo traen
+	// `plan_id`, y sin el catalogo como respaldo el chip queda en blanco -asi
+	// se detecto este caso, con una conexion de TV real (cliente 015387).
+	const nombreDe = (c) =>
+		(typeof c?.plan?.name === 'string' && c.plan.name) || nombrePorId?.get(c?.plan_id) || '';
+
 	const connections = vivas.map((c) => ({
 		plan_id: c?.plan_id ?? null,
-		plan_nombre: typeof c?.plan?.name === 'string' ? c.plan.name : ''
+		plan_nombre: nombreDe(c)
 	}));
 
 	const promos = vivas
 		.filter((c) => c?.promotion_id)
 		.map((c) => ({
 			conexion_id: c.id,
-			plan_nombre: typeof c.plan?.name === 'string' ? c.plan.name : '',
+			plan_nombre: nombreDe(c),
 			promo_nombre: typeof c.promotion?.name === 'string' ? c.promotion.name : '',
 			beneficio: typeof c.promotion?.bill_detail === 'string' ? c.promotion.bill_detail : '',
 			inicio: typeof c.promotion_start_date === 'string' ? c.promotion_start_date.slice(0, 10) : '',
@@ -52,13 +62,15 @@ function conexionesDe(crudo) {
  * Un cliente de `GET /api/customer`, reducido a lo que usa la Cartera.
  *
  * @param {any} crudo
+ * @param {Map<number, string>} [nombrePorId] Ver `conexionesDe`.
  * @returns {{code: string, nombre: string, estado: string, start_date: string,
- *   entity_id: number | null, entity_nombre: string, debt: number, duedebt: number,
+ *   entity_id: number | null, entity_nombre: string, comercial_activity: string,
+ *   debt: number, duedebt: number,
  *   connections: {plan_id: number|null, plan_nombre: string}[],
  *   promos: {conexion_id: number, plan_nombre: string, promo_nombre: string,
  *     beneficio: string, inicio: string, fin: string}[]}}
  */
-export function normalizarCliente(crudo) {
+export function normalizarCliente(crudo, nombrePorId) {
 	const c = crudo ?? {};
 
 	return {
@@ -70,11 +82,22 @@ export function normalizarCliente(crudo) {
 		start_date: typeof c.start_date === 'string' ? c.start_date.slice(0, 10) : '',
 		entity_id: c.entity_id ?? null,
 		entity_nombre: typeof c.entity?.name === 'string' ? c.entity.name : '',
+		// Campo de texto libre de "datos personales" en IspCube. Normalmente es
+		// la actividad comercial real, pero para debito automatico con tarjeta
+		// se usa como marca: ver `perfilDe`.
+		comercial_activity: typeof c.comercial_activity === 'string' ? c.comercial_activity : '',
 		debt: Number(c.debt) || 0,
 		duedebt: Number(c.duedebt) || 0,
-		...conexionesDe(c)
+		...conexionesDe(c, nombrePorId)
 	};
 }
+
+/**
+ * Marca que usa IspCube en `comercial_activity` para debito automatico con
+ * tarjeta. No es la actividad comercial real del cliente: es un valor fijo
+ * que carga administracion (sondeado en el cliente 003566).
+ */
+const MARCA_DEBITO_AUTOMATICO = 'FACTURA EN DEBITO AUTOMATICO';
 
 /**
  * Medio de pago del cliente.
@@ -83,14 +106,21 @@ export function normalizarCliente(crudo) {
  * cobranza (`entity_id`). Que entidades son tarjeta se configura en
  * `cartera_config`, no se adivina.
  *
- * Con la lista vacia todos caen en `ventanilla`. Es deliberado: el panel
- * funciona antes de configurarse, solo que sin distinguir tarjetas.
+ * Con la lista vacia todos caen en `ventanilla` por entidad. Es deliberado: el
+ * panel funciona antes de configurarse, solo que sin distinguir tarjetas.
+ *
+ * Ademas de la entidad, `comercial_activity` puede marcar debito automatico
+ * (`MARCA_DEBITO_AUTOMATICO`) sin que la entidad este configurada como
+ * tarjeta: alcanza con cualquiera de las dos senales. Vacio no cuenta.
  *
  * @param {unknown} entityId
  * @param {unknown[]} entidadesTarjeta
+ * @param {unknown} [comercialActivity]
  * @returns {'ventanilla' | 'tarjeta'}
  */
-export function perfilDe(entityId, entidadesTarjeta) {
+export function perfilDe(entityId, entidadesTarjeta, comercialActivity) {
+	if (comercialActivity === MARCA_DEBITO_AUTOMATICO) return 'tarjeta';
+
 	if (entityId === null || entityId === undefined) return 'ventanilla';
 	if (!Array.isArray(entidadesTarjeta) || entidadesTarjeta.length === 0) return 'ventanilla';
 

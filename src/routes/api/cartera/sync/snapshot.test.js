@@ -16,7 +16,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { POST } from './+server.js';
-import { getCustomerByCode, getTickets, getCobranzas } from '$lib/server/ispcube.js';
+import { getCustomerByCode, getTickets, getCobranzas, getPlanCatalog } from '$lib/server/ispcube.js';
 
 vi.mock('$lib/server/adminAuth.js', () => ({
 	verificarPermiso: vi.fn(async () => ({ ok: true, usuarioId: 'usuario-1' }))
@@ -25,7 +25,8 @@ vi.mock('$lib/server/adminAuth.js', () => ({
 vi.mock('$lib/server/ispcube.js', () => ({
 	getCustomerByCode: vi.fn(),
 	getTickets: vi.fn(),
-	getCobranzas: vi.fn()
+	getCobranzas: vi.fn(),
+	getPlanCatalog: vi.fn()
 }));
 
 /** Cliente sano, sin nada hostil, para no tener que repetirlo en cada test. */
@@ -51,8 +52,10 @@ beforeEach(() => {
 	vi.mocked(getCustomerByCode).mockReset();
 	vi.mocked(getTickets).mockReset();
 	vi.mocked(getCobranzas).mockReset();
+	vi.mocked(getPlanCatalog).mockReset();
 	vi.mocked(getTickets).mockResolvedValue({ ok: true, tickets: [] });
 	vi.mocked(getCobranzas).mockResolvedValue({ ok: true, cobranzas: [] });
+	vi.mocked(getPlanCatalog).mockResolvedValue({ ok: true, porId: new Map() });
 });
 
 describe('POST /api/cartera/sync - validacion del body', () => {

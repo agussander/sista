@@ -4,7 +4,6 @@
 // las que ya hay. Vive aparte de ClienteDetalle porque su estado (carga de
 // notas, guardado, error) no tiene nada que ver con el snapshot de IspCube que
 // muestra el resto del panel.
-import { onMount } from 'svelte';
 import Spinner from '$lib/components/ui/Spinner.svelte';
 import { carteraStore } from './carteraStore.svelte.js';
 
@@ -43,9 +42,11 @@ async function guardar() {
     guardando = true;
     error = '';
     try {
+        // Sin `cargar()` explicito: `agregarNota` incrementa `notasVersion` y de
+        // la recarga se encarga el efecto de abajo, igual que cuando la nota la
+        // escribe el chip de recordatorio.
         await carteraStore.agregarNota(cliente.id, tipo, texto.trim());
         texto = '';
-        await cargar();
     } catch (e) {
         console.error(e);
         error = 'No se pudo guardar la anotación.';
@@ -56,35 +57,50 @@ async function guardar() {
 
 const fmt = (iso) => (iso ? new Date(iso).toLocaleDateString('es-AR') : '—');
 
-onMount(cargar);
+// Carga inicial y recarga ante cada anotacion nueva, venga de este formulario o
+// del chip de recordatorio (que escribe las anotaciones automaticas). Leer
+// `notasVersion` aca es lo que suscribe el efecto.
+$effect(() => {
+    carteraStore.notasVersion;
+    cargar();
+});
 </script>
 
 <section class="bloque">
     <h4>Anotaciones</h4>
 
     <form onsubmit={(e) => { e.preventDefault(); guardar(); }}>
-        <!-- `aria-pressed` y no un grupo de radios: son toggles de verdad -que
-             el activo se pueda apagar es justamente el punto- y ninguno viene
-             elegido. Sin esto, cual esta activo se cuenta solo por color. -->
-        <div class="tipos">
-            {#each TIPOS as t}
-                <button
-                    type="button"
-                    aria-pressed={tipo === t.value}
-                    class:activo={tipo === t.value}
-                    onclick={() => (tipo = tipo === t.value ? '' : t.value)}
-                >{t.label}</button>
-            {/each}
+        <!-- El campo es una sola caja: el textarea pierde su borde y lo pone
+             `.campo`, para que los chips de medio de contacto y el boton de
+             guardar vivan adentro del mismo recuadro en vez de flotar sueltos
+             arriba y abajo. El foco del textarea lo marca `:focus-within`. -->
+        <div class="campo">
+            <textarea
+                bind:value={texto}
+                placeholder="Qué hablaron, qué quedó pendiente…"
+                rows="3"
+                disabled={guardando}
+            ></textarea>
+            <div class="barra">
+                <!-- `aria-pressed` y no un grupo de radios: son toggles de verdad -que
+                     el activo se pueda apagar es justamente el punto- y ninguno viene
+                     elegido. Sin esto, cual esta activo se cuenta solo por color. -->
+                <div class="tipos">
+                    {#each TIPOS as t}
+                        <button
+                            type="button"
+                            aria-pressed={tipo === t.value}
+                            class:activo={tipo === t.value}
+                            disabled={guardando}
+                            onclick={() => (tipo = tipo === t.value ? '' : t.value)}
+                        >{t.label}</button>
+                    {/each}
+                </div>
+                <button type="submit" class="guardar" disabled={guardando || !texto.trim()}>
+                    {guardando ? 'Guardando…' : 'Guardar'}
+                </button>
+            </div>
         </div>
-        <textarea
-            bind:value={texto}
-            placeholder="Qué hablaron, qué quedó pendiente…"
-            rows="3"
-            disabled={guardando}
-        ></textarea>
-        <button type="submit" class="guardar" disabled={guardando || !texto.trim()}>
-            {guardando ? 'Guardando…' : 'Guardar anotación'}
-        </button>
     </form>
 
     {#if error}<p class="error">{error}</p>{/if}
@@ -113,22 +129,39 @@ onMount(cargar);
 <style>
 .bloque { border-top: 1px solid #ececec; padding-top: 1.5em; margin-top: 1.5em; }
 h4 { margin: 0 0 1em; color: var(--violeta2); font-size: 1.05em; }
-.tipos { display: flex; gap: 0.4em; flex-wrap: wrap; margin-bottom: 0.8em; }
-.tipos button {
-    border: 1.5px solid #e0e0e0; background: #fff; color: var(--violeta2);
-    border-radius: 2em; padding: 0.4em 1em; cursor: pointer; font-size: 0.9em;
+.campo {
+    border: 2px solid #e5e7eb; border-radius: 0.8em; background: #fff;
+    padding: 0.2em 0.2em 0.4em;
 }
-.tipos button.activo { background: var(--violeta2); color: #fff; border-color: var(--violeta2); }
+.campo:focus-within { border-color: var(--violeta2); }
 textarea {
-    width: 100%; padding: 0.8em 1em; border: 2px solid #e5e7eb; border-radius: 0.8em;
-    font-family: inherit; font-size: 1em; box-sizing: border-box; resize: vertical;
+    display: block; width: 100%; padding: 0.7em 0.8em 0.2em; border: none;
+    background: transparent; font-family: inherit; font-size: 1em;
+    box-sizing: border-box; resize: vertical;
 }
-textarea:focus { outline: none; border-color: var(--violeta2); }
+textarea:focus { outline: none; }
+/* Los chips a la izquierda y el guardar pegado a la derecha, en la misma fila
+   del pie del campo. */
+.barra {
+    display: flex; align-items: center; gap: 0.6em; flex-wrap: wrap;
+    padding: 0 0.5em; margin-top: 0.2em;
+}
+.tipos { display: flex; gap: 0.35em; flex-wrap: wrap; }
+.tipos button {
+    border: 1.5px solid #e5e7eb; background: #fff; color: #6b7280;
+    border-radius: 0.5em; padding: 0.3em 0.7em; cursor: pointer;
+    font-size: 0.78em; font-weight: 600; font-family: inherit;
+}
+.tipos button:hover:not(:disabled) { border-color: #d1d5db; background: #f9fafb; color: #4b5563; }
+.tipos button.activo { background: var(--violeta2); color: #fff; border-color: var(--violeta2); }
+.tipos button:disabled { opacity: 0.6; cursor: not-allowed; }
 .guardar {
-    background: var(--violeta2); color: #fff; border: none; border-radius: 2em;
-    padding: 0.7em 1.4em; font-weight: 600; cursor: pointer; margin-top: 0.8em;
+    margin-left: auto; background: var(--violeta2); color: #fff; border: none;
+    border-radius: 0.5em; padding: 0.45em 1em; font-weight: 600; cursor: pointer;
+    font-size: 0.85em; font-family: inherit;
 }
-.guardar:disabled { opacity: 0.6; cursor: not-allowed; }
+.guardar:hover:not(:disabled) { background: color-mix(in srgb, var(--violeta2) 85%, #000); }
+.guardar:disabled { opacity: 0.5; cursor: not-allowed; }
 .bitacora { list-style: none; padding: 0; margin: 1.5em 0 0; display: flex; flex-direction: column; gap: 0.8em; }
 .bitacora li { background: #faf8fd; border-radius: 0.8em; padding: 0.9em 1.1em; }
 .meta { display: flex; gap: 0.8em; align-items: center; margin-bottom: 0.4em; }

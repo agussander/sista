@@ -115,13 +115,6 @@ onMount(cargar);
                             </span>
                         </span>
                         <span class="categoria">
-                            <!-- El color viene del catalogo y solo acompana: el nombre
-                                 de la categoria siempre esta escrito al lado, asi que
-                                 el color nunca es el unico canal de informacion. -->
-                            <span
-                                class="punto-cat"
-                                style:background={t.categoria.color || '#d1d5db'}
-                            ></span>
                             <span class="cat-nombre">{nombreO(t.categoria, 'categoría')}</span>
                         </span>
                         <span class="fecha">{fechaLegible(t.fecha) || 'sin fecha'}</span>
@@ -215,13 +208,15 @@ h4 {
 }
 .carrusel li { flex: 0 0 auto; scroll-snap-align: start; }
 
+/* Tarjetas blancas con borde gris: el violeta queda para lo que es accion o
+   alerta, no para el fondo de una lista de lectura. */
 .tarjeta {
     display: block; width: 14em; text-align: left; cursor: pointer;
-    background: #faf8fd; border: 1.5px solid #ece7f3; border-radius: 0.8em;
+    background: #fff; border: 1.5px solid #e5e7eb; border-radius: 0.8em;
     padding: 0.8em 0.9em; font-family: inherit;
 }
 .cuerpo { display: flex; flex-direction: column; gap: 0.45em; }
-.tarjeta:hover { border-color: #d8cbe9; }
+.tarjeta:hover { border-color: #d1d5db; background: #fafafa; }
 .tarjeta.activa { border-color: var(--violeta2); background: #fff; }
 .tarjeta:focus-visible { outline: 2px solid var(--violeta2); outline-offset: 2px; }
 /* `min-width: 0` en las tres filas de la tarjeta: por defecto un flex item vale
@@ -247,22 +242,20 @@ h4 {
 /* El ellipsis va en el span del texto y no en `.categoria`: `text-overflow` no
    corta el contenido de un contenedor flex. */
 .cat-nombre { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.punto-cat {
-    width: 0.6em; height: 0.6em; border-radius: 50%; flex: 0 0 auto;
-    border: 1px solid rgba(0, 0, 0, 0.12);
-}
 .fecha { font-size: 0.78em; color: #9ca3af; }
 
 .detalle {
-    background: #faf8fd; border: 1.5px solid #ece7f3; border-radius: 0.9em;
+    background: #fafafa; border: 1.5px solid #e5e7eb; border-radius: 0.9em;
     padding: 1em 1.1em; margin-top: 0.4em;
 }
 .cabecera { display: flex; align-items: center; gap: 0.7em; }
 .cabecera strong { color: var(--violeta2); }
 .cerrar-detalle {
-    margin-left: auto; background: none; border: none; font-size: 1.4em; line-height: 1;
-    cursor: pointer; color: #9ca3af;
+    margin-left: auto; background: none; border: none; font-size: 1.1em; line-height: 1;
+    cursor: pointer; color: #9ca3af; width: 1.7em; height: 1.7em; padding: 0;
+    display: flex; align-items: center; justify-content: center; border-radius: 0.5em;
 }
+.cerrar-detalle:hover { background: #f3f4f6; color: #4b5563; }
 .meta {
     display: grid; grid-template-columns: repeat(auto-fit, minmax(8em, 1fr));
     gap: 0.8em; margin: 0.9em 0 0;

@@ -49,6 +49,17 @@ describe('normalizarCliente', () => {
 		expect(c.debt).toBe(0);
 		expect(c.start_date).toBe('');
 	});
+
+	it('conserva comercial_activity', () => {
+		// Sondeo real (cliente 003566): el campo llega tal cual, con el typo de
+		// IspCube ("comercial", no "commercial").
+		const c = normalizarCliente({ ...crudo, comercial_activity: 'FACTURA EN DEBITO AUTOMATICO' });
+		expect(c.comercial_activity).toBe('FACTURA EN DEBITO AUTOMATICO');
+	});
+
+	it('sin comercial_activity da string vacio', () => {
+		expect(normalizarCliente({}).comercial_activity).toBe('');
+	});
 });
 
 describe('normalizarCliente: connections y promos', () => {
@@ -204,6 +215,63 @@ describe('normalizarCliente: connections y promos', () => {
 	});
 });
 
+describe('normalizarCliente: plan_nombre por catalogo cuando falta plan.name', () => {
+	// Sondeo real (cliente 015387): las conexiones de TV/reventa (conntype
+	// "nc") no traen `plan` anidado como si trae una conexion de internet
+	// (conntype "pppoe") -solo `plan_id`-, asi que sin catalogo el chip queda
+	// en blanco. `normalizarCliente` recibe un segundo parametro opcional,
+	// `Map<number, string>` de `plan_id` a nombre, para resolverlo.
+	it('sin plan.name pero con plan_id en el catalogo, usa el nombre del catalogo', () => {
+		const nombrePorId = new Map([[151, 'Servicio tv basico Gigared ( Por cuenta y orden cuit 30663045179)']]);
+		const c = normalizarCliente({ connections: [{ id: 1, plan_id: 151 }] }, nombrePorId);
+
+		expect(c.connections).toEqual([
+			{ plan_id: 151, plan_nombre: 'Servicio tv basico Gigared ( Por cuenta y orden cuit 30663045179)' }
+		]);
+	});
+
+	it('sin plan.name y sin match en el catalogo, plan_nombre vacio', () => {
+		const c = normalizarCliente({ connections: [{ id: 1, plan_id: 999 }] }, new Map());
+		expect(c.connections).toEqual([{ plan_id: 999, plan_nombre: '' }]);
+	});
+
+	it('plan.name embebido tiene prioridad sobre el catalogo', () => {
+		const nombrePorId = new Map([[27, 'No deberia usarse']]);
+		const c = normalizarCliente(
+			{ connections: [{ id: 1, plan_id: 27, plan: { name: 'Nombre embebido' } }] },
+			nombrePorId
+		);
+
+		expect(c.connections[0].plan_nombre).toBe('Nombre embebido');
+	});
+
+	it('promos tambien resuelve plan_nombre desde el catalogo cuando falta plan.name', () => {
+		const nombrePorId = new Map([[5, 'Plan del catalogo']]);
+		const c = normalizarCliente(
+			{
+				connections: [
+					{
+						id: 1,
+						plan_id: 5,
+						promotion_id: 10,
+						promotion_start_date: '2026-01-01 00:00:00',
+						promotion_end_date: '2026-02-01 00:00:00',
+						promotion: { name: 'Promo X', bill_detail: 'y' }
+					}
+				]
+			},
+			nombrePorId
+		);
+
+		expect(c.promos[0].plan_nombre).toBe('Plan del catalogo');
+	});
+
+	it('sin segundo argumento (llamadas existentes) sigue funcionando igual que antes', () => {
+		const c = normalizarCliente({ connections: [{ id: 1, plan_id: 5, plan: {} }] });
+		expect(c.connections).toEqual([{ plan_id: 5, plan_nombre: '' }]);
+	});
+});
+
 describe('perfilDe', () => {
 	it('es tarjeta si la entidad esta en la lista', () => {
 		expect(perfilDe(4, [4, 7])).toBe('tarjeta');
@@ -224,6 +292,20 @@ describe('perfilDe', () => {
 
 	it('sin entidad es ventanilla', () => {
 		expect(perfilDe(null, [4])).toBe('ventanilla');
+	});
+
+	it('es tarjeta si comercial_activity dice FACTURA EN DEBITO AUTOMATICO, aunque la entidad no clasifique', () => {
+		// Sondeo real (cliente 003566): la entidad configurada como tarjeta en
+		// `cartera_config` no siempre alcanza para detectar debito automatico.
+		expect(perfilDe(2, [4, 7], 'FACTURA EN DEBITO AUTOMATICO')).toBe('tarjeta');
+	});
+
+	it('comercial_activity vacio no cambia el resultado por entidad', () => {
+		expect(perfilDe(2, [4, 7], '')).toBe('ventanilla');
+	});
+
+	it('comercial_activity con otro texto no es tarjeta', () => {
+		expect(perfilDe(2, [4, 7], 'ALGUN OTRO TEXTO')).toBe('ventanilla');
 	});
 });
 

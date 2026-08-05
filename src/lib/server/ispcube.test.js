@@ -6,7 +6,9 @@ import {
 	getTickets,
 	getCobranzas,
 	getCatalogos,
-	limpiarCacheToken
+	getPlanCatalog,
+	limpiarCacheToken,
+	limpiarCachePlanes
 } from './ispcube.js';
 
 const CONFIG = {
@@ -624,5 +626,68 @@ describe('getCatalogos', () => {
 		expect(r).toEqual({ ok: false, reason: 'api' });
 		// auth + entities_list, nada mas: areas_list no se llega a pedir.
 		expect(calls).toHaveLength(2);
+	});
+});
+
+describe('getPlanCatalog', () => {
+	beforeEach(() => {
+		limpiarCacheToken();
+		limpiarCachePlanes();
+	});
+	const okAuth = res(200, { token: 'tok' });
+	const PLANES = [
+		{ id: 27, name: 'Servicio de Internet basico POWER F131' },
+		{ id: 151, name: 'Servicio tv basico Gigared ( Por cuenta y orden cuit 30663045179)' }
+	];
+
+	it('trae el catalogo y lo expone como Map de id a nombre', async () => {
+		const calls = [];
+		const r = await getPlanCatalog(CONFIG, { fetchImpl: fakeFetch([okAuth, res(200, PLANES)], calls) });
+
+		expect(r.ok).toBe(true);
+		expect(r.porId.get(27)).toBe('Servicio de Internet basico POWER F131');
+		expect(r.porId.get(151)).toBe('Servicio tv basico Gigared ( Por cuenta y orden cuit 30663045179)');
+		expect(calls[1].url).toBe('https://sista.ispcube.online/api/plans/plans_list');
+	});
+
+	it('cachea entre llamadas: la segunda no vuelve a pedir el catalogo', async () => {
+		const calls = [];
+		const fetchImpl = fakeFetch([okAuth, res(200, PLANES)], calls);
+
+		await getPlanCatalog(CONFIG, { fetchImpl });
+		await getPlanCatalog(CONFIG, { fetchImpl });
+
+		// auth + plans_list, una sola vez: la segunda llamada a getPlanCatalog
+		// no dispara ni siquiera el pedido de token (esta cacheado tambien).
+		expect(calls).toHaveLength(2);
+	});
+
+	it('el cache vence con el TTL y vuelve a pedir el catalogo', async () => {
+		const calls = [];
+		const fetchImpl = fakeFetch([okAuth, res(200, PLANES)], calls);
+		let ahora = 1_000_000;
+		const now = () => ahora;
+
+		await getPlanCatalog(CONFIG, { fetchImpl, now });
+		ahora += 2 * 60 * 60 * 1000;
+		await getPlanCatalog(CONFIG, { fetchImpl, now });
+
+		// El token (TTL 23h) sigue vigente a las 2h: solo se repite plans_list,
+		// no la autenticacion. auth + plans_list + plans_list = 3.
+		expect(calls).toHaveLength(3);
+	});
+
+	it('si la respuesta no es un array, falla con reason invalid', async () => {
+		const r = await getPlanCatalog(CONFIG, {
+			fetchImpl: fakeFetch([okAuth, res(200, { status: false, message: 'error' })])
+		});
+
+		expect(r).toEqual({ ok: false, reason: 'invalid' });
+	});
+
+	it('propaga el reason si la autenticacion o el pedido fallan', async () => {
+		const r = await getPlanCatalog(CONFIG, { fetchImpl: fakeFetch([okAuth, res(500, {})]) });
+
+		expect(r).toEqual({ ok: false, reason: 'api' });
 	});
 });

@@ -6,12 +6,14 @@
  * siguen siendo la unica autorizacion. El servidor no necesita una cuenta de
  * servicio con permisos amplios.
  *
- * Estrategia por-cliente: 3 requests de IspCube por codigo. El spec documenta
- * una estrategia en bloque mucho mas barata; si el sondeo la habilita, se
- * reemplaza el cuerpo de `snapshotDe` y el contrato no cambia.
+ * Estrategia por-cliente: 3 requests de IspCube por codigo, mas el catalogo de
+ * planes (`getPlanCatalog`) una sola vez por request a este endpoint -no por
+ * codigo-, cacheado una hora, asi que en la practica casi siempre es 0. El
+ * spec documenta una estrategia en bloque mucho mas barata; si el sondeo la
+ * habilita, se reemplaza el cuerpo de `snapshotDe` y el contrato no cambia.
  */
 import { json } from '@sveltejs/kit';
-import { getCustomerByCode, getTickets, getCobranzas } from '$lib/server/ispcube.js';
+import { getCustomerByCode, getTickets, getCobranzas, getPlanCatalog } from '$lib/server/ispcube.js';
 import { ispcubeConfig, pocketbaseUrl } from '$lib/server/ispcubeDeps.js';
 import { verificarPermiso } from '$lib/server/adminAuth.js';
 import { normalizarCliente, resumenTickets } from '$lib/cartera/normalizar.js';
@@ -77,9 +79,13 @@ export async function POST({ request }) {
 	const areasSoporte = Array.isArray(body?.areasSoporte) ? idsFinitos(body.areasSoporte) : [];
 	const estadosCerrados = Array.isArray(body?.estadosCerrados) ? idsFinitos(body.estadosCerrados) : [];
 	const cfg = ispcubeConfig();
+	// Una sola vez por batch, no por codigo: cacheado adentro de
+	// `getPlanCatalog`, asi que no suma un request de cuota por cliente.
+	const planes = await getPlanCatalog(cfg);
+	const nombrePorId = planes.ok ? planes.porId : undefined;
 
 	const resultados = await enTandas(codes, CONCURRENCIA, (code) =>
-		snapshotDe(code, cfg, { areasSoporte, estadosCerrados })
+		snapshotDe(code, cfg, { areasSoporte, estadosCerrados, nombrePorId })
 	);
 
 	return json({ resultados });
@@ -103,9 +109,9 @@ export async function POST({ request }) {
  *
  * @param {string} code
  * @param {import('$lib/server/ispcube.js').IspcubeConfig} cfg
- * @param {{areasSoporte: number[], estadosCerrados: number[]}} opciones
+ * @param {{areasSoporte: number[], estadosCerrados: number[], nombrePorId?: Map<number, string>}} opciones
  */
-async function snapshotDe(code, cfg, { areasSoporte, estadosCerrados }) {
+async function snapshotDe(code, cfg, { areasSoporte, estadosCerrados, nombrePorId }) {
 	try {
 		const cliente = await getCustomerByCode(code, cfg);
 		if (!cliente.ok) return { code, ok: false, reason: cliente.reason };
@@ -116,7 +122,7 @@ async function snapshotDe(code, cfg, { areasSoporte, estadosCerrados }) {
 			code,
 			ok: true,
 			datos: {
-				...normalizarCliente(cliente.customer.crudo ?? cliente.customer),
+				...normalizarCliente(cliente.customer.crudo ?? cliente.customer, nombrePorId),
 				tickets: tickets.ok
 					? resumenTickets(tickets.tickets, { areasSoporte, estadosCerrados })
 					: null,

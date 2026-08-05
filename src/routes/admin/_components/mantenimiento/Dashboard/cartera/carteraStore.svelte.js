@@ -5,6 +5,7 @@
 // NO escribe: guardar es responsabilidad de este store, con el token del propio
 // asesor, para que las reglas de la coleccion sigan siendo la unica
 // autorizacion.
+import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 import { pb } from '$lib/pocketbase';
 import { aRefrescar } from '$lib/cartera/refresco.js';
 import { fusionarPagos } from '$lib/cartera/pagos.js';
@@ -35,10 +36,19 @@ let error = $state('');
 // 502, o ese code puntual con `ok: false` en la respuesta de /sync). Es la
 // unica forma en que el detalle y la lista se enteran de un refresco fallido:
 // antes esos casos solo llegaban a `console.error` y la pantalla se quedaba
-// mostrando el snapshot viejo sin ningun aviso. Es un Set reactivo (Svelte 5
-// hace `$state` profundo sobre Map/Set): `.add`/`.delete` alcanzan sin
-// reasignar.
-let fallosRefresco = $state(new Set());
+// mostrando el snapshot viejo sin ningun aviso.
+//
+// `SvelteSet` y no `$state(new Set())`: el `$state` profundo de Svelte 5 alcanza
+// a objetos y arrays, NO a Map/Set. Con un Set comun, `.add`/`.delete` no
+// notifican a nadie y la vista se queda con el valor viejo.
+const fallosRefresco = new SvelteSet();
+
+// Se incrementa con cada anotacion guardada. Las notas no viven en el store
+// (se piden por cliente al abrir el detalle), pero ahora no las escribe solo el
+// formulario de anotaciones: tambien las escribe el chip de recordatorio, que
+// es un componente hermano. Este contador es la senal para que la bitacora se
+// recargue sin que un componente tenga que conocer al otro.
+let notasVersion = $state(0);
 
 // clienteId -> recordatorios pendientes (`hecho = false`), ordenados por fecha.
 //
@@ -46,7 +56,11 @@ let fallosRefresco = $state(new Set());
 // muestra hasta 500 filas y una consulta por fila seria inviable. Es el mismo
 // motivo por el que `ultimo_contacto` esta desnormalizado, con la diferencia de
 // que aca una sola consulta alcanza y no hace falta mantener una copia.
-let recordatorios = $state(new Map());
+//
+// `SvelteMap` por el mismo motivo que `fallosRefresco`: crear, completar o
+// reprogramar un recordatorio son `.set`/`.delete` sobre una clave, y con un
+// Map comun el chip del header seguia mostrando el recordatorio viejo.
+const recordatorios = new SvelteMap();
 
 // Codigos con un sync en vuelo ahora mismo. No es reactivo a proposito: solo
 // lo lee `sincronizar` para no duplicar trabajo, ninguna vista lo muestra.
@@ -133,18 +147,53 @@ async function cargarRecordatorios() {
 			lista.push(r);
 			porCliente.set(r.cliente, lista);
 		}
-		recordatorios = porCliente;
+		// Se vuelca sobre el mismo SvelteMap en vez de reasignarlo: la referencia
+		// es la que estan leyendo los componentes.
+		recordatorios.clear();
+		for (const [cliente, lista] of porCliente) recordatorios.set(cliente, lista);
 	} catch (e) {
 		// La Cartera funciona sin recordatorios: no es motivo para romper la
 		// carga entera y dejar al asesor sin lista.
 		console.error('[cartera] no se pudieron cargar los recordatorios:', e);
-		recordatorios = new Map();
+		recordatorios.clear();
 	}
 }
 
 /** Recordatorios pendientes de un cliente. Siempre un array. */
 function recordatoriosDe(clienteId) {
 	return recordatorios.get(clienteId) ?? [];
+}
+
+/**
+ * dd/mm/aaaa para los textos de la bitacora.
+ *
+ * Por partes y no con `new Date(iso)`: un "2026-08-04" se interpreta en UTC y
+ * en Argentina (UTC-3) queda escrito un dia antes. Mismo motivo que en el resto
+ * de la Cartera.
+ */
+function fmtFecha(iso) {
+	const p = partesFecha(iso);
+	if (!p) return iso;
+	return `${String(p.dia).padStart(2, '0')}/${String(p.mes).padStart(2, '0')}/${p.anio}`;
+}
+
+/**
+ * Deja el rastro de una accion sobre un recordatorio en la bitacora.
+ *
+ * Los recordatorios son efimeros -al completarse salen de la lista de
+ * pendientes y no queda nada-, asi que sin esto la bitacora no mostraba ni que
+ * se habia planificado un contacto ni cuando se cumplio.
+ */
+async function notaDeRecordatorio(clienteId, texto) {
+	try {
+		// Etiqueta `nota` (nota interna): no es una llamada ni un WhatsApp, es el
+		// sistema anotando lo que hizo el asesor.
+		await agregarNota(clienteId, 'nota', texto);
+	} catch (e) {
+		// La anotacion es el rastro, no la accion: el recordatorio ya se guardo,
+		// y hacer fallar la operacion entera por la bitacora seria peor.
+		console.error('[cartera] no se pudo dejar la anotacion del recordatorio:', e);
+	}
 }
 
 async function crearRecordatorio(clienteId, fecha, texto) {
@@ -160,6 +209,7 @@ async function crearRecordatorio(clienteId, fecha, texto) {
 		clienteId,
 		[...recordatoriosDe(clienteId), creado].sort((a, b) => a.fecha.localeCompare(b.fecha))
 	);
+	await notaDeRecordatorio(clienteId, `Recordatorio seteado para el ${fmtFecha(fecha)}: ${texto}`);
 	return creado;
 }
 
@@ -169,6 +219,29 @@ async function completarRecordatorio(recordatorio) {
 	const lista = recordatoriosDe(recordatorio.cliente).filter((r) => r.id !== recordatorio.id);
 	if (lista.length > 0) recordatorios.set(recordatorio.cliente, lista);
 	else recordatorios.delete(recordatorio.cliente);
+
+	await notaDeRecordatorio(
+		recordatorio.cliente,
+		`✓ Recordatorio listo: ${recordatorio.texto} (${fmtFecha(recordatorio.fecha)})`
+	);
+}
+
+/** Mueve un recordatorio pendiente a otra fecha, sin tocar su texto. */
+async function reprogramarRecordatorio(recordatorio, fecha) {
+	const guardado = await pb.collection(RECORDATORIOS).update(recordatorio.id, { fecha });
+
+	recordatorios.set(
+		recordatorio.cliente,
+		recordatoriosDe(recordatorio.cliente)
+			.map((r) => (r.id === guardado.id ? guardado : r))
+			.sort((a, b) => a.fecha.localeCompare(b.fecha))
+	);
+
+	await notaDeRecordatorio(
+		recordatorio.cliente,
+		`Recordatorio reprogramado para el ${fmtFecha(fecha)}: ${recordatorio.texto}`
+	);
+	return guardado;
 }
 
 // No se exporta suelta: como el resto de la logica del store, solo se expone
@@ -272,7 +345,7 @@ async function guardarSnapshot(code, datos) {
 
 	const perfil = actual.perfil_manual
 		? actual.perfil_pago
-		: perfilDe(datos.entity_id, config.entidades_tarjeta);
+		: perfilDe(datos.entity_id, config.entidades_tarjeta, datos.comercial_activity);
 
 	const parche = {
 		nombre: datos.nombre,
@@ -373,7 +446,7 @@ async function agregar(code, fechaInstalacion) {
 			start_date: datos.cliente.start_date,
 			entity_id: datos.cliente.entity_id,
 			entity_nombre: datos.cliente.entity_nombre,
-			perfil_pago: perfilDe(datos.cliente.entity_id, config.entidades_tarjeta),
+			perfil_pago: perfilDe(datos.cliente.entity_id, config.entidades_tarjeta, datos.cliente.comercial_activity),
 			perfil_manual: false,
 			debt: datos.cliente.debt,
 			duedebt: datos.cliente.duedebt,
@@ -415,12 +488,14 @@ async function notasDe(clienteId) {
  * una consecuencia de elegir una etiqueta en el formulario.
  */
 async function agregarNota(clienteId, tipo, texto) {
-	return await pb.collection(NOTAS).create({
+	const creada = await pb.collection(NOTAS).create({
 		cliente: clienteId,
 		autor: pb.authStore.record.id,
 		tipo,
 		texto
 	});
+	notasVersion += 1;
+	return creada;
 }
 
 /**
@@ -484,6 +559,9 @@ export const carteraStore = {
 	get sincronizando() {
 		return sincronizando;
 	},
+	get notasVersion() {
+		return notasVersion;
+	},
 	get error() {
 		return error;
 	},
@@ -496,6 +574,7 @@ export const carteraStore = {
 	recordatoriosDe,
 	crearRecordatorio,
 	completarRecordatorio,
+	reprogramarRecordatorio,
 	marcarTicketsVistos,
 	archivar,
 	refrescoFallido,

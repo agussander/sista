@@ -72,6 +72,18 @@ const TOKEN_TTL_MS = 23 * 60 * 60 * 1000;
 const cacheToken = new Map();
 
 /**
+ * TTL del catalogo de planes cacheado. Es un catalogo, no un dato del
+ * cliente: cambia poco y la API se factura por request, asi que vale la
+ * pena no volver a pedirlo en cada sync. Una hora es un piso razonable
+ * entre "no gastar cuota de mas" y "un plan nuevo tarda como mucho una hora
+ * en aparecer sin reiniciar el server".
+ */
+const PLAN_CATALOG_TTL_MS = 60 * 60 * 1000;
+
+/** @type {Map<string, {porId: Map<number, string>, expira: number}>} */
+const cachePlanes = new Map();
+
+/**
  * Pedidos de token en vuelo, por clave. Sin esto, dos llamadas concurrentes
  * con el cache frio (arranque, redeploy, TTL vencido) disparan cada una su
  * propio POST al endpoint de token -que se factura- en vez de compartir uno.
@@ -87,6 +99,14 @@ const pedidosEnVuelo = new Map();
 export function limpiarCacheToken() {
 	cacheToken.clear();
 	pedidosEnVuelo.clear();
+}
+
+/**
+ * Vacia el cache del catalogo de planes. Existe para los tests, mismo motivo
+ * que `limpiarCacheToken`.
+ */
+export function limpiarCachePlanes() {
+	cachePlanes.clear();
 }
 
 /**
@@ -511,6 +531,42 @@ export async function getCatalogos(config, options = {}) {
 		entidades: Array.isArray(entidades.data) ? entidades.data : [],
 		areas: Array.isArray(areas.data) ? areas.data : []
 	};
+}
+
+/**
+ * Catalogo de planes, como `Map<plan_id, nombre>`. Solo lectura, cacheado
+ * en memoria del proceso (ver `PLAN_CATALOG_TTL_MS`).
+ *
+ * Existe porque `connections[]` de `GET /api/customer` no siempre trae el
+ * plan anidado: las conexiones de internet (`conntype: "pppoe"`) si traen
+ * `plan.name`, pero las de TV/telefonia por reventa (`conntype: "nc"`) solo
+ * traen `plan_id` suelto. Sin este catalogo como respaldo, `normalizarCliente`
+ * no tiene de donde sacar el nombre para esas conexiones.
+ *
+ * @param {IspcubeConfig} config
+ * @param {{ fetchImpl?: typeof fetch, now?: () => number }} [options]
+ * @returns {Promise<{ok: true, porId: Map<number, string>} | {ok: false, reason: string}>}
+ */
+export async function getPlanCatalog(config, { fetchImpl = fetch, now = Date.now } = {}) {
+	const clave = trimBase(config.baseUrl);
+	const cacheado = cachePlanes.get(clave);
+	if (cacheado && cacheado.expira > now()) return { ok: true, porId: cacheado.porId };
+
+	const r = await getAutenticado('/api/plans/plans_list', config, { fetchImpl });
+	if (!r.ok) return { ok: false, reason: r.reason };
+
+	if (!Array.isArray(r.data)) {
+		console.error('[ispcube] la respuesta de plans_list no es un array:', r.data);
+		return { ok: false, reason: 'invalid' };
+	}
+
+	const porId = new Map();
+	for (const p of r.data) {
+		if (p && typeof p.id === 'number' && typeof p.name === 'string') porId.set(p.id, p.name);
+	}
+
+	cachePlanes.set(clave, { porId, expira: now() + PLAN_CATALOG_TTL_MS });
+	return { ok: true, porId };
 }
 
 /**
