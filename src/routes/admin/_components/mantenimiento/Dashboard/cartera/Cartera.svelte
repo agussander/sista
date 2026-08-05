@@ -9,6 +9,7 @@ import CarteraConfig from './CarteraConfig.svelte';
 import { puntosPorMes } from '$lib/cartera/pagos.js';
 import { diaCorteDe, promosActivas } from '$lib/cartera/alertas.js';
 import { partesFecha } from '$lib/cartera/fechas.js';
+import { fechaLegible } from '$lib/cartera/tickets.js';
 
 const clientes = $derived(carteraStore.clientes);
 const loading = $derived(carteraStore.loading);
@@ -70,20 +71,22 @@ function urgenciaDe(alertas) {
 // eso, saber si alguien ya llamo costaria una consulta por fila. La urgencia se
 // calcula aca, una vez por cliente, para no recalcularla dos veces por fila en
 // el template.
-// `promoTexto` es informativo, no una alerta: no pasa por alertasDeCliente ni
-// suma a la urgencia (un cliente con una promo que vence en 8 meses no tiene
-// nada urgente por eso). Se calcula en el mismo derived que ya arma
-// conAlertas para no recorrer la lista de clientes dos veces.
+// `promosActivas` y `proximoRecordatorio` son informativos, no alertas: no
+// pasan por `alertasDeCliente` ni suman a la urgencia. Un cliente con una promo
+// que vence en 8 meses, o con un recordatorio para dentro de 10 dias, no tiene
+// nada urgente por eso. Se calculan en el mismo derived que ya arma la lista
+// para no recorrer los clientes tres veces.
 const conAlertas = $derived.by(() => {
     const hoy = hoyPartes();
     return clientes.map((c) => {
         const alertas = carteraStore.alertasDeCliente(c);
         const activas = promosActivas(c.promos ?? [], hoy);
+        const proximo = carteraStore.proximoRecordatorioDe(c);
         return {
             cliente: c,
             alertas,
             urgencia: urgenciaDe(alertas),
-            promoTexto: activas.length > 0 ? activas[0].promo_nombre : null
+            chips: chipsDe(c, alertas, activas, proximo)
         };
     });
 });
@@ -114,7 +117,10 @@ const ETIQUETAS = {
     seguimiento: 'Contactar (2 meses)',
     mora_1: 'No pagó',
     mora_2: 'Mora vencida',
-    tickets: 'Tickets nuevos',
+    // Singular: la alerta nace de comparar `tickets.ultimo` contra
+    // `tickets_vistos_hasta`, o sea "hay algo posterior a tu ultima mirada".
+    // El plural sugeria un contador de tickets abiertos, que es otra cosa.
+    tickets: 'Ticket nuevo',
     recordatorio: 'Recordatorio',
     promo_venciendo: 'Promo por vencer'
 };
@@ -126,6 +132,106 @@ const ETIQUETA_ESTADO_PUNTO = {
     pendiente: 'Todavía no vence este mes',
     gris: 'Todavía no se le facturaba'
 };
+
+// Orden de lectura de los chips de una fila, de mas a menos urgente. Los chips
+// COEXISTEN: un cliente con mora vencida, ticket nuevo, recordatorio y promo
+// por vencer muestra los cuatro. Esto solo decide de izquierda a derecha,
+// nunca esconde ninguno.
+const ORDEN_CHIP = {
+    mora_2: 0,
+    mora_1: 1,
+    tickets: 2,
+    recordatorio: 3,
+    promo_venciendo: 4,
+    seguimiento: 5,
+    promo: 6
+};
+
+// El color del semaforo no puede ser el unico canal (misma regla que siguen los
+// puntos de pago y el resto de los chips): esto es lo que lee un lector de
+// pantalla antes del texto del recordatorio.
+const SR_RECORDATORIO = {
+    vencido: 'Recordatorio vencido:',
+    hoy: 'Recordatorio para hoy:',
+    proximo: 'Recordatorio próximo:'
+};
+
+// Version corta para el chip ("15/9"), sin ceros ni anio: tiene que entrar
+// junto al texto sin descuadrar la fila. La completa va en el `title`.
+// Mismo criterio que `RecordatorioChip`, y mismo motivo para no usar
+// `new Date(iso)`: un "2026-08-04" se interpreta en UTC y en Argentina (UTC-3)
+// se muestra corrido un dia.
+function fmtCorta(iso) {
+    const p = partesFecha(iso);
+    return p ? `${p.dia}/${p.mes}` : iso;
+}
+
+function fmtFecha(iso) {
+    const p = partesFecha(iso);
+    if (!p) return iso;
+    return `${String(p.dia).padStart(2, '0')}/${String(p.mes).padStart(2, '0')}/${p.anio}`;
+}
+
+function cuandoVence(dias) {
+    if (dias === 0) return 'vence hoy';
+    if (dias < 0) return `hace ${-dias} ${dias === -1 ? 'día' : 'días'}`;
+    return `en ${dias} ${dias === 1 ? 'día' : 'días'}`;
+}
+
+function tituloTicket(cliente) {
+    const f = fechaLegible(cliente.tickets?.ultimo?.fecha, { conHora: true });
+    return f ? `Último ticket: ${f}` : null;
+}
+
+/**
+ * Los chips de una fila, ya ordenados.
+ *
+ * Cada chip es `{tipo, mod, texto, titulo, sr}`: `tipo` da la clase base y la
+ * posicion en `ORDEN_CHIP`, `mod` es una clase extra (solo la usa el semaforo
+ * del recordatorio) y `sr` es el texto que solo oye un lector de pantalla.
+ */
+function chipsDe(cliente, alertas, activas, proximo) {
+    const chips = [];
+
+    for (const a of alertas) {
+        // El recordatorio se dibuja aparte, desde `proximoRecordatorioDe`: la
+        // alerta solo existe cuando ya vencio y el chip tiene que verse antes
+        // tambien. Si se dibujaran los dos, un recordatorio vencido saldria
+        // duplicado.
+        if (a.tipo === 'recordatorio') continue;
+
+        chips.push({
+            tipo: a.tipo,
+            mod: '',
+            texto: ETIQUETAS[a.tipo],
+            titulo: a.tipo === 'tickets' ? tituloTicket(cliente) : (a.texto ?? null),
+            sr: ''
+        });
+    }
+
+    if (proximo) {
+        const r = proximo.recordatorio;
+        chips.push({
+            tipo: 'recordatorio',
+            mod: `rec-${proximo.estado}`,
+            texto: `${r.texto} · ${fmtCorta(r.fecha)}`,
+            titulo: `${fmtFecha(r.fecha)} · ${cuandoVence(proximo.dias)}`,
+            sr: SR_RECORDATORIO[proximo.estado]
+        });
+    }
+
+    if (activas.length > 0) {
+        chips.push({
+            tipo: 'promo',
+            mod: '',
+            texto: activas[0].promo_nombre,
+            titulo: activas[0].promo_nombre,
+            sr: 'Promo activa:'
+        });
+    }
+
+    return chips.sort((a, b) => ORDEN_CHIP[a.tipo] - ORDEN_CHIP[b.tipo]);
+}
 
 function puntosDe(cliente) {
     const instalacion = partesFecha(cliente.fecha_instalacion);
@@ -228,7 +334,7 @@ onMount(() => carteraStore.cargar());
         </div>
     {:else}
         <ul class="lista">
-            {#each visibles as { cliente, alertas, urgencia, promoTexto } (cliente.id)}
+            {#each visibles as { cliente, alertas, urgencia, chips } (cliente.id)}
                 <li class:con-alerta={alertas.length > 0} class={urgencia ? `urgencia-${urgencia}` : ''}>
                     <button class="fila" onclick={() => (abierto = cliente)}>
                         <div class="quien">
@@ -245,29 +351,10 @@ onMount(() => carteraStore.cargar());
                         </div>
 
                         <div class="alertas">
-                            {#if promoTexto}
-                                <span class="chip promo" title={promoTexto}>
-                                    <span class="sr-only">Promo activa:</span>
-                                    {promoTexto}
-                                </span>
-                            {/if}
-                            {#each alertas as a}
-                                <span
-                                    class="chip {a.tipo}"
-                                    title={a.tipo === 'recordatorio' || a.tipo === 'promo_venciendo' ? a.texto : null}
-                                >
-                                    {#if a.tipo === 'recordatorio'}
-                                        <!-- El "Recordatorio:" va oculto y no escrito como en
-                                             el detalle: aca el chip esta recortado a 14em y el
-                                             prefijo se comeria la mitad del texto util. Pero
-                                             sin el, un lector de pantalla lee "Llamar por el
-                                             router" sin decir que es un recordatorio, y el
-                                             color no le sirve de nada. -->
-                                        <span class="sr-only">Recordatorio:</span>
-                                        {a.texto || ETIQUETAS.recordatorio}
-                                    {:else}
-                                        {ETIQUETAS[a.tipo]}
-                                    {/if}
+                            {#each chips as chip}
+                                <span class="chip {chip.tipo} {chip.mod}" title={chip.titulo}>
+                                    {#if chip.sr}<span class="sr-only">{chip.sr}</span>{/if}
+                                    {chip.texto}
                                 </span>
                             {/each}
                         </div>
@@ -380,14 +467,19 @@ li.urgencia-alta { border-left: 4px solid #ef4444; box-shadow: 0 1px 8px rgba(23
 }
 /* Mismo amber que mora_1: "atender pronto", no una falla ya consumada como mora_2. */
 .chip.promo_venciendo { background: #fef3c7; color: #92400e; }
-/* Verde: distinto de las cuatro alertas que deduce el sistema, porque este lo
-   escribio el asesor. El texto se recorta -el completo va en el `title`- para
-   que un recordatorio largo no descuadre la fila. */
+/* El recordatorio se recorta -el texto completo va en el `title`- para que uno
+   largo no descuadre la fila. El color lo pone el modificador de estado. */
 .chip.recordatorio {
-    background: #d1fae5; color: #065f46;
     display: inline-block; max-width: 14em;
     overflow: hidden; text-overflow: ellipsis;
 }
+/* Semaforo del recordatorio. Los tres colores ya existen en el panel: el verde
+   es el de "lo cargo el asesor" del detalle, el ambar es el de mora_1
+   ("atender pronto") y el rojo el de mora_2 ("ya se paso"). Cero paletas
+   nuevas. */
+.chip.rec-proximo { background: #d1fae5; color: #065f46; }
+.chip.rec-hoy { background: #fef3c7; color: #92400e; }
+.chip.rec-vencido { background: #fee2e2; color: #991b1b; }
 .sync { color: #9ca3af; font-size: 0.8em; white-space: nowrap; }
 /* Mismo tono amber que las alertas de mora, no rojo: un refresco fallido deja
    al cliente en el modo degradado esperado (snapshot viejo), no en un error. */
