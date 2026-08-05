@@ -9,7 +9,7 @@ import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 import { pb } from '$lib/pocketbase';
 import { aRefrescar } from '$lib/cartera/refresco.js';
 import { fusionarPagos } from '$lib/cartera/pagos.js';
-import { alertasDe } from '$lib/cartera/alertas.js';
+import { alertasDe, proximoRecordatorio } from '$lib/cartera/alertas.js';
 import { perfilDe } from '$lib/cartera/normalizar.js';
 import { partesFecha } from '$lib/cartera/fechas.js';
 import { CONFIG_DEFAULT, normalizarConfig } from '$lib/cartera/config.js';
@@ -250,6 +250,16 @@ async function reprogramarRecordatorio(recordatorio, fecha) {
 // `carteraStore.alertasDeCliente(...)`.
 function alertasDeCliente(cliente) {
 	return alertasDe(cliente, hoyPartes(), config, recordatoriosDe(cliente.id), cliente.promos ?? []);
+}
+
+/**
+ * El proximo recordatorio pendiente del cliente, vencido o no.
+ *
+ * Igual que `alertasDeCliente`, no se exporta suelta: se consume siempre como
+ * `carteraStore.proximoRecordatorioDe(...)`.
+ */
+function proximoRecordatorioDe(cliente) {
+	return proximoRecordatorio(recordatoriosDe(cliente.id), hoyPartes());
 }
 
 async function refrescarVencidos() {
@@ -578,5 +588,6 @@ export const carteraStore = {
 	marcarTicketsVistos,
 	archivar,
 	refrescoFallido,
-	alertasDeCliente
+	alertasDeCliente,
+	proximoRecordatorioDe
 };
