@@ -7,7 +7,7 @@ import AgregarCliente from './AgregarCliente.svelte';
 import ClienteDetalle from './ClienteDetalle.svelte';
 import CarteraConfig from './CarteraConfig.svelte';
 import { puntosPorMes } from '$lib/cartera/pagos.js';
-import { diaCorteDe } from '$lib/cartera/alertas.js';
+import { diaCorteDe, promosActivas } from '$lib/cartera/alertas.js';
 import { partesFecha } from '$lib/cartera/fechas.js';
 
 const clientes = $derived(carteraStore.clientes);
@@ -19,6 +19,12 @@ let filtro = $state('todos');
 let abierto = $state(null);
 let agregando = $state(false);
 let configurando = $state(false);
+
+/** Partes de la fecha de hoy, en hora local. */
+function hoyPartes() {
+    const d = new Date();
+    return { anio: d.getFullYear(), mes: d.getMonth() + 1, dia: d.getDate() };
+}
 
 // El banner de error del store es un string compartido: lo escriben cargar(),
 // sincronizar() y archivar(), y una sincronizacion de fondo puede pisar un
@@ -49,7 +55,7 @@ $effect(() => {
 // cliente con mora vencida se nota mas que uno que solo tiene el recordatorio
 // de seguimiento, aun antes de leer los chips. Un recordatorio propio pesa como
 // un ticket: lo puso el asesor a proposito, no lo dedujo el sistema.
-const PESO = { mora_2: 3, mora_1: 2, tickets: 2, recordatorio: 2, seguimiento: 1 };
+const PESO = { mora_2: 3, mora_1: 2, tickets: 2, recordatorio: 2, promo_venciendo: 2, seguimiento: 1 };
 
 function urgenciaDe(alertas) {
     if (alertas.length === 0) return null;
@@ -64,12 +70,23 @@ function urgenciaDe(alertas) {
 // eso, saber si alguien ya llamo costaria una consulta por fila. La urgencia se
 // calcula aca, una vez por cliente, para no recalcularla dos veces por fila en
 // el template.
-const conAlertas = $derived(
-    clientes.map((c) => {
+// `promoTexto` es informativo, no una alerta: no pasa por alertasDeCliente ni
+// suma a la urgencia (un cliente con una promo que vence en 8 meses no tiene
+// nada urgente por eso). Se calcula en el mismo derived que ya arma
+// conAlertas para no recorrer la lista de clientes dos veces.
+const conAlertas = $derived.by(() => {
+    const hoy = hoyPartes();
+    return clientes.map((c) => {
         const alertas = carteraStore.alertasDeCliente(c);
-        return { cliente: c, alertas, urgencia: urgenciaDe(alertas) };
-    })
-);
+        const activas = promosActivas(c.promos ?? [], hoy);
+        return {
+            cliente: c,
+            alertas,
+            urgencia: urgenciaDe(alertas),
+            promoTexto: activas.length > 0 ? activas[0].promo_nombre : null
+        };
+    });
+});
 
 const FILTROS = [
     { value: 'todos', label: 'Todos' },
@@ -77,7 +94,8 @@ const FILTROS = [
     { value: 'seguimiento', label: 'Seguimiento 2 meses' },
     { value: 'mora', label: 'En mora' },
     { value: 'tickets', label: 'Tickets nuevos' },
-    { value: 'recordatorio', label: 'Recordatorios' }
+    { value: 'recordatorio', label: 'Recordatorios' },
+    { value: 'promo_venciendo', label: 'Promos por vencer' }
 ];
 
 const visibles = $derived(
@@ -97,7 +115,8 @@ const ETIQUETAS = {
     mora_1: 'No pagó',
     mora_2: 'Mora vencida',
     tickets: 'Tickets nuevos',
-    recordatorio: 'Recordatorio'
+    recordatorio: 'Recordatorio',
+    promo_venciendo: 'Promo por vencer'
 };
 
 const ETIQUETA_ESTADO_PUNTO = {
@@ -209,7 +228,7 @@ onMount(() => carteraStore.cargar());
         </div>
     {:else}
         <ul class="lista">
-            {#each visibles as { cliente, alertas, urgencia } (cliente.id)}
+            {#each visibles as { cliente, alertas, urgencia, promoTexto } (cliente.id)}
                 <li class:con-alerta={alertas.length > 0} class={urgencia ? `urgencia-${urgencia}` : ''}>
                     <button class="fila" onclick={() => (abierto = cliente)}>
                         <div class="quien">
@@ -226,10 +245,13 @@ onMount(() => carteraStore.cargar());
                         </div>
 
                         <div class="alertas">
+                            {#if promoTexto}
+                                <span class="chip promo" title={promoTexto}>{promoTexto}</span>
+                            {/if}
                             {#each alertas as a}
                                 <span
                                     class="chip {a.tipo}"
-                                    title={a.tipo === 'recordatorio' ? a.texto : null}
+                                    title={a.tipo === 'recordatorio' || a.tipo === 'promo_venciendo' ? a.texto : null}
                                 >
                                     {#if a.tipo === 'recordatorio'}
                                         <!-- El "Recordatorio:" va oculto y no escrito como en
@@ -345,6 +367,16 @@ li.urgencia-alta { border-left: 4px solid #ef4444; box-shadow: 0 1px 8px rgba(23
 .chip.mora_1 { background: #fef3c7; color: #92400e; }
 .chip.mora_2 { background: #fee2e2; color: #991b1b; }
 .chip.tickets { background: #dbeafe; color: #1e40af; }
+/* Cyan/teal: nuevo, no lo usa ningun otro chip. Distinto del verde de
+   recordatorio -que significa "lo cargo el asesor"-, esto es informativo,
+   deducido de IspCube. */
+.chip.promo {
+    background: #cffafe; color: #155e75;
+    display: inline-block; max-width: 14em;
+    overflow: hidden; text-overflow: ellipsis;
+}
+/* Mismo amber que mora_1: "atender pronto", no una falla ya consumada como mora_2. */
+.chip.promo_venciendo { background: #fef3c7; color: #92400e; }
 /* Verde: distinto de las cuatro alertas que deduce el sistema, porque este lo
    escribio el asesor. El texto se recorta -el completo va en el `title`- para
    que un recordatorio largo no descuadre la fila. */
