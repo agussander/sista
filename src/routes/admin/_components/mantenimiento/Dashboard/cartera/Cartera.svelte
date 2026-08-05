@@ -10,6 +10,7 @@ import { puntosPorMes } from '$lib/cartera/pagos.js';
 import { diaCorteDe, promosActivas } from '$lib/cartera/alertas.js';
 import { partesFecha } from '$lib/cartera/fechas.js';
 import { fechaLegible } from '$lib/cartera/tickets.js';
+import { desdeCuando } from '$lib/cartera/relativo.js';
 
 const clientes = $derived(carteraStore.clientes);
 const loading = $derived(carteraStore.loading);
@@ -20,6 +21,14 @@ let filtro = $state('todos');
 let abierto = $state(null);
 let agregando = $state(false);
 let configurando = $state(false);
+
+// El tiempo relativo de cada fila tiene que envejecer solo. Sin este reloj,
+// `desdeCuando` se evalua una sola vez al pintar y una pestania abierta desde
+// la maniana sigue diciendo lo mismo a la tarde.
+//
+// 30 s y no 60 s para que el salto de "recién" a "hace 1 min" no se atrase
+// hasta un minuto entero.
+let ahora = $state(Date.now());
 
 /** Partes de la fecha de hoy, en hora local. */
 function hoyPartes() {
@@ -273,16 +282,15 @@ function refrescarVisibles() {
     carteraStore.sincronizar(codes);
 }
 
-function desdeCuando(iso) {
-    if (!iso) return 'nunca';
-    const horas = Math.floor((Date.now() - Date.parse(iso)) / 3600_000);
-    if (!Number.isFinite(horas)) return 'nunca';
-    if (horas < 1) return 'recién';
-    if (horas < 24) return `hace ${horas} h`;
-    return `hace ${Math.floor(horas / 24)} d`;
-}
+onMount(() => {
+    // El cuerpo con llaves no es cosmetico: `onMount(() => carteraStore.cargar())`
+    // devolvia la Promise de `cargar`, y Svelte trata el valor de retorno de
+    // `onMount` como la funcion de limpieza.
+    carteraStore.cargar();
 
-onMount(() => carteraStore.cargar());
+    const id = setInterval(() => (ahora = Date.now()), 30_000);
+    return () => clearInterval(id);
+});
 </script>
 
 <section>
@@ -360,7 +368,7 @@ onMount(() => carteraStore.cargar());
                         </div>
 
                         <span class="sync">
-                            {desdeCuando(cliente.sincronizado)}
+                            {desdeCuando(cliente.sincronizado, ahora)}
                             {#if carteraStore.refrescoFallido(cliente.code)}
                                 <span class="sync-fallo" title="No pudimos actualizar contra IspCube. Mostrando el último snapshot.">
                                     · sin actualizar
