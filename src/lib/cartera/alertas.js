@@ -17,12 +17,16 @@ import {
 	claveMes,
 	sumarMeses,
 	compararFechas,
-	compararFechaHora
+	compararFechaHora,
+	diferenciaDias
 } from './fechas.js';
 import { primerMesFacturable } from './pagos.js';
 
 /** Meses desde la instalacion hasta el llamado de seguimiento. */
 const MESES_SEGUIMIENTO = 2;
+
+/** Dias de aviso antes del vencimiento de una promo. */
+const DIAS_AVISO_PROMO = 15;
 
 /**
  * @typedef {object} ConfigCartera
@@ -43,6 +47,26 @@ export function diaCorteDe(perfil, config) {
 }
 
 /**
+ * Promos activas: `fin` todavia no paso. El arranque futuro cuenta como
+ * activa igual — algunas promos se cargan con `promotion_start_date` del mes
+ * que viene desde el dia de la instalacion.
+ *
+ * Toma el array de promos directo (`cliente.promos`), no el cliente entero:
+ * mismo criterio que esta funcion recibe `recordatorios` como array.
+ *
+ * @param {any[]} promos
+ * @param {import('./fechas.js').Partes} hoy
+ * @returns {any[]} Ordenadas por `fin` ascendente
+ */
+export function promosActivas(promos, hoy) {
+	return (Array.isArray(promos) ? promos : [])
+		.map((p) => ({ p, fin: partesFecha(p?.fin) }))
+		.filter(({ fin }) => fin && compararFechas(hoy, fin) <= 0)
+		.sort((a, b) => compararFechas(a.fin, b.fin))
+		.map(({ p }) => p);
+}
+
+/**
  * Alertas activas de un cliente.
  *
  * Toma SOLO el registro del cliente, sin las notas: la lista muestra hasta 500
@@ -55,9 +79,10 @@ export function diaCorteDe(perfil, config) {
  * @param {import('./fechas.js').Partes} hoy
  * @param {ConfigCartera} config
  * @param {any[]} [recordatorios] Recordatorios PENDIENTES del cliente (`hecho = false`)
+ * @param {any[]} [promos] `cliente.promos`, sin filtrar por vigencia
  * @returns {{tipo: string, desde: string | null, texto?: string}[]}
  */
-export function alertasDe(cliente, hoy, config, recordatorios = []) {
+export function alertasDe(cliente, hoy, config, recordatorios = [], promos = []) {
 	const alertas = [];
 
 	const instalacion = partesFecha(cliente?.fecha_instalacion);
@@ -138,6 +163,19 @@ export function alertasDe(cliente, hoy, config, recordatorios = []) {
 	if (vencidos.length > 0) {
 		const primero = vencidos[0].r;
 		alertas.push({ tipo: 'recordatorio', desde: primero.fecha, texto: primero.texto });
+	}
+
+	// --- Promo por vencer ----------------------------------------------------
+	// Una sola alerta con la de vencimiento mas proximo, igual que recordatorio.
+	// `promosActivas` es informativa y la usa la UI directo (chip de la lista,
+	// seccion del detalle); acá solo se usa para derivar esta alerta puntual.
+	const activas = promosActivas(promos, hoy);
+	if (activas.length > 0) {
+		const proxima = activas[0];
+		const fin = partesFecha(proxima.fin);
+		if (fin && diferenciaDias(hoy, fin) <= DIAS_AVISO_PROMO) {
+			alertas.push({ tipo: 'promo_venciendo', desde: proxima.fin, texto: proxima.promo_nombre });
+		}
 	}
 
 	return alertas;

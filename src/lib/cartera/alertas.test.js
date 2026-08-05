@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { alertasDe, diaCorteDe } from './alertas.js';
+import { alertasDe, diaCorteDe, promosActivas } from './alertas.js';
 
 const CONFIG = {
 	dia_corte_1: 10,
@@ -467,5 +467,74 @@ describe('alerta de recordatorio', () => {
 		alertasDe(base, hoy, CONFIG, original);
 
 		expect(original).toEqual(copia);
+	});
+});
+
+describe('promosActivas', () => {
+	const hoy = { anio: 2026, mes: 8, dia: 4 };
+
+	it('una promo con fin futuro esta activa', () => {
+		const r = promosActivas([{ fin: '2026-09-01', promo_nombre: 'A' }], hoy);
+		expect(r).toHaveLength(1);
+	});
+
+	it('una promo con fin hoy esta activa (borde inclusive)', () => {
+		const r = promosActivas([{ fin: '2026-08-04', promo_nombre: 'A' }], hoy);
+		expect(r).toHaveLength(1);
+	});
+
+	it('una promo con fin pasado no esta activa', () => {
+		const r = promosActivas([{ fin: '2026-08-03', promo_nombre: 'A' }], hoy);
+		expect(r).toHaveLength(0);
+	});
+
+	it('sin promos devuelve un array vacio', () => {
+		expect(promosActivas([], hoy)).toEqual([]);
+		expect(promosActivas(undefined, hoy)).toEqual([]);
+	});
+
+	it('varias activas quedan ordenadas por fin ascendente', () => {
+		const r = promosActivas(
+			[
+				{ fin: '2026-12-01', promo_nombre: 'La lejana' },
+				{ fin: '2026-09-01', promo_nombre: 'La cercana' }
+			],
+			hoy
+		);
+		expect(r.map((p) => p.promo_nombre)).toEqual(['La cercana', 'La lejana']);
+	});
+});
+
+describe('alerta de promo por vencer', () => {
+	const hoy = { anio: 2026, mes: 8, dia: 4 };
+
+	it('a 15 dias exactos del vencimiento enciende la alerta (borde inclusive)', () => {
+		const r = alertasDe(base, hoy, CONFIG, [], [{ fin: '2026-08-19', promo_nombre: 'Promo A' }]);
+		expect(tipos(r)).toContain('promo_venciendo');
+	});
+
+	it('a 16 dias del vencimiento no enciende la alerta', () => {
+		const r = alertasDe(base, hoy, CONFIG, [], [{ fin: '2026-08-20', promo_nombre: 'Promo A' }]);
+		expect(tipos(r)).not.toContain('promo_venciendo');
+	});
+
+	it('una promo ya vencida no enciende la alerta', () => {
+		const r = alertasDe(base, hoy, CONFIG, [], [{ fin: '2026-08-01', promo_nombre: 'Promo vieja' }]);
+		expect(tipos(r)).not.toContain('promo_venciendo');
+	});
+
+	it('con dos promos activas, la alerta usa la de vencimiento mas proximo', () => {
+		const r = alertasDe(base, hoy, CONFIG, [], [
+			{ fin: '2026-08-10', promo_nombre: 'La cercana' },
+			{ fin: '2026-08-05', promo_nombre: 'La mas cercana' }
+		]);
+		const promo = r.find((a) => a.tipo === 'promo_venciendo');
+		expect(promo.texto).toBe('La mas cercana');
+		expect(promo.desde).toBe('2026-08-05');
+	});
+
+	it('llamar sin el quinto argumento sigue funcionando y no emite promo_venciendo', () => {
+		expect(() => alertasDe(base, hoy, CONFIG, [])).not.toThrow();
+		expect(tipos(alertasDe(base, hoy, CONFIG, []))).not.toContain('promo_venciendo');
 	});
 });
