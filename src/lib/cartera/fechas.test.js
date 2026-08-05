@@ -231,4 +231,12 @@ describe('diferenciaDias', () => {
 	it('cruza un 29 de febrero bisiesto', () => {
 		expect(diferenciaDias({ anio: 2024, mes: 2, dia: 28 }, { anio: 2024, mes: 3, dia: 1 })).toBe(2);
 	});
+
+	it('1900 no es bisiesto (divisible por 100 pero no por 400)', () => {
+		expect(diferenciaDias({ anio: 1900, mes: 2, dia: 28 }, { anio: 1900, mes: 3, dia: 1 })).toBe(1);
+	});
+
+	it('2000 es bisiesto (divisible por 400)', () => {
+		expect(diferenciaDias({ anio: 2000, mes: 2, dia: 28 }, { anio: 2000, mes: 3, dia: 1 })).toBe(2);
+	});
 });

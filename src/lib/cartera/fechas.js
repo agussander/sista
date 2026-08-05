@@ -167,9 +167,9 @@ export function compararFechaHora(a, b) {
 }
 
 /**
- * Cantidad de dias desde el 1 de enero del año 1 (proleptico gregoriano) hasta
- * `partes`. Algoritmo "days_from_civil" de Howard Hinnant: no depende de
- * `Date` ni de huso horario, coherente con el resto de este modulo.
+ * Cantidad de dias desde 1970-01-01 (epoch Unix) hasta `partes`. Algoritmo
+ * "days_from_civil" de Howard Hinnant: no depende de `Date` ni de huso
+ * horario, coherente con el resto de este modulo.
  *
  * @param {Partes} partes
  * @returns {number}
