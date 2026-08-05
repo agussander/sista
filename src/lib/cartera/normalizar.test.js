@@ -51,6 +51,139 @@ describe('normalizarCliente', () => {
 	});
 });
 
+describe('normalizarCliente: connections y promos', () => {
+	// Cliente 012377, sondeo real contra IspCube (GET /api/customer): dos
+	// conexiones vivas (una con promo activa, una sin promo) y una tercera
+	// dada de baja, agregada a mano para probar el filtro.
+	const crudo = {
+		connections: [
+			{
+				id: 35914,
+				plan_id: 27,
+				delete_date: null,
+				deleted_in_provider: 0,
+				promotion_id: 63,
+				promotion_start_date: '2026-09-01 00:00:00',
+				promotion_end_date: '2026-10-31 23:59:59',
+				plan: { id: 27, name: 'Servicio de Internet basico POWER F131' },
+				promotion: {
+					id: 63,
+					name: 'PROMOCION CHEQUE CARGO CONEXION',
+					bill_detail: 'Bonificacion Cargo Conexión',
+					value: '10000.00',
+					months: 2
+				}
+			},
+			{
+				id: 40021,
+				plan_id: 31,
+				delete_date: null,
+				deleted_in_provider: 0,
+				promotion_id: null,
+				promotion_start_date: null,
+				promotion_end_date: null,
+				plan: { id: 31, name: 'Plan TV Basico' }
+			},
+			{
+				id: 50000,
+				plan_id: 99,
+				delete_date: '2026-01-01 00:00:00',
+				deleted_in_provider: 0,
+				promotion_id: 70,
+				promotion_start_date: '2026-01-01 00:00:00',
+				promotion_end_date: '2026-12-31 23:59:59',
+				plan: { id: 99, name: 'Plan Borrado' },
+				promotion: { id: 70, name: 'Promo Borrada', bill_detail: 'x' }
+			}
+		]
+	};
+
+	it('connections mapea plan_id y plan_nombre de las conexiones vivas', () => {
+		const c = normalizarCliente(crudo);
+		expect(c.connections).toEqual([
+			{ plan_id: 27, plan_nombre: 'Servicio de Internet basico POWER F131' },
+			{ plan_id: 31, plan_nombre: 'Plan TV Basico' }
+		]);
+	});
+
+	it('connections excluye la conexion borrada', () => {
+		const c = normalizarCliente(crudo);
+		expect(c.connections.some((cx) => cx.plan_id === 99)).toBe(false);
+	});
+
+	it('promos solo incluye la conexion con promotion_id y fecha de fin, viva', () => {
+		const c = normalizarCliente(crudo);
+		expect(c.promos).toEqual([
+			{
+				conexion_id: 35914,
+				plan_nombre: 'Servicio de Internet basico POWER F131',
+				promo_nombre: 'PROMOCION CHEQUE CARGO CONEXION',
+				beneficio: 'Bonificacion Cargo Conexión',
+				inicio: '2026-09-01',
+				fin: '2026-10-31'
+			}
+		]);
+	});
+
+	it('promos excluye una conexion borrada aunque tenga promotion_id', () => {
+		const c = normalizarCliente(crudo);
+		expect(c.promos.some((p) => p.conexion_id === 50000)).toBe(false);
+	});
+
+	it('una conexion sin plan.name da plan_nombre vacio y conserva plan_id', () => {
+		const c = normalizarCliente({
+			connections: [{ id: 1, plan_id: 5, plan: {} }]
+		});
+		expect(c.connections).toEqual([{ plan_id: 5, plan_nombre: '' }]);
+	});
+
+	it('una conexion con promotion_id pero sin promotion_end_date no entra en promos', () => {
+		const c = normalizarCliente({
+			connections: [
+				{
+					id: 2,
+					plan_id: 5,
+					promotion_id: 10,
+					promotion_start_date: '2026-01-01 00:00:00',
+					promotion_end_date: null,
+					plan: { name: 'Plan X' },
+					promotion: { name: 'Promo X', bill_detail: 'y' }
+				}
+			]
+		});
+		expect(c.promos).toEqual([]);
+	});
+
+	it('una conexion con promotion_id pero sin promotion.name no entra en promos', () => {
+		const c = normalizarCliente({
+			connections: [
+				{
+					id: 3,
+					plan_id: 5,
+					promotion_id: 11,
+					promotion_start_date: '2026-01-01 00:00:00',
+					promotion_end_date: '2026-02-01 00:00:00',
+					plan: { name: 'Plan X' },
+					promotion: {}
+				}
+			]
+		});
+		expect(c.promos).toEqual([]);
+	});
+
+	it('connections ausente da dos arrays vacios', () => {
+		const c = normalizarCliente({});
+		expect(c.connections).toEqual([]);
+		expect(c.promos).toEqual([]);
+	});
+
+	it('connections no es array da dos arrays vacios', () => {
+		const c = normalizarCliente({ connections: 'no es un array' });
+		expect(c.connections).toEqual([]);
+		expect(c.promos).toEqual([]);
+	});
+});
+
 describe('perfilDe', () => {
 	it('es tarjeta si la entidad esta en la lista', () => {
 		expect(perfilDe(4, [4, 7])).toBe('tarjeta');

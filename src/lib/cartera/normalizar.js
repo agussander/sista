@@ -8,11 +8,55 @@ import { toTitleCase } from '../formatName.js';
 import { partesFechaHora, compararFechaHora } from './fechas.js';
 
 /**
+ * Conexiones y promos de un cliente, extraidas de `crudo.connections`.
+ *
+ * Un cliente puede tener mas de una conexion (por ejemplo internet + TV), cada
+ * una con su propio plan y, opcionalmente, su propia promo. Las dos listas
+ * salen de un solo recorrido con un solo filtro de "conexion viva": evita que
+ * `connections` y `promos` puedan desincronizarse sobre que cuenta como dada
+ * de baja.
+ *
+ * @param {any} crudo
+ * @returns {{
+ *   connections: {plan_id: number|null, plan_nombre: string}[],
+ *   promos: {conexion_id: number, plan_nombre: string, promo_nombre: string,
+ *     beneficio: string, inicio: string, fin: string}[]
+ * }}
+ */
+function conexionesDe(crudo) {
+	const vivas = (Array.isArray(crudo?.connections) ? crudo.connections : []).filter(
+		(c) => !c?.delete_date && !c?.deleted_in_provider
+	);
+
+	const connections = vivas.map((c) => ({
+		plan_id: c?.plan_id ?? null,
+		plan_nombre: typeof c?.plan?.name === 'string' ? c.plan.name : ''
+	}));
+
+	const promos = vivas
+		.filter((c) => c?.promotion_id)
+		.map((c) => ({
+			conexion_id: c.id,
+			plan_nombre: typeof c.plan?.name === 'string' ? c.plan.name : '',
+			promo_nombre: typeof c.promotion?.name === 'string' ? c.promotion.name : '',
+			beneficio: typeof c.promotion?.bill_detail === 'string' ? c.promotion.bill_detail : '',
+			inicio: typeof c.promotion_start_date === 'string' ? c.promotion_start_date.slice(0, 10) : '',
+			fin: typeof c.promotion_end_date === 'string' ? c.promotion_end_date.slice(0, 10) : ''
+		}))
+		.filter((p) => p.promo_nombre && p.fin);
+
+	return { connections, promos };
+}
+
+/**
  * Un cliente de `GET /api/customer`, reducido a lo que usa la Cartera.
  *
  * @param {any} crudo
  * @returns {{code: string, nombre: string, estado: string, start_date: string,
- *   entity_id: number | null, entity_nombre: string, debt: number, duedebt: number}}
+ *   entity_id: number | null, entity_nombre: string, debt: number, duedebt: number,
+ *   connections: {plan_id: number|null, plan_nombre: string}[],
+ *   promos: {conexion_id: number, plan_nombre: string, promo_nombre: string,
+ *     beneficio: string, inicio: string, fin: string}[]}}
  */
 export function normalizarCliente(crudo) {
 	const c = crudo ?? {};
@@ -27,7 +71,8 @@ export function normalizarCliente(crudo) {
 		entity_id: c.entity_id ?? null,
 		entity_nombre: typeof c.entity?.name === 'string' ? c.entity.name : '',
 		debt: Number(c.debt) || 0,
-		duedebt: Number(c.duedebt) || 0
+		duedebt: Number(c.duedebt) || 0,
+		...conexionesDe(c)
 	};
 }
 
