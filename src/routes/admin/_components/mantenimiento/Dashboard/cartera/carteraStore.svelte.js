@@ -176,7 +176,7 @@ async function completarRecordatorio(recordatorio) {
 // `sincronizar`, etc.), para que consumirla desde un componente sea siempre
 // `carteraStore.alertasDeCliente(...)`.
 function alertasDeCliente(cliente) {
-	return alertasDe(cliente, hoyPartes(), config, recordatoriosDe(cliente.id));
+	return alertasDe(cliente, hoyPartes(), config, recordatoriosDe(cliente.id), cliente.promos ?? []);
 }
 
 async function refrescarVencidos() {
