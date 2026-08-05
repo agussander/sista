@@ -246,7 +246,10 @@ onMount(() => carteraStore.cargar());
 
                         <div class="alertas">
                             {#if promoTexto}
-                                <span class="chip promo" title={promoTexto}>{promoTexto}</span>
+                                <span class="chip promo" title={promoTexto}>
+                                    <span class="sr-only">Promo activa:</span>
+                                    {promoTexto}
+                                </span>
                             {/if}
                             {#each alertas as a}
                                 <span
