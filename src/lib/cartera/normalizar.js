@@ -25,7 +25,7 @@ import { partesFechaHora, compararFechaHora } from './fechas.js';
  */
 function conexionesDe(crudo) {
 	const vivas = (Array.isArray(crudo?.connections) ? crudo.connections : []).filter(
-		(c) => !c?.delete_date && !c?.deleted_in_provider
+		(c) => c && !c.delete_date && !c.deleted_in_provider
 	);
 
 	const connections = vivas.map((c) => ({

@@ -111,6 +111,26 @@ describe('normalizarCliente: connections y promos', () => {
 		expect(c.connections.some((cx) => cx.plan_id === 99)).toBe(false);
 	});
 
+	it('connections y promos excluyen una conexion con deleted_in_provider aunque delete_date sea null', () => {
+		const c = normalizarCliente({
+			connections: [
+				{
+					id: 60000,
+					plan_id: 100,
+					delete_date: null,
+					deleted_in_provider: 1,
+					promotion_id: 80,
+					promotion_start_date: '2026-01-01 00:00:00',
+					promotion_end_date: '2026-12-31 23:59:59',
+					plan: { id: 100, name: 'Plan Baja Proveedor' },
+					promotion: { id: 80, name: 'Promo Baja Proveedor', bill_detail: 'x' }
+				}
+			]
+		});
+		expect(c.connections).toEqual([]);
+		expect(c.promos).toEqual([]);
+	});
+
 	it('promos solo incluye la conexion con promotion_id y fecha de fin, viva', () => {
 		const c = normalizarCliente(crudo);
 		expect(c.promos).toEqual([
