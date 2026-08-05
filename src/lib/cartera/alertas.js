@@ -67,6 +67,48 @@ export function promosActivas(promos, hoy) {
 }
 
 /**
+ * El recordatorio pendiente que toca mirar primero, este vencido o no.
+ *
+ * A diferencia de la alerta `recordatorio` de `alertasDe` -que nace SOLO
+ * cuando la fecha ya paso-, esta tambien devuelve los futuros: la fila de la
+ * lista dibuja el chip con su fecha y un semaforo, para que el asesor vea
+ * "llamar el 12" el dia 10 y no recien el 12.
+ *
+ * Que sea una funcion aparte y no un cambio en `alertasDe` es deliberado: un
+ * recordatorio futuro NO es una alerta. Si entrara por `alertasDe` prenderia
+ * el borde de urgencia y el filtro "Con alerta" para un cliente al que no hay
+ * que hacerle nada hoy.
+ *
+ * Orden ascendente por fecha, mismo criterio que `alertasDe`: si hay vencidos
+ * gana el mas viejo (un pendiente viejo es mas urgente, no menos); si no los
+ * hay, gana el futuro mas cercano. Uno solo y no todos: la fila no gana nada
+ * con N chips iguales, y el detalle ya los muestra completos.
+ *
+ * @param {any[]} recordatorios Recordatorios PENDIENTES (`hecho = false`)
+ * @param {import('./fechas.js').Partes} hoy
+ * @returns {{recordatorio: any, dias: number, estado: 'vencido' | 'hoy' | 'proximo'} | null}
+ */
+export function proximoRecordatorio(recordatorios, hoy) {
+	const pendientes = (Array.isArray(recordatorios) ? recordatorios : [])
+		.map((r) => ({ r, partes: partesFecha(r?.fecha) }))
+		.filter(({ partes }) => partes !== null)
+		// El .sort() cae sobre el array intermedio del .map, nunca sobre el que
+		// entro por parametro.
+		.sort((a, b) => compararFechas(a.partes, b.partes));
+
+	if (pendientes.length === 0) return null;
+
+	const { r, partes } = pendientes[0];
+	const dias = diferenciaDias(hoy, partes);
+
+	return {
+		recordatorio: r,
+		dias,
+		estado: dias < 0 ? 'vencido' : dias === 0 ? 'hoy' : 'proximo'
+	};
+}
+
+/**
  * Alertas activas de un cliente.
  *
  * Toma SOLO el registro del cliente, sin las notas: la lista muestra hasta 500

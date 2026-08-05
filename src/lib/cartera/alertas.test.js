@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { alertasDe, diaCorteDe, promosActivas } from './alertas.js';
+import { alertasDe, diaCorteDe, promosActivas, proximoRecordatorio } from './alertas.js';
 
 const CONFIG = {
 	dia_corte_1: 10,
@@ -553,5 +553,110 @@ describe('alerta de promo por vencer', () => {
 	it('llamar sin el quinto argumento sigue funcionando y no emite promo_venciendo', () => {
 		expect(() => alertasDe(base, hoy, CONFIG, [])).not.toThrow();
 		expect(tipos(alertasDe(base, hoy, CONFIG, []))).not.toContain('promo_venciendo');
+	});
+});
+
+describe('proximoRecordatorio', () => {
+	const hoy = { anio: 2026, mes: 8, dia: 5 };
+
+	it('sin recordatorios devuelve null', () => {
+		expect(proximoRecordatorio([], hoy)).toBe(null);
+	});
+
+	it('uno futuro sale como proximo, con los dias que faltan', () => {
+		const r = proximoRecordatorio([{ fecha: '2026-08-12', texto: 'Llamar' }], hoy);
+
+		expect(r.estado).toBe('proximo');
+		expect(r.dias).toBe(7);
+		expect(r.recordatorio.texto).toBe('Llamar');
+	});
+
+	it('uno para hoy sale como hoy, con dias en 0', () => {
+		const r = proximoRecordatorio([{ fecha: '2026-08-05', texto: 'Hoy' }], hoy);
+
+		expect(r.estado).toBe('hoy');
+		expect(r.dias).toBe(0);
+	});
+
+	it('uno pasado sale como vencido, con los dias en negativo', () => {
+		const r = proximoRecordatorio([{ fecha: '2026-08-01', texto: 'Se paso' }], hoy);
+
+		expect(r.estado).toBe('vencido');
+		expect(r.dias).toBe(-4);
+	});
+
+	it('con varios vencidos gana el mas viejo', () => {
+		// Mismo criterio que `alertasDe`: un pendiente viejo es mas urgente, no
+		// menos.
+		const r = proximoRecordatorio(
+			[
+				{ fecha: '2026-08-03', texto: 'El nuevo' },
+				{ fecha: '2026-07-20', texto: 'El viejo' }
+			],
+			hoy
+		);
+
+		expect(r.recordatorio.texto).toBe('El viejo');
+	});
+
+	it('un vencido le gana a un futuro mas cercano en el calendario', () => {
+		const r = proximoRecordatorio(
+			[
+				{ fecha: '2026-08-06', texto: 'Manana' },
+				{ fecha: '2026-08-04', texto: 'Ayer' }
+			],
+			hoy
+		);
+
+		expect(r.recordatorio.texto).toBe('Ayer');
+		expect(r.estado).toBe('vencido');
+	});
+
+	it('sin vencidos gana el futuro mas cercano', () => {
+		const r = proximoRecordatorio(
+			[
+				{ fecha: '2026-09-01', texto: 'Lejos' },
+				{ fecha: '2026-08-08', texto: 'Cerca' }
+			],
+			hoy
+		);
+
+		expect(r.recordatorio.texto).toBe('Cerca');
+		expect(r.estado).toBe('proximo');
+	});
+
+	it('las entradas sin fecha usable se ignoran', () => {
+		expect(proximoRecordatorio([{ fecha: '', texto: 'a' }, null, { texto: 'b' }], hoy)).toBe(null);
+	});
+
+	it('una entrada rota no tapa a una sana', () => {
+		const r = proximoRecordatorio(
+			[{ fecha: 'pronto', texto: 'Rota' }, { fecha: '2026-08-09', texto: 'Sana' }],
+			hoy
+		);
+
+		expect(r.recordatorio.texto).toBe('Sana');
+	});
+
+	it('algo que no es un array no rompe', () => {
+		// El store arma el array desde un Map; si alguna vez entrega otra cosa,
+		// la lista entera no puede caerse por eso.
+		expect(proximoRecordatorio(null, hoy)).toBe(null);
+		expect(proximoRecordatorio('pronto', hoy)).toBe(null);
+	});
+
+	it('no muta el array que recibe', () => {
+		// La lista la llama una vez por cliente en cada recalculo, sobre el array
+		// que cachea el store: ordenarlo in situ le cambiaria el orden a la vista
+		// del detalle.
+		const original = [
+			{ fecha: '2026-08-03', texto: 'El nuevo' },
+			{ fecha: '2026-07-20', texto: 'El viejo' }
+		];
+		const copia = [...original];
+
+		proximoRecordatorio(original, hoy);
+
+		expect(original).toEqual(copia);
 	});
 });
