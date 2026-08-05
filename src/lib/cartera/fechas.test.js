@@ -7,7 +7,8 @@ import {
 	sumarMeses,
 	compararFechas,
 	diasDelMes,
-	compararFechaHora
+	compararFechaHora,
+	diferenciaDias
 } from './fechas.js';
 
 describe('partesFecha', () => {
@@ -203,5 +204,31 @@ describe('compararFechaHora', () => {
 				{ anio: 2026, mes: 7, dia: 14, hora: 23, minuto: 59, segundo: 59 }
 			)
 		).toBeGreaterThan(0);
+	});
+});
+
+describe('diferenciaDias', () => {
+	it('da 0 para el mismo dia', () => {
+		expect(diferenciaDias({ anio: 2026, mes: 7, dia: 15 }, { anio: 2026, mes: 7, dia: 15 })).toBe(0);
+	});
+
+	it('da 1 para el dia siguiente', () => {
+		expect(diferenciaDias({ anio: 2026, mes: 7, dia: 15 }, { anio: 2026, mes: 7, dia: 16 })).toBe(1);
+	});
+
+	it('da -1 para el dia anterior', () => {
+		expect(diferenciaDias({ anio: 2026, mes: 7, dia: 15 }, { anio: 2026, mes: 7, dia: 14 })).toBe(-1);
+	});
+
+	it('cruza el fin de mes', () => {
+		expect(diferenciaDias({ anio: 2026, mes: 7, dia: 31 }, { anio: 2026, mes: 8, dia: 1 })).toBe(1);
+	});
+
+	it('cruza el fin de anio', () => {
+		expect(diferenciaDias({ anio: 2026, mes: 12, dia: 31 }, { anio: 2027, mes: 1, dia: 1 })).toBe(1);
+	});
+
+	it('cruza un 29 de febrero bisiesto', () => {
+		expect(diferenciaDias({ anio: 2024, mes: 2, dia: 28 }, { anio: 2024, mes: 3, dia: 1 })).toBe(2);
 	});
 });

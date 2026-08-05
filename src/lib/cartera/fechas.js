@@ -165,3 +165,32 @@ export function compararFechaHora(a, b) {
 	if (a.minuto !== b.minuto) return a.minuto - b.minuto;
 	return a.segundo - b.segundo;
 }
+
+/**
+ * Cantidad de dias desde el 1 de enero del año 1 (proleptico gregoriano) hasta
+ * `partes`. Algoritmo "days_from_civil" de Howard Hinnant: no depende de
+ * `Date` ni de huso horario, coherente con el resto de este modulo.
+ *
+ * @param {Partes} partes
+ * @returns {number}
+ */
+function diaJuliano({ anio, mes, dia }) {
+	const y = mes <= 2 ? anio - 1 : anio;
+	const era = Math.floor((y >= 0 ? y : y - 399) / 400);
+	const yoe = y - era * 400; // [0, 399]
+	const doy = Math.floor((153 * (mes + (mes > 2 ? -3 : 9)) + 2) / 5) + dia - 1; // [0, 365]
+	const doe = yoe * 365 + Math.floor(yoe / 4) - Math.floor(yoe / 100) + doy; // [0, 146096]
+	return era * 146097 + doe - 719468;
+}
+
+/**
+ * Dias de diferencia entre dos fechas (b - a). Puede dar negativo si `b` es
+ * anterior a `a`.
+ *
+ * @param {Partes} a
+ * @param {Partes} b
+ * @returns {number}
+ */
+export function diferenciaDias(a, b) {
+	return diaJuliano(b) - diaJuliano(a);
+}
