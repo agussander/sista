@@ -503,6 +503,23 @@ describe('promosActivas', () => {
 		);
 		expect(r.map((p) => p.promo_nombre)).toEqual(['La cercana', 'La lejana']);
 	});
+
+	it('una fin invalida o vacia se ignora', () => {
+		expect(promosActivas([{ fin: '', promo_nombre: 'sin fecha' }], hoy)).toEqual([]);
+		expect(promosActivas([{ fin: 'pronto', promo_nombre: 'fecha en prosa' }], hoy)).toEqual([]);
+	});
+
+	it('no muta el array que recibe', () => {
+		const original = [
+			{ fin: '2026-12-01', promo_nombre: 'La lejana' },
+			{ fin: '2026-09-01', promo_nombre: 'La cercana' }
+		];
+		const copia = [...original];
+
+		promosActivas(original, hoy);
+
+		expect(original).toEqual(copia);
+	});
 });
 
 describe('alerta de promo por vencer', () => {
