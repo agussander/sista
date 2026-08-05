@@ -280,6 +280,55 @@ async function ponerCampoOpcional(nombreColeccion, nombreCampo) {
 	console.log(`- ${nombreColeccion}.${nombreCampo}: ahora es opcional.`);
 }
 
+/**
+ * Agrega un campo nuevo a una coleccion que YA existe, si todavia no lo tiene.
+ *
+ * `crear()` es idempotente por coleccion entera: si `cartera_clientes` ya
+ * existe en produccion, sumar un campo a su literal de `fields` en este
+ * archivo no alcanza, `crear()` la saltea completa. Hace falta el mismo tipo
+ * de PATCH que `ponerCampoOpcional`, pero agregando un campo en vez de
+ * modificar uno existente.
+ */
+async function agregarCampoSiFalta(nombreColeccion, campo) {
+	const res = await api(`/api/collections/${nombreColeccion}`);
+	if (!res.ok) {
+		// Igual que en ponerCampoOpcional(): solo un 404 cuenta como "no existe".
+		if (res.status === 404) {
+			console.log(`- ${nombreColeccion}.${campo.name}: la coleccion no existe, nada que migrar.`);
+			return;
+		}
+		console.error(`- ${nombreColeccion}: no se pudo leer para migrar (${res.status})`, res.data);
+		process.exit(1);
+	}
+
+	if (res.data.fields.some((f) => f.name === campo.name)) {
+		console.log(`- ${nombreColeccion}.${campo.name}: ya existe, se saltea.`);
+		return;
+	}
+
+	if (DRY_RUN) {
+		console.log(`- ${nombreColeccion}.${campo.name}: SE AGREGARIA.`);
+		return;
+	}
+
+	// Igual que en ponerCampoOpcional(): el PATCH reemplaza `fields` entero, hay
+	// que mandar todos los campos existentes mas el nuevo.
+	const fields = [...res.data.fields, campo];
+	const patch = await api(`/api/collections/${nombreColeccion}`, {
+		method: 'PATCH',
+		body: { fields }
+	});
+	if (!patch.ok) {
+		console.error(
+			`- ${nombreColeccion}.${campo.name}: FALLO`,
+			patch.status,
+			JSON.stringify(patch.data, null, 2)
+		);
+		process.exit(1);
+	}
+	console.log(`- ${nombreColeccion}.${campo.name}: agregado.`);
+}
+
 async function main() {
 	console.log(`PocketBase: ${PB_URL}${DRY_RUN ? '  (dry run, no escribe nada)' : ''}\n`);
 	await autenticar();
@@ -327,6 +376,8 @@ async function main() {
 			numero('duedebt'),
 			json('pagos'),
 			json('tickets'),
+			json('promos'),
+			json('connections'),
 			texto('tickets_vistos_hasta'),
 			texto('ultimo_contacto'),
 			texto('sincronizado'),
@@ -449,6 +500,8 @@ async function main() {
 	// dejar vacia.
 	console.log('\nMigraciones de campos:');
 	await ponerCampoOpcional('cartera_notas', 'tipo');
+	await agregarCampoSiFalta('cartera_clientes', json('promos'));
+	await agregarCampoSiFalta('cartera_clientes', json('connections'));
 
 	// --- el registro unico de configuracion -----------------------------------
 	console.log('\nRegistro de configuracion:');
