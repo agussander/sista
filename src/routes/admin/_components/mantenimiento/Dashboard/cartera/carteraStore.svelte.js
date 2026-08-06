@@ -308,7 +308,15 @@ async function descubrirCandidatosDeVendedor() {
 
 		for (const candidato of candidatos) {
 			if (conocidos.has(candidato.code)) continue;
+
+			// `conocidos` sale de `clientes`, que solo trae activos (cargar() filtra
+			// archivado = false): un cliente archivado a proposito, cuyo registro de
+			// IspCube todavia cae dentro de la ventana de descubrimiento, no aparece
+			// ahi y sin este chequeo se reintentaria el create() en cada carga de
+			// pagina, rebotando siempre contra el indice unico (asesor, code).
+			const existente = await buscarExistente(candidato.code);
 			conocidos.add(candidato.code);
+			if (existente) continue;
 
 			try {
 				const creado = await pb.collection(CLIENTES).create({

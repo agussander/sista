@@ -117,6 +117,8 @@ const FILTROS = [
     { value: 'seguimiento', label: 'Seguimiento 2 meses' },
     { value: 'mora', label: 'En mora' },
     { value: 'tickets', label: 'Tickets nuevos' },
+    { value: 'nap_faltante', label: 'Sin reserva de NAP' },
+    { value: 'nap_anulado', label: 'NAP anulado' },
     { value: 'recordatorio', label: 'Recordatorios' },
     { value: 'promo_venciendo', label: 'Promos por vencer' }
 ];
