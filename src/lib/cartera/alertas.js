@@ -220,5 +220,18 @@ export function alertasDe(cliente, hoy, config, recordatorios = [], promos = [])
 		}
 	}
 
+	// --- Reserva de NAP ------------------------------------------------------
+	// Solo se evalua habilitado: sin conexion activa, no tener el ticket
+	// todavia es lo esperable (el proceso de instalacion ni arranco), no una
+	// anomalia. Mutuamente excluyentes: sin ticket no hay ticket anulado que
+	// mostrar.
+	if (Array.isArray(cliente?.connections) && cliente.connections.length > 0) {
+		if (!cliente?.alta_nap?.existe) {
+			alertas.push({ tipo: 'nap_faltante', desde: null });
+		} else if (cliente.alta_nap.anulado) {
+			alertas.push({ tipo: 'nap_anulado', desde: null });
+		}
+	}
+
 	return alertas;
 }

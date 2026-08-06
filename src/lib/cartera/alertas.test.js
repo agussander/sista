@@ -660,3 +660,73 @@ describe('proximoRecordatorio', () => {
 		expect(original).toEqual(copia);
 	});
 });
+
+describe('alertas de la reserva de NAP', () => {
+	const CONFIG_NAP = CONFIG;
+
+	it('sin conexiones activas, no alerta aunque falte el ticket', () => {
+		const r = alertasDe(
+			{ ...base, connections: [], alta_nap: { existe: false, cerrado: false, anulado: false } },
+			{ anio: 2026, mes: 8, dia: 6 },
+			CONFIG_NAP
+		);
+		expect(tipos(r)).not.toContain('nap_faltante');
+		expect(tipos(r)).not.toContain('nap_anulado');
+	});
+
+	it('habilitado y sin ticket de NAP, nap_faltante', () => {
+		const r = alertasDe(
+			{
+				...base,
+				connections: [{ plan_id: 1 }],
+				alta_nap: { existe: false, cerrado: false, anulado: false }
+			},
+			{ anio: 2026, mes: 8, dia: 6 },
+			CONFIG_NAP
+		);
+		expect(tipos(r)).toContain('nap_faltante');
+		expect(tipos(r)).not.toContain('nap_anulado');
+	});
+
+	it('habilitado y el ticket de NAP anulado, nap_anulado', () => {
+		const r = alertasDe(
+			{
+				...base,
+				connections: [{ plan_id: 1 }],
+				alta_nap: { existe: true, cerrado: false, anulado: true }
+			},
+			{ anio: 2026, mes: 8, dia: 6 },
+			CONFIG_NAP
+		);
+		expect(tipos(r)).toContain('nap_anulado');
+		expect(tipos(r)).not.toContain('nap_faltante');
+	});
+
+	it('habilitado y el ticket de NAP cerrado, sin alertas de NAP', () => {
+		const r = alertasDe(
+			{
+				...base,
+				connections: [{ plan_id: 1 }],
+				alta_nap: { existe: true, cerrado: true, anulado: false }
+			},
+			{ anio: 2026, mes: 8, dia: 6 },
+			CONFIG_NAP
+		);
+		expect(tipos(r)).not.toContain('nap_faltante');
+		expect(tipos(r)).not.toContain('nap_anulado');
+	});
+
+	it('habilitado y el ticket de NAP abierto (no cerrado, no anulado), sin alertas de NAP', () => {
+		const r = alertasDe(
+			{
+				...base,
+				connections: [{ plan_id: 1 }],
+				alta_nap: { existe: true, cerrado: false, anulado: false }
+			},
+			{ anio: 2026, mes: 8, dia: 6 },
+			CONFIG_NAP
+		);
+		expect(tipos(r)).not.toContain('nap_faltante');
+		expect(tipos(r)).not.toContain('nap_anulado');
+	});
+});
