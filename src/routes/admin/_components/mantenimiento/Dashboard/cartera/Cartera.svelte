@@ -67,14 +67,14 @@ $effect(() => {
 // de seguimiento, aun antes de leer los chips. Un recordatorio propio pesa como
 // un ticket: lo puso el asesor a proposito, no lo dedujo el sistema.
 const PESO = {
-	mora_2: 3,
-	mora_1: 2,
-	tickets: 2,
-	recordatorio: 2,
-	promo_venciendo: 2,
-	nap_faltante: 2,
-	nap_anulado: 2,
-	seguimiento: 1
+    mora_2: 3,
+    mora_1: 2,
+    tickets: 2,
+    recordatorio: 2,
+    promo_venciendo: 2,
+    nap_faltante: 2,
+    nap_anulado: 2,
+    seguimiento: 1
 };
 
 function urgenciaDe(alertas) {
@@ -156,8 +156,8 @@ const ETIQUETA_ESTADO_PUNTO = {
 };
 
 const ETIQUETA_ESTADO_INSTALACION = {
-	pendiente_pago: 'Pendiente de pago',
-	instalacion_pendiente: 'Instalación pendiente'
+    pendiente_pago: 'Pendiente de pago',
+    instalacion_pendiente: 'Instalación pendiente'
 };
 
 // Orden de lectura de los chips de una fila, de mas a menos urgente. Los chips
@@ -165,15 +165,15 @@ const ETIQUETA_ESTADO_INSTALACION = {
 // por vencer muestra los cuatro. Esto solo decide de izquierda a derecha,
 // nunca esconde ninguno.
 const ORDEN_CHIP = {
-	mora_2: 0,
-	mora_1: 1,
-	tickets: 2,
-	nap_faltante: 3,
-	nap_anulado: 3,
-	recordatorio: 4,
-	promo_venciendo: 5,
-	seguimiento: 6,
-	promo: 7
+    mora_2: 0,
+    mora_1: 1,
+    tickets: 2,
+    nap_faltante: 3,
+    nap_anulado: 3,
+    recordatorio: 4,
+    promo_venciendo: 5,
+    seguimiento: 6,
+    promo: 7
 };
 
 // El color del semaforo no puede ser el unico canal (misma regla que siguen los
