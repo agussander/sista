@@ -504,6 +504,16 @@ async function main() {
 	await ponerCampoOpcional('cartera_notas', 'tipo');
 	await agregarCampoSiFalta('cartera_clientes', json('promos'));
 	await agregarCampoSiFalta('cartera_clientes', json('connections'));
+	// `alta_nap`, `nuevo` e `instalado_aviso` nacen con el alta automatica por
+	// vendedor y el estado de instalacion derivado (spec del 2026-08-06).
+	// `fecha_instalacion` nacio required porque la tipeaba el asesor a mano;
+	// ahora se completa sola cuando se detecta que el ticket de NAP cerro, asi
+	// que un cliente recien creado (a mano o por vendedor) puede no tenerla
+	// todavia.
+	await agregarCampoSiFalta('cartera_clientes', json('alta_nap'));
+	await agregarCampoSiFalta('cartera_clientes', booleano('nuevo'));
+	await agregarCampoSiFalta('cartera_clientes', booleano('instalado_aviso'));
+	await ponerCampoOpcional('cartera_clientes', 'fecha_instalacion');
 
 	// --- el registro unico de configuracion -----------------------------------
 	console.log('\nRegistro de configuracion:');
