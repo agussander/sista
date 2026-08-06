@@ -1,33 +1,25 @@
 <!-- src/routes/admin/_components/mantenimiento/Dashboard/cartera/AgregarCliente.svelte -->
 <script>
-// Alta en dos pasos: primero se valida el numero contra IspCube y se muestra el
-// nombre para que el asesor confirme que es quien cree, y recien despues se
-// pide la fecha de instalacion.
+// Alta en dos pasos: primero se valida el numero contra IspCube y se muestra
+// el nombre para que el asesor confirme que es quien cree.
 //
-// La fecha la carga el asesor y no sale de IspCube a proposito: en IspCube las
-// altas se cargan desde el principio del mes siguiente, asi que su `start_date`
-// es casi siempre el dia 1 y no sirve para agendar el llamado de los 2 meses.
+// Ya no se pide la fecha de instalacion: se completa sola cuando el ticket de
+// "alta reserva de NAP" cierra (ver carteraStore.agregar y el spec del
+// 2026-08-06). Antes se pedia a mano porque `start_date` de IspCube no sirve
+// para esto -no es la fecha de instalacion real-, pero ahora hay una fuente
+// mejor que tipearla: el cierre del ticket.
 import { carteraStore } from './carteraStore.svelte.js';
 
 let { onCerrar } = $props();
 
-// `hoyISO` no sale del store (es privado ahi, y no depende de datos de
-// IspCube): se calcula aca nomas, en hora local, para no repetir el bug de
-// `toISOString` (que es UTC y puede correr el dia).
-function hoyISO() {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
 let code = $state('');
-let fecha = $state(hoyISO());
 let guardando = $state(false);
 let error = $state('');
 
 async function guardar() {
     error = '';
     guardando = true;
-    const r = await carteraStore.agregar(code.trim(), fecha);
+    const r = await carteraStore.agregar(code.trim());
     guardando = false;
 
     if (r.ok) onCerrar();
@@ -72,9 +64,6 @@ async function guardar() {
                 disabled={guardando}
             />
             <p class="ayuda">Con los ceros adelante, tal como figura en IspCube.</p>
-
-            <label for="fecha">Fecha de instalación</label>
-            <input id="fecha" type="date" bind:value={fecha} disabled={guardando} />
 
             {#if error}<p class="error">{error}</p>{/if}
 
