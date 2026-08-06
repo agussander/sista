@@ -16,7 +16,7 @@ import { json } from '@sveltejs/kit';
 import { getCustomerByCode, getTickets, getCobranzas, getPlanCatalog } from '$lib/server/ispcube.js';
 import { ispcubeConfig, pocketbaseUrl } from '$lib/server/ispcubeDeps.js';
 import { verificarPermiso } from '$lib/server/adminAuth.js';
-import { normalizarCliente, resumenTickets } from '$lib/cartera/normalizar.js';
+import { normalizarCliente, resumenTickets, resumenAltaNap } from '$lib/cartera/normalizar.js';
 import { pagosDeCobranzas } from '$lib/cartera/pagos.js';
 import { idsFinitos } from '$lib/cartera/ids.js';
 
@@ -126,6 +126,9 @@ async function snapshotDe(code, cfg, { areasSoporte, estadosCerrados, nombrePorI
 				tickets: tickets.ok
 					? resumenTickets(tickets.tickets, { areasSoporte, estadosCerrados })
 					: null,
+				// Mismos tickets crudos que ya trajo `getTickets` arriba: no es un
+				// request extra a IspCube.
+				alta_nap: tickets.ok ? resumenAltaNap(tickets.tickets, { estadosCerrados }) : null,
 				pagos: cobranzas.ok ? pagosDeCobranzas(cobranzas.cobranzas) : null
 			}
 		};

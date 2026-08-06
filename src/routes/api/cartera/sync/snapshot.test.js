@@ -123,4 +123,31 @@ describe('POST /api/cartera/sync - resiliencia de snapshotDe', () => {
 		expect(porCode['000001']).toEqual({ code: '000001', ok: false, reason: 'error' });
 		expect(porCode['000002'].ok).toBe(true);
 	});
+
+	it('suma alta_nap a los datos, leido de los mismos tickets que resumenTickets', async () => {
+		vi.mocked(getCustomerByCode).mockResolvedValue(clienteSano('003566'));
+		vi.mocked(getTickets).mockResolvedValue({
+			ok: true,
+			tickets: [
+				{
+					id: 1,
+					ticket_category_id: 69,
+					ticket_status_id: 3,
+					created_at: '2026-08-01T10:00:00.000000Z',
+					closed_date: '2026-08-05 15:22:00'
+				}
+			]
+		});
+
+		const r = await post({ codes: ['003566'], estadosCerrados: [3] });
+
+		expect(r.status).toBe(200);
+		const body = await r.json();
+		expect(body.resultados[0].datos.alta_nap).toEqual({
+			existe: true,
+			cerrado: true,
+			anulado: false,
+			closed_date: '2026-08-05'
+		});
+	});
 });
