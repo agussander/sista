@@ -444,4 +444,16 @@ describe('resumenAltaNap', () => {
 		expect(resumenAltaNap(null, { estadosCerrados: [3] }).existe).toBe(false);
 		expect(resumenAltaNap(undefined, { estadosCerrados: [3] }).existe).toBe(false);
 	});
+
+	it('un created_at corrupto en el primer ticket no bloquea al siguiente, valido', () => {
+		const corrupto = ticket({ id: 1, ticket_status_id: 8, created_at: 'fecha-invalida', closed_date: null });
+		const valido = ticket({
+			id: 2,
+			ticket_status_id: 3,
+			created_at: '2026-08-01T10:00:00.000000Z',
+			closed_date: '2026-08-05 15:22:00'
+		});
+		const r = resumenAltaNap([corrupto, valido], { estadosCerrados: [3] });
+		expect(r).toEqual({ existe: true, cerrado: true, anulado: false, closed_date: '2026-08-05' });
+	});
 });

@@ -219,13 +219,17 @@ export function resumenAltaNap(tickets, { estadosCerrados }) {
 		if (!t || t.deleted_at) continue;
 		if (t.ticket_category_id !== CATEGORIA_ALTA_NAP) continue;
 
-		if (!masReciente) {
-			masReciente = t;
-			continue;
-		}
 		const fecha = partesFechaHora(t.created_at);
-		const fechaPrevia = partesFechaHora(masReciente.created_at);
-		if (fecha && fechaPrevia && compararFechaHora(fecha, fechaPrevia) > 0) masReciente = t;
+		// Mismo criterio que `resumenTickets`: un ticket sin fecha legible no
+		// puede convertirse en "el mas reciente" -ni siquiera como primer
+		// candidato-, o un created_at corrupto queda pegado ahi para siempre
+		// y ningun ticket posterior, por mas valido que sea, puede
+		// desplazarlo.
+		if (!fecha) continue;
+
+		if (!masReciente || compararFechaHora(fecha, partesFechaHora(masReciente.created_at)) > 0) {
+			masReciente = t;
+		}
 	}
 
 	if (!masReciente) return { existe: false, cerrado: false, anulado: false, closed_date: '' };
