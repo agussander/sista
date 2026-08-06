@@ -7,6 +7,7 @@ import {
 	getCobranzas,
 	getCatalogos,
 	getPlanCatalog,
+	getCustomersPage,
 	limpiarCacheToken,
 	limpiarCachePlanes
 } from './ispcube.js';
@@ -687,6 +688,51 @@ describe('getPlanCatalog', () => {
 
 	it('propaga el reason si la autenticacion o el pedido fallan', async () => {
 		const r = await getPlanCatalog(CONFIG, { fetchImpl: fakeFetch([okAuth, res(500, {})]) });
+
+		expect(r).toEqual({ ok: false, reason: 'api' });
+	});
+});
+
+describe('getCustomersPage', () => {
+	beforeEach(() => limpiarCacheToken());
+
+	const okAuth = res(200, { token: 'tok' });
+
+	it('pagina con limit y offset, con todos los headers obligatorios', async () => {
+		const calls = [];
+		await getCustomersPage(200, 100, CONFIG, {
+			fetchImpl: fakeFetch([okAuth, res(200, [])], calls)
+		});
+
+		expect(calls[1].url).toBe(
+			'https://sista.ispcube.online/api/customers/customers_list?limit=100&offset=200'
+		);
+		expect(calls[1].init.headers['login-type']).toBe('api');
+		expect(calls[1].init.headers.username).toBe('u');
+		expect(calls[1].init.headers.Authorization).toBe('Bearer tok');
+	});
+
+	it('devuelve los clientes cuando la api responde un array', async () => {
+		const customers = [{ id: 1, code: '000001', seller_id: 6, start_date: '2026-08-01 00:00:00' }];
+		const r = await getCustomersPage(0, 100, CONFIG, {
+			fetchImpl: fakeFetch([okAuth, res(200, customers)])
+		});
+
+		expect(r).toEqual({ ok: true, customers });
+	});
+
+	it('devuelve invalid si un 200 no trae un array', async () => {
+		const r = await getCustomersPage(0, 100, CONFIG, {
+			fetchImpl: fakeFetch([okAuth, res(200, { status: false, message: 'algo raro' })])
+		});
+
+		expect(r).toEqual({ ok: false, reason: 'invalid' });
+	});
+
+	it('propaga el reason ante un error de la api', async () => {
+		const r = await getCustomersPage(0, 100, CONFIG, {
+			fetchImpl: fakeFetch([okAuth, res(500, {})])
+		});
 
 		expect(r).toEqual({ ok: false, reason: 'api' });
 	});

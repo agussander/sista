@@ -506,6 +506,35 @@ export async function getCobranzas(code, config, options = {}) {
 }
 
 /**
+ * Una pagina de `GET /api/customers/customers_list`, el payload de cliente
+ * mas rico de la API (trae `connections`, `seller_id`, `start_date`, etc.).
+ * Solo lectura.
+ *
+ * No hay forma de filtrar por vendedor en la API -se probo `?seller_id=` y
+ * la API lo ignora, sondeado el 2026-08-06-: quien llama filtra `customers`
+ * por `seller_id` en su propio codigo, pagina por pagina.
+ *
+ * @param {number} offset
+ * @param {number} limit
+ * @param {IspcubeConfig} config
+ * @param {{ fetchImpl?: typeof fetch }} [options]
+ * @returns {Promise<{ok: true, customers: any[]} | {ok: false, reason: string}>}
+ */
+export async function getCustomersPage(offset, limit, config, options = {}) {
+	const r = await getAutenticado(
+		`/api/customers/customers_list?limit=${limit}&offset=${offset}`,
+		config,
+		options
+	);
+
+	if (!r.ok) return { ok: false, reason: r.reason };
+	// Mismo motivo que en getTickets: un 200 que no trae un array puede ser un
+	// objeto de error de IspCube con status HTTP 200.
+	if (!Array.isArray(r.data)) return { ok: false, reason: 'invalid' };
+	return { ok: true, customers: r.data };
+}
+
+/**
  * Catalogos que la Cartera necesita para configurarse: las entidades de
  * cobranza (que en IspCube ES el medio de pago) y las areas de tickets.
  *
