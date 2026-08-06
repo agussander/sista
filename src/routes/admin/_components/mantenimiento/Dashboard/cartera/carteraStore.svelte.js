@@ -358,6 +358,26 @@ async function guardarSnapshot(code, datos) {
 		? actual.perfil_pago
 		: perfilDe(datos.entity_id, config.entidades_tarjeta, datos.comercial_activity);
 
+	const connections = Array.isArray(datos.connections) ? datos.connections : [];
+	// `datos.alta_nap` puede faltar si `/sync` no pudo traer tickets esta vez
+	// (IspCube caido puntual): se conserva el ultimo valor conocido en vez de
+	// perderlo.
+	const altaNap = datos.alta_nap ?? actual.alta_nap ?? {
+		existe: false,
+		cerrado: false,
+		anulado: false,
+		closed_date: ''
+	};
+
+	// La transicion se detecta comparando el estado ANTES de este parche
+	// contra el que resulta de aplicarlo. La formula se escribe en CADA sync,
+	// nunca solo cuando da true: la sync siguiente a una transicion encuentra
+	// `estadoViejo === 'instalado'` (porque ya quedo guardado asi) y da false
+	// sola, sin logica de "apagar" aparte.
+	const estadoViejo = estadoInstalacionDe(actual);
+	const estadoNuevo = estadoInstalacionDe({ connections, alta_nap: altaNap });
+	const instaladoAviso = estadoNuevo === 'instalado' && estadoViejo !== 'instalado';
+
 	const parche = {
 		nombre: datos.nombre,
 		estado: datos.estado,
@@ -367,10 +387,20 @@ async function guardarSnapshot(code, datos) {
 		perfil_pago: perfil,
 		debt: datos.debt,
 		duedebt: datos.duedebt,
-		connections: Array.isArray(datos.connections) ? datos.connections : [],
+		connections,
 		promos: Array.isArray(datos.promos) ? datos.promos : [],
+		alta_nap: altaNap,
+		// Mismo mecanismo exacto que instalado_aviso: se escribe false en cada
+		// sync sin condicion, asi que la primera sync despues de crearse (con
+		// nuevo:true) lo apaga sola.
+		nuevo: false,
+		instalado_aviso: instaladoAviso,
 		sincronizado: new Date().toISOString()
 	};
+
+	if (instaladoAviso && !actual.fecha_instalacion) {
+		parche.fecha_instalacion = altaNap.closed_date;
+	}
 
 	if (datos.pagos) {
 		parche.pagos = fusionarPagos(actual.pagos, datos.pagos, hoyPartes());
