@@ -12,6 +12,7 @@ import { fusionarPagos } from '$lib/cartera/pagos.js';
 import { alertasDe, proximoRecordatorio } from '$lib/cartera/alertas.js';
 import { perfilDe } from '$lib/cartera/normalizar.js';
 import { partesFecha } from '$lib/cartera/fechas.js';
+import { estadoInstalacionDe } from '$lib/cartera/instalacion.js';
 import { CONFIG_DEFAULT, normalizarConfig } from '$lib/cartera/config.js';
 
 const CLIENTES = 'cartera_clientes';
@@ -402,36 +403,24 @@ async function buscarExistente(code) {
 	}
 }
 
-async function agregar(code, fechaInstalacion) {
+async function agregar(code) {
 	if (!/^\d{1,12}$/.test(code)) {
 		return { ok: false, error: 'El número de cliente son solo dígitos.' };
-	}
-	if (!partesFecha(fechaInstalacion)) {
-		return { ok: false, error: 'Falta la fecha de instalación.' };
 	}
 	if (clientes.some((c) => c.code === code)) {
 		return { ok: false, error: 'Ese cliente ya está en tu cartera.' };
 	}
 
 	try {
-		// El chequeo de arriba solo mira la lista en memoria, que excluye a los
-		// archivados (se cargan con `archivado = false`). Sin este segundo
-		// chequeo, volver a agregar a alguien archivado pega contra el indice
-		// unico (asesor, code) de PocketBase y sale un error generico. En vez de
-		// eso, reaparece: se reactiva el mismo registro con la fecha de
-		// instalacion nueva, conservando su historial de pagos y tickets.
-		//
-		// Si `existente` esta activo (no archivado) es que el chequeo en memoria
-		// de arriba quedo desactualizado por una carga concurrente: se lo trata
-		// como duplicado, no se lo pisa.
 		const existente = await buscarExistente(code);
 		if (existente && !existente.archivado) {
 			return { ok: false, error: 'Ese cliente ya está en tu cartera.' };
 		}
 		if (existente && existente.archivado) {
-			const restaurado = await pb
-				.collection(CLIENTES)
-				.update(existente.id, { archivado: false, fecha_instalacion: fechaInstalacion });
+			// Se reactiva tal cual estaba, sin tocar su fecha_instalacion: ya la
+			// tenia cargada (a mano de antes de este cambio, o completada sola por
+			// un sync), y no hay motivo para pisarla.
+			const restaurado = await pb.collection(CLIENTES).update(existente.id, { archivado: false });
 			clientes = [restaurado, ...clientes];
 			return { ok: true, cliente: restaurado };
 		}
@@ -446,11 +435,18 @@ async function agregar(code, fechaInstalacion) {
 		if (!res.ok) return { ok: false, error: 'No pudimos consultar IspCube. Probá de nuevo.' };
 
 		const datos = await res.json();
+		const connections = Array.isArray(datos.cliente.connections) ? datos.cliente.connections : [];
+		const altaNap = datos.alta_nap ?? { existe: false, cerrado: false, anulado: false, closed_date: '' };
+		// Caso borde: un cliente que se agrega a mano cuando su ticket de NAP ya
+		// estaba cerrado desde antes (por ejemplo, se cargo tarde). No dispara el
+		// aviso "instalado" -no es una transicion, es su estado de entrada-, pero
+		// si completa la fecha real de una.
+		const estado = estadoInstalacionDe({ connections, alta_nap: altaNap });
 
 		const registro = {
 			asesor: pb.authStore.record.id,
 			code,
-			fecha_instalacion: fechaInstalacion,
+			fecha_instalacion: estado === 'instalado' ? altaNap.closed_date : '',
 			nombre: datos.cliente.nombre,
 			estado: datos.cliente.estado,
 			start_date: datos.cliente.start_date,
@@ -460,10 +456,13 @@ async function agregar(code, fechaInstalacion) {
 			perfil_manual: false,
 			debt: datos.cliente.debt,
 			duedebt: datos.cliente.duedebt,
-			connections: Array.isArray(datos.cliente.connections) ? datos.cliente.connections : [],
+			connections,
 			promos: Array.isArray(datos.cliente.promos) ? datos.cliente.promos : [],
 			pagos: Array.isArray(datos.pagos) ? datos.pagos : [],
 			tickets: datos.tickets?.error ? null : datos.tickets,
+			alta_nap: altaNap,
+			nuevo: false,
+			instalado_aviso: false,
 			tickets_vistos_hasta: '',
 			ultimo_contacto: '',
 			sincronizado: new Date().toISOString(),
