@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normalizarCliente, perfilDe, resumenTickets } from './normalizar.js';
+import { normalizarCliente, perfilDe, resumenTickets, resumenAltaNap } from './normalizar.js';
 
 describe('normalizarCliente', () => {
 	const crudo = {
@@ -376,5 +376,72 @@ describe('resumenTickets', () => {
 			cerrados: 0,
 			ultimo: null
 		});
+	});
+});
+
+describe('resumenAltaNap', () => {
+	const ticket = (over = {}) => ({
+		id: 1,
+		ticket_category_id: 69,
+		ticket_status_id: 3,
+		created_at: '2026-08-01T10:00:00.000000Z',
+		closed_date: '2026-08-05 15:22:00',
+		...over
+	});
+
+	it('sin tickets de la categoria 69, existe es false', () => {
+		const r = resumenAltaNap([{ ...ticket(), ticket_category_id: 40 }], {
+			estadosCerrados: [3]
+		});
+		expect(r).toEqual({ existe: false, cerrado: false, anulado: false, closed_date: '' });
+	});
+
+	it('con un ticket cerrado (status en estadosCerrados)', () => {
+		const r = resumenAltaNap([ticket({ ticket_status_id: 3 })], { estadosCerrados: [3] });
+		expect(r).toEqual({ existe: true, cerrado: true, anulado: false, closed_date: '2026-08-05' });
+	});
+
+	it('con un ticket abierto (status fuera de estadosCerrados)', () => {
+		const r = resumenAltaNap([ticket({ ticket_status_id: 1, closed_date: null })], {
+			estadosCerrados: [3]
+		});
+		expect(r).toEqual({ existe: true, cerrado: false, anulado: false, closed_date: '' });
+	});
+
+	it('con un ticket anulado (status_id 8), cerrado es false y anulado true', () => {
+		const r = resumenAltaNap([ticket({ ticket_status_id: 8, closed_date: null })], {
+			estadosCerrados: [3]
+		});
+		expect(r).toEqual({ existe: true, cerrado: false, anulado: true, closed_date: '' });
+	});
+
+	it('con varios tickets de la categoria, gana el mas reciente por created_at', () => {
+		const viejo = ticket({
+			id: 1,
+			ticket_status_id: 8,
+			created_at: '2026-07-01T10:00:00.000000Z',
+			closed_date: null
+		});
+		const nuevo = ticket({
+			id: 2,
+			ticket_status_id: 3,
+			created_at: '2026-08-01T10:00:00.000000Z',
+			closed_date: '2026-08-05 15:22:00'
+		});
+		const r = resumenAltaNap([viejo, nuevo], { estadosCerrados: [3] });
+		expect(r).toEqual({ existe: true, cerrado: true, anulado: false, closed_date: '2026-08-05' });
+	});
+
+	it('descarta tickets borrados (deleted_at)', () => {
+		const r = resumenAltaNap([{ ...ticket(), deleted_at: '2026-08-01T00:00:00Z' }], {
+			estadosCerrados: [3]
+		});
+		expect(r.existe).toBe(false);
+	});
+
+	it('tolera un array vacio o no-array sin explotar', () => {
+		expect(resumenAltaNap([], { estadosCerrados: [3] }).existe).toBe(false);
+		expect(resumenAltaNap(null, { estadosCerrados: [3] }).existe).toBe(false);
+		expect(resumenAltaNap(undefined, { estadosCerrados: [3] }).existe).toBe(false);
 	});
 });

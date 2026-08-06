@@ -177,3 +177,70 @@ export function resumenTickets(tickets, { areasSoporte, estadosCerrados }) {
 
 	return { abiertos: nAbiertos, cerrados: nCerrados, ultimo };
 }
+
+/**
+ * Categoria del ticket de reserva de NAP en IspCube: "ALTA RESERVA DE NAP".
+ * Sondeado en vivo el 2026-08-06 contra `GET /api/tickets/category_list`.
+ * Hardcodeado a proposito -no configurable como `areas_soporte`-: el nombre
+ * del proceso no va a cambiar en mucho tiempo, y si algun dia cambia, se
+ * actualiza aca.
+ */
+const CATEGORIA_ALTA_NAP = 69;
+
+/**
+ * Estado "ANULADO" de un ticket en IspCube. Sondeado el 2026-08-06 contra
+ * `GET /api/tickets/status_list`. Distinto de `estados_cerrados`
+ * (`cartera_config`): un ticket anulado no es lo mismo que uno cerrado, y la
+ * Cartera necesita distinguirlos para la alerta `nap_anulado`.
+ */
+const ESTADO_ANULADO = 8;
+
+/**
+ * Estado del ticket de "ALTA RESERVA DE NAP" mas reciente de un cliente.
+ *
+ * De aca sale la fecha real de instalacion (`closed_date`, NO `start_date`
+ * del cliente: son fechas distintas, ver el spec del 2026-08-06) y el estado
+ * de instalacion derivado (`estadoInstalacionDe` en `instalacion.js`).
+ *
+ * @param {unknown} tickets Respuesta cruda de `getTickets`
+ * @param {{estadosCerrados: unknown[]}} opciones Misma lista que usa `resumenTickets`
+ * @returns {{existe: boolean, cerrado: boolean, anulado: boolean, closed_date: string}}
+ */
+export function resumenAltaNap(tickets, { estadosCerrados }) {
+	if (!Array.isArray(tickets)) {
+		return { existe: false, cerrado: false, anulado: false, closed_date: '' };
+	}
+
+	const cerrados = (Array.isArray(estadosCerrados) ? estadosCerrados : []).map(String);
+
+	/** @type {any} */
+	let masReciente = null;
+	for (const t of tickets) {
+		if (!t || t.deleted_at) continue;
+		if (t.ticket_category_id !== CATEGORIA_ALTA_NAP) continue;
+
+		if (!masReciente) {
+			masReciente = t;
+			continue;
+		}
+		const fecha = partesFechaHora(t.created_at);
+		const fechaPrevia = partesFechaHora(masReciente.created_at);
+		if (fecha && fechaPrevia && compararFechaHora(fecha, fechaPrevia) > 0) masReciente = t;
+	}
+
+	if (!masReciente) return { existe: false, cerrado: false, anulado: false, closed_date: '' };
+
+	const cerrado = cerrados.includes(String(masReciente.ticket_status_id));
+
+	return {
+		existe: true,
+		cerrado,
+		anulado: masReciente.ticket_status_id === ESTADO_ANULADO,
+		// Igual que `start_date` en `normalizarCliente`: se guarda la fecha
+		// sola, la hora nunca es significativa aca.
+		closed_date:
+			cerrado && typeof masReciente.closed_date === 'string'
+				? masReciente.closed_date.slice(0, 10)
+				: ''
+	};
+}
