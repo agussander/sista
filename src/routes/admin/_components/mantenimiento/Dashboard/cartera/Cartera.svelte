@@ -11,6 +11,7 @@ import { diaCorteDe, promosActivas } from '$lib/cartera/alertas.js';
 import { partesFecha } from '$lib/cartera/fechas.js';
 import { fechaLegible } from '$lib/cartera/tickets.js';
 import { desdeCuando } from '$lib/cartera/relativo.js';
+import { estadoInstalacionDe } from '$lib/cartera/instalacion.js';
 
 const clientes = $derived(carteraStore.clientes);
 const loading = $derived(carteraStore.loading);
@@ -65,7 +66,16 @@ $effect(() => {
 // cliente con mora vencida se nota mas que uno que solo tiene el recordatorio
 // de seguimiento, aun antes de leer los chips. Un recordatorio propio pesa como
 // un ticket: lo puso el asesor a proposito, no lo dedujo el sistema.
-const PESO = { mora_2: 3, mora_1: 2, tickets: 2, recordatorio: 2, promo_venciendo: 2, seguimiento: 1 };
+const PESO = {
+	mora_2: 3,
+	mora_1: 2,
+	tickets: 2,
+	recordatorio: 2,
+	promo_venciendo: 2,
+	nap_faltante: 2,
+	nap_anulado: 2,
+	seguimiento: 1
+};
 
 function urgenciaDe(alertas) {
     if (alertas.length === 0) return null;
@@ -95,7 +105,8 @@ const conAlertas = $derived.by(() => {
             cliente: c,
             alertas,
             urgencia: urgenciaDe(alertas),
-            chips: chipsDe(c, alertas, activas, proximo)
+            chips: chipsDe(c, alertas, activas, proximo),
+            estadoInstalacion: estadoInstalacionDe(c)
         };
     });
 });
@@ -131,7 +142,9 @@ const ETIQUETAS = {
     // El plural sugeria un contador de tickets abiertos, que es otra cosa.
     tickets: 'Ticket nuevo',
     recordatorio: 'Recordatorio',
-    promo_venciendo: 'Promo por vencer'
+    promo_venciendo: 'Promo por vencer',
+    nap_faltante: 'Sin reserva de NAP',
+    nap_anulado: 'NAP anulado'
 };
 
 const ETIQUETA_ESTADO_PUNTO = {
@@ -142,18 +155,25 @@ const ETIQUETA_ESTADO_PUNTO = {
     gris: 'Todavía no se le facturaba'
 };
 
+const ETIQUETA_ESTADO_INSTALACION = {
+	pendiente_pago: 'Pendiente de pago',
+	instalacion_pendiente: 'Instalación pendiente'
+};
+
 // Orden de lectura de los chips de una fila, de mas a menos urgente. Los chips
 // COEXISTEN: un cliente con mora vencida, ticket nuevo, recordatorio y promo
 // por vencer muestra los cuatro. Esto solo decide de izquierda a derecha,
 // nunca esconde ninguno.
 const ORDEN_CHIP = {
-    mora_2: 0,
-    mora_1: 1,
-    tickets: 2,
-    recordatorio: 3,
-    promo_venciendo: 4,
-    seguimiento: 5,
-    promo: 6
+	mora_2: 0,
+	mora_1: 1,
+	tickets: 2,
+	nap_faltante: 3,
+	nap_anulado: 3,
+	recordatorio: 4,
+	promo_venciendo: 5,
+	seguimiento: 6,
+	promo: 7
 };
 
 // El color del semaforo no puede ser el unico canal (misma regla que siguen los
@@ -342,12 +362,32 @@ onMount(() => {
         </div>
     {:else}
         <ul class="lista">
-            {#each visibles as { cliente, alertas, urgencia, chips } (cliente.id)}
+            {#each visibles as { cliente, alertas, urgencia, chips, estadoInstalacion } (cliente.id)}
                 <li class:con-alerta={alertas.length > 0} class={urgencia ? `urgencia-${urgencia}` : ''}>
                     <button class="fila" onclick={() => (abierto = cliente)}>
                         <div class="quien">
-                            <strong>{cliente.nombre}</strong>
+                            <div class="nombre-linea">
+                                <strong>{cliente.nombre}</strong>
+                                {#if cliente.nuevo}
+                                    <span
+                                        class="badge nuevo"
+                                        title="Sumado automáticamente por tu vendedor en IspCube"
+                                    >
+                                        Nuevo
+                                    </span>
+                                {/if}
+                                {#if cliente.instalado_aviso}
+                                    <span class="badge instalado" title="El ticket de reserva de NAP se cerró">
+                                        Instalado ✓
+                                    </span>
+                                {/if}
+                            </div>
                             <span class="code">{cliente.code}</span>
+                            {#if estadoInstalacion !== 'instalado'}
+                                <span class="estado-instalacion">
+                                    {ETIQUETA_ESTADO_INSTALACION[estadoInstalacion]}
+                                </span>
+                            {/if}
                         </div>
 
                         <div class="pagos" title="Últimos 6 meses">
@@ -447,8 +487,20 @@ li.urgencia-alta { border-left: 4px solid #ef4444; box-shadow: 0 1px 8px rgba(23
 /* Con teclado no habia ninguna senial de donde estabas parado. */
 .fila:focus-visible { outline: 2px solid var(--violeta2); outline-offset: -2px; background: #faf8fd; }
 .quien { display: flex; flex-direction: column; gap: 0.15em; min-width: 0; }
-.quien strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nombre-linea { display: flex; align-items: center; gap: 0.4em; min-width: 0; }
+.nombre-linea strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .code { color: #9ca3af; font-size: 0.85em; }
+/* "Nuevo": mismo cyan que .chip.promo (informativo, deducido de IspCube).
+   "Instalado": mismo verde que .chip.rec-proximo. Cero paletas nuevas. */
+.badge {
+    font-size: 0.68em; font-weight: 700; padding: 0.15em 0.55em; border-radius: 1em;
+    white-space: nowrap; text-transform: uppercase; letter-spacing: 0.02em; flex-shrink: 0;
+}
+.badge.nuevo { background: #cffafe; color: #155e75; }
+.badge.instalado { background: #d1fae5; color: #065f46; }
+/* Discreto a proposito: instalacion_pendiente/pendiente_pago se muestran,
+   pero sin la fuerza visual de una alerta -no lo son-. */
+.estado-instalacion { color: #92400e; font-size: 0.78em; font-weight: 600; }
 .pagos { display: flex; gap: 0.3em; }
 .sr-only {
     position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
@@ -485,6 +537,9 @@ li.urgencia-alta { border-left: 4px solid #ef4444; box-shadow: 0 1px 8px rgba(23
 }
 /* Mismo amber que mora_1: "atender pronto", no una falla ya consumada como mora_2. */
 .chip.promo_venciendo { background: #fef3c7; color: #92400e; }
+/* Mismo amber que mora_1/tickets: anomalia de proceso, no un vencimiento,
+   pero tampoco algo para ignorar. */
+.chip.nap_faltante, .chip.nap_anulado { background: #fef3c7; color: #92400e; }
 /* El recordatorio se recorta -el texto completo va en el `title`- para que uno
    largo no descuadre la fila. El color lo pone el modificador de estado. */
 .chip.recordatorio {
