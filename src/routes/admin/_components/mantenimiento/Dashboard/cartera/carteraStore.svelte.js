@@ -11,7 +11,7 @@ import { aRefrescar } from '$lib/cartera/refresco.js';
 import { fusionarPagos } from '$lib/cartera/pagos.js';
 import { alertasDe, proximoRecordatorio } from '$lib/cartera/alertas.js';
 import { perfilDe } from '$lib/cartera/normalizar.js';
-import { partesFecha } from '$lib/cartera/fechas.js';
+import { partesFecha, sumarMeses } from '$lib/cartera/fechas.js';
 import { estadoInstalacionDe } from '$lib/cartera/instalacion.js';
 import { CONFIG_DEFAULT, normalizarConfig } from '$lib/cartera/config.js';
 
@@ -73,17 +73,21 @@ function hoyPartes() {
 	return { anio: d.getFullYear(), mes: d.getMonth() + 1, dia: d.getDate() };
 }
 
+/** `{anio, mes, dia}` a `"YYYY-MM-DD"`. */
+function fechaISO(partes) {
+	return `${partes.anio}-${String(partes.mes).padStart(2, '0')}-${String(partes.dia).padStart(2, '0')}`;
+}
+
 /**
  * Fecha de hoy como `YYYY-MM-DD`, sin pasar por toISOString (que es UTC).
  *
- * No se exporta: hoy por hoy solo lo usa `marcarContactado` para sellar
- * `ultimo_contacto`, y no depende de datos de IspCube (a diferencia de
- * `fechas.js`, que solo parsea fechas que vienen de la API). Si otra pantalla
- * llega a necesitar "hoy en YYYY-MM-DD", se exporta entonces.
+ * No se exporta: hoy por hoy solo la usan `marcarContactado` (para sellar
+ * `ultimo_contacto`) y `descubrirCandidatosDeVendedor` (para el fallback de
+ * `antes` con una cartera vacia), y ninguna depende de datos de IspCube (a
+ * diferencia de `fechas.js`, que solo parsea fechas que vienen de la API).
  */
 function hoyISO() {
-	const { anio, mes, dia } = hoyPartes();
-	return `${anio}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+	return fechaISO(hoyPartes());
 }
 
 async function cargarConfig() {
@@ -125,6 +129,10 @@ async function cargar() {
 	// sincronizar() es async y puede rechazar (fetch caido, etc.); sin este
 	// catch esa promesa quedaria colgando como una unhandled rejection.
 	refrescarVencidos().catch((e) => console.error('[cartera] fallo el refresco automatico:', e));
+	// Mismo criterio: no bloquea el pintado de la lista existente.
+	descubrirCandidatosDeVendedor().catch((e) =>
+		console.error('[cartera] fallo el descubrimiento de candidatos:', e)
+	);
 }
 
 async function cargarRecordatorios() {
@@ -266,6 +274,83 @@ function proximoRecordatorioDe(cliente) {
 async function refrescarVencidos() {
 	const codes = aRefrescar(clientes, { ahora: Date.now(), hoy: hoyPartes(), config });
 	if (codes.length > 0) await sincronizar(codes);
+}
+
+/**
+ * Busca clientes nuevos por vendedor y los suma solos a la cartera.
+ *
+ * Sin `id_vendedor` en el usuario autenticado (columna que se carga a mano
+ * en PocketBase, fuera de este codigo), no hace nada: el asesor simplemente
+ * no participa. Ver el spec del 2026-08-06.
+ */
+async function descubrirCandidatosDeVendedor() {
+	const idVendedor = pb.authStore.record?.id_vendedor;
+	if (!idVendedor) return;
+
+	const activos = clientes.filter((c) => !c.archivado && c.start_date);
+	// YYYY-MM-DD compara bien como string (mismo criterio que ya usa pagos.js
+	// con las claves de mes): no hace falta pasar por partesFecha/compararFechas
+	// para un minimo.
+	const antes =
+		activos.length > 0
+			? activos.reduce((min, c) => (c.start_date < min ? c.start_date : min), activos[0].start_date)
+			: fechaISO(sumarMeses(hoyPartes(), -1));
+
+	try {
+		const res = await fetch(
+			`/api/cartera/candidatos?vendedor=${encodeURIComponent(idVendedor)}&antes=${antes}`,
+			{ headers: { Authorization: `Bearer ${pb.authStore.token}` } }
+		);
+		if (!res.ok) return;
+
+		const { candidatos } = await res.json();
+		const conocidos = new Set(clientes.map((c) => c.code));
+
+		for (const candidato of candidatos) {
+			if (conocidos.has(candidato.code)) continue;
+			conocidos.add(candidato.code);
+
+			try {
+				const creado = await pb.collection(CLIENTES).create({
+					asesor: pb.authStore.record.id,
+					code: candidato.code,
+					fecha_instalacion: '',
+					nombre: candidato.nombre,
+					estado: candidato.estado,
+					start_date: candidato.start_date,
+					entity_id: candidato.entity_id,
+					entity_nombre: candidato.entity_nombre,
+					perfil_pago: perfilDe(candidato.entity_id, config.entidades_tarjeta, candidato.comercial_activity),
+					perfil_manual: false,
+					debt: candidato.debt,
+					duedebt: candidato.duedebt,
+					connections: candidato.connections,
+					promos: candidato.promos,
+					pagos: [],
+					tickets: null,
+					alta_nap: null,
+					nuevo: true,
+					instalado_aviso: false,
+					tickets_vistos_hasta: '',
+					ultimo_contacto: '',
+					// Vacio a proposito, no new Date().toISOString(): hace que
+					// aRefrescar() lo tome como prioritario en la carga siguiente, asi
+					// el primer sync real (el que trae tickets y calcula alta_nap)
+					// llega pronto y no hay que esperar las 12h de FRESCO_MS.
+					sincronizado: '',
+					archivado: false
+				});
+				clientes = [creado, ...clientes];
+			} catch (e) {
+				// Un create que rebota (por ejemplo el indice unico si dos pestanias
+				// corren el descubrimiento a la vez) no debe tumbar a los demas
+				// candidatos del lote.
+				console.error('[cartera] no se pudo sumar el candidato', candidato.code, e);
+			}
+		}
+	} catch (e) {
+		console.error('[cartera] fallo el descubrimiento de candidatos por vendedor:', e);
+	}
 }
 
 /**
