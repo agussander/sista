@@ -73,7 +73,13 @@ function hoyPartes() {
 	return { anio: d.getFullYear(), mes: d.getMonth() + 1, dia: d.getDate() };
 }
 
-/** `{anio, mes, dia}` a `"YYYY-MM-DD"`. */
+/**
+ * `{anio, mes, dia}` a `"YYYY-MM-DD"`.
+ *
+ * No se exporta: hoy por hoy solo la usan `hoyISO` y `descubrirCandidatosDeVendedor`
+ * (para su ventana fija de 30 dias), y ninguna depende de datos de IspCube (a
+ * diferencia de `fechas.js`, que solo parsea fechas que vienen de la API).
+ */
 function fechaISO(partes) {
 	return `${partes.anio}-${String(partes.mes).padStart(2, '0')}-${String(partes.dia).padStart(2, '0')}`;
 }
@@ -81,10 +87,8 @@ function fechaISO(partes) {
 /**
  * Fecha de hoy como `YYYY-MM-DD`, sin pasar por toISOString (que es UTC).
  *
- * No se exporta: hoy por hoy solo la usan `marcarContactado` (para sellar
- * `ultimo_contacto`) y `descubrirCandidatosDeVendedor` (para el fallback de
- * `antes` con una cartera vacia), y ninguna depende de datos de IspCube (a
- * diferencia de `fechas.js`, que solo parsea fechas que vienen de la API).
+ * No se exporta: hoy por hoy solo la usa `marcarContactado`, para sellar
+ * `ultimo_contacto`.
  */
 function hoyISO() {
 	return fechaISO(hoyPartes());
@@ -287,14 +291,15 @@ async function descubrirCandidatosDeVendedor() {
 	const idVendedor = pb.authStore.record?.id_vendedor;
 	if (!idVendedor) return;
 
-	const activos = clientes.filter((c) => !c.archivado && c.start_date);
-	// YYYY-MM-DD compara bien como string (mismo criterio que ya usa pagos.js
-	// con las claves de mes): no hace falta pasar por partesFecha/compararFechas
-	// para un minimo.
-	const antes =
-		activos.length > 0
-			? activos.reduce((min, c) => (c.start_date < min ? c.start_date : min), activos[0].start_date)
-			: fechaISO(sumarMeses(hoyPartes(), -1));
+	// Ventana fija de 30 dias, siempre -no "el cliente mas viejo que ya
+	// tengo"-. Un vendedor con cartera historica (años de clientes) tiene un
+	// alta muy vieja como cliente mas antiguo: usarla de corte hacia atras
+	// hacia que el tope duro de paginas de /candidatos (500 registros, que a
+	// este ritmo cubre 2-3 meses de TODA la base) fuera el que terminaba
+	// mandando, trayendo de arrastre meses de historial que el asesor no
+	// pidio. Con la ventana fija, cada carga mira nada mas que los ultimos 30
+	// dias, se pida cuando se pida.
+	const antes = fechaISO(sumarMeses(hoyPartes(), -1));
 
 	try {
 		const res = await fetch(

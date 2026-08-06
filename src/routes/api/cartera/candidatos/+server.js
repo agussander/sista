@@ -10,8 +10,12 @@
  *
  * Acotado por dos lados, para que un vendedor sin actividad reciente (o un
  * `antes` mal calculado) no dispare una paginada completa de toda la base:
- * un tope duro de paginas (`MAX_PAGINAS`) y `antes`, la fecha de alta mas
- * vieja que el asesor ya tiene en su cartera.
+ * un tope duro de paginas (`MAX_PAGINAS`) y `antes`, que manda el llamador
+ * -hoy, una ventana fija de 30 dias desde `descubrirCandidatosDeVendedor`,
+ * sin importar cuanta cartera historica tenga ya el asesor: usar su cliente
+ * mas viejo como corte hacia atras traia meses de historial de arrastre en
+ * vendedores con cartera vieja, porque el tope de paginas terminaba siendo
+ * el que mandaba en vez de `antes`-.
  */
 import { json } from '@sveltejs/kit';
 import { getCustomersPage } from '$lib/server/ispcube.js';
