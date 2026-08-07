@@ -105,15 +105,22 @@ segundo click invierte la dirección.
 
 | Columna | 1er click | Nulos |
 |---|---|---|
-| Código | ascendente | — |
-| Nombre | A→Z (`localeCompare` es-AR) | — |
+| Código | ascendente | — (es la clave, no puede faltar) |
+| Nombre | A→Z (`localeCompare` es-AR) | al final |
 | Edad aprox | mayor primero | al final |
 | Ciudad | A→Z | al final |
 | Conexiones | más conexiones primero | — |
 | Contacto | más viejo primero (el que más urge) | "nunca" cuenta como el más viejo |
 | Pagos | peor comportamiento primero | sin puntos ordena último |
 | **Alertas** | vuelve al orden compuesto por defecto | — |
-| Alta | más nuevos primero | — |
+| Alta | más nuevos primero | al final |
+
+**"Al final" significa en las dos direcciones.** Invertir el orden no puede
+subir arriba de todo a las filas sin dato: quien hace click en Edad para ver a
+los más jóvenes no quiere treinta clientes sin DNI cargado encabezando la
+lista. Ojo con que `normalizarCliente` deja `''` —no `null`— cuando IspCube no
+manda un campo: nombre y alta parecen no poder faltar y sin embargo necesitan
+el mismo tratamiento que edad y ciudad.
 
 **Un orden por columna es *solo* por esa columna: las alertas no flotan
 arriba.** Es deliberado y es el caso de uso que motivó el botón — "a veces es
@@ -128,8 +135,18 @@ mismos que ya dibuja la fila, sin los grises): `rojo` vale 3, `amarillo` 1,
 que no sale de un campo directo, y por eso vive en `orden.js` con su propio
 test.
 
-**Desempate universal.** Toda columna cae al orden compuesto por defecto cuando
-empata, así el resultado es estable y no cambia entre renders.
+**Desempate universal.** Cuando dos filas empatan en la columna elegida,
+desempata **alta más nueva primero, y el código como último recurso**. Nada
+más: ni urgencia ni alertas.
+
+Es deliberado y costó encontrarlo. La versión anterior de este spec desempataba
+con el orden compuesto por defecto, cuyo *primer* criterio es "con alerta antes
+que sin alerta" — y eso reintroducía la prioridad por alerta por la ventana. En
+una columna de baja cardinalidad el grupo empatado es casi la lista entera:
+prácticamente todos los clientes tienen una sola conexión y hay tres ciudades,
+así que "ordenar por Conexiones" terminaba siendo el orden por defecto con otro
+nombre. El desempate tiene que dar un orden total y estable, y nada más que
+eso.
 
 ### 4. Paginación
 

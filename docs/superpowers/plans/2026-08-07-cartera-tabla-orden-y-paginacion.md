@@ -763,7 +763,7 @@ const cmpNumero = (a, b) => a - b;
  */
 const COLUMNAS = {
 	codigo: { dir: 'asc', valor: (f) => f.cliente.code, comparar: cmpTexto },
-	nombre: { dir: 'asc', valor: (f) => f.cliente.nombre, comparar: cmpTexto },
+	nombre: { dir: 'asc', valor: (f) => f.cliente.nombre || null, comparar: cmpTexto },
 	edad: { dir: 'desc', valor: (f) => f.edad, comparar: cmpNumero },
 	ciudad: { dir: 'asc', valor: (f) => f.ciudad || null, comparar: cmpTexto },
 	conexiones: {
@@ -777,7 +777,7 @@ const COLUMNAS = {
 		valor: (f) => (f.puntos?.length ? pesoPagos(f.puntos) : null),
 		comparar: cmpNumero
 	},
-	alta: { dir: 'desc', valor: (f) => f.alta, comparar: cmpTexto }
+	alta: { dir: 'desc', valor: (f) => f.alta || null, comparar: cmpTexto }
 };
 
 /**
@@ -793,9 +793,29 @@ export function direccionInicial(columna) {
 }
 
 /**
- * El orden por defecto, y tambien el desempate de cualquier orden por columna:
- * asi dos filas con la misma ciudad siempre salen en el mismo orden entre
- * renders, en vez de depender de como venia el array.
+ * Desempate estable, sin ninguna nocion de urgencia: alta mas nueva arriba, y
+ * el code como ultimo recurso para que el orden sea total (dos clientes dados
+ * de alta el mismo dia no pueden quedar sueltos).
+ *
+ * Es lo unico que desempata un orden POR COLUMNA. Usar `compararDefecto` ahi
+ * -que era lo que hacia la primera version- reintroducia la prioridad por
+ * alerta por la ventana: en una columna de baja cardinalidad (casi todos los
+ * clientes tienen una sola conexion, y hay tres ciudades) el grupo empatado es
+ * casi la lista entera, asi que "ordenar por conexiones" terminaba siendo el
+ * orden por defecto con otro nombre.
+ *
+ * @param {Fila} a
+ * @param {Fila} b
+ */
+function compararEstable(a, b) {
+	if (a.alta !== b.alta) return a.alta < b.alta ? 1 : -1;
+	return cmpTexto(a.cliente.code, b.cliente.code);
+}
+
+/**
+ * El orden por defecto de la lista. NO se usa para desempatar un orden por
+ * columna -para eso esta `compararEstable`-, porque su primer criterio es
+ * "con alerta antes que sin alerta".
  *
  * @param {Fila} a
  * @param {Fila} b
@@ -821,10 +841,7 @@ function compararDefecto(a, b) {
 		}
 	}
 
-	// Alta mas nueva arriba, y el code como ultimo recurso para que el orden sea
-	// total (dos clientes dados de alta el mismo dia no pueden quedar sueltos).
-	if (a.alta !== b.alta) return a.alta < b.alta ? 1 : -1;
-	return cmpTexto(a.cliente.code, b.cliente.code);
+	return compararEstable(a, b);
 }
 
 /**
@@ -850,8 +867,11 @@ export function ordenar(filas, columna = 'alertas', direccion = 'desc') {
 	const sinDato = [];
 	for (const f of copia) (col.valor(f) === null ? sinDato : conDato).push(f);
 
-	conDato.sort((a, b) => signo * col.comparar(col.valor(a), col.valor(b)) || compararDefecto(a, b));
-	sinDato.sort(compararDefecto);
+	// `compararEstable` y no `compararDefecto`: ver el comentario de aquel.
+	// El desempate va FUERA del `signo` a proposito, para que dos filas con el
+	// mismo valor salgan en el mismo orden en las dos direcciones.
+	conDato.sort((a, b) => signo * col.comparar(col.valor(a), col.valor(b)) || compararEstable(a, b));
+	sinDato.sort(compararEstable);
 
 	return [...conDato, ...sinDato];
 }
