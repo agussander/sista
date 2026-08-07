@@ -354,6 +354,8 @@ async function descubrirCandidatosDeVendedor() {
 					code: candidato.code,
 					fecha_instalacion: '',
 					nombre: candidato.nombre,
+					doc_number: candidato.doc_number,
+					ciudad: candidato.ciudad,
 					estado: candidato.estado,
 					start_date: candidato.start_date,
 					entity_id: candidato.entity_id,
@@ -507,6 +509,11 @@ async function guardarSnapshot(code, datos) {
 
 	const parche = {
 		nombre: datos.nombre,
+		// Si la coleccion todavia no tiene estos dos campos, PocketBase ignora
+		// las claves extra y el update pasa igual: se pueden desplegar el codigo
+		// y el cambio de schema en cualquier orden.
+		doc_number: datos.doc_number,
+		ciudad: datos.ciudad,
 		estado: datos.estado,
 		start_date: datos.start_date,
 		entity_id: datos.entity_id,
@@ -632,6 +639,8 @@ async function agregar(code) {
 			code,
 			fecha_instalacion: estado === 'instalado' ? altaNap.closed_date : '',
 			nombre: datos.cliente.nombre,
+			doc_number: datos.cliente.doc_number,
+			ciudad: datos.cliente.ciudad,
 			estado: datos.cliente.estado,
 			start_date: datos.cliente.start_date,
 			entity_id: datos.cliente.entity_id,
