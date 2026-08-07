@@ -18,10 +18,17 @@
 /**
  * Pares `[dni, anio de nacimiento]`, ascendentes por DNI.
  *
- * Los extremos importan tanto como los puntos del medio: por debajo del primero
- * la secuencia deja de ser confiable (libretas de enrolamiento y civicas, dos
- * series separadas hasta fines de los 60) y por encima del ultimo estariamos
- * extrapolando hacia numeros que todavia no se emitieron.
+ * No salen de ninguna tabla oficial -la RENAPER no publica una-: son puntos de
+ * referencia de uso comun, aproximados a proposito. Si algun dia se consiguen
+ * datos reales, se corrigen aca y el resto del modulo no se entera.
+ *
+ * Los extremos importan tanto como los puntos del medio. Por debajo del
+ * primero la secuencia deja de ser confiable: hasta fines de los 60 convivian
+ * la libreta de enrolamiento y la civica, dos series separadas. Por encima del
+ * ultimo estariamos extrapolando hacia numeros que todavia no se emitieron, y
+ * ahi arriba tambien vive la serie 90.000.000+, que la RENAPER reserva a
+ * extranjeros y que no es secuencial por nacimiento: el tope de la tabla la
+ * descarta sola.
  */
 const ANCLAS = [
 	[1_000_000, 1920],
@@ -56,9 +63,6 @@ const ANCLAS = [
 	[60_000_000, 2020]
 ];
 
-/** Primer DNI de la serie que la RENAPER reserva a extranjeros. */
-const SERIE_EXTRANJEROS = 90_000_000;
-
 /** Prefijos de CUIT/CUIL que corresponden a una persona fisica. */
 const PREFIJOS_PERSONA = ['20', '23', '24', '27'];
 
@@ -83,9 +87,12 @@ export function dniDe(docNumber) {
 		return Number(digitos.slice(2, 10));
 	}
 
-	// Mas de 11 digitos no es ninguna de las dos cosas; menos, es un DNI
-	// (posiblemente viejo y corto, que `estimarAnioNacimiento` va a descartar).
+	// Mas de 11 digitos no es ni un DNI ni un CUIT.
 	if (digitos.length > 11) return null;
+
+	// Todo lo demas se devuelve tal cual, incluso un numero corto o absurdo:
+	// esta funcion solo lee el documento. Decidir si sirve para estimar algo
+	// es de `estimarAnioNacimiento`, que tiene la tabla para saberlo.
 	return Number(digitos);
 }
 
@@ -98,11 +105,6 @@ export function dniDe(docNumber) {
 export function estimarAnioNacimiento(docNumber) {
 	const dni = dniDe(docNumber);
 	if (dni === null) return null;
-
-	// Redundante con el tope de la tabla (90M > 60M), pero explicito: la serie
-	// de extranjeros no es secuencial por nacimiento y no se estima ni aunque
-	// algun dia las anclas lleguen mas arriba.
-	if (dni >= SERIE_EXTRANJEROS) return null;
 
 	const [primerDni] = ANCLAS[0];
 	const [ultimoDni] = ANCLAS[ANCLAS.length - 1];
@@ -117,20 +119,33 @@ export function estimarAnioNacimiento(docNumber) {
 		return Math.round(anioAnterior + avance * (anioActual - anioAnterior));
 	}
 
+	// Inalcanzable mientras el guardia de rango de arriba se cumpla: la ultima
+	// vuelta del loop tiene `dniActual === ultimoDni` y siempre entra. Esta
+	// igual para que la funcion no pueda devolver `undefined` y contradecir su
+	// propia firma si ese guardia alguna vez cambia.
 	return null;
 }
 
 /**
  * Edad aproximada en anios cumplidos-ish: no sabemos el mes de nacimiento, asi
- * que es la resta de anios y nada mas. Un resultado imposible (negativo, o mas
- * de 120) se descarta: significa que el `anioActual` o el documento estan mal,
- * y mostrar "-3" seria peor que no mostrar nada.
+ * que es la resta de anios y nada mas.
+ *
+ * `anioActual` es un anio suelto (2026), no un `Date` ni una fecha: quien
+ * llama ya tiene las partes de hoy calculadas y pasarle el objeto entero
+ * devolveria `null` para TODA la lista, que se ve como una columna de guiones
+ * sin ningun error en ningun lado. Por eso se valida en vez de dejarlo pasar.
+ *
+ * Una edad imposible (negativa, o mas de 120) tambien se descarta: significa
+ * que el documento o el anio estan mal, y mostrar "-3" seria peor que no
+ * mostrar nada.
  *
  * @param {unknown} docNumber
  * @param {number} anioActual
  * @returns {number | null}
  */
 export function estimarEdad(docNumber, anioActual) {
+	if (!Number.isInteger(anioActual)) return null;
+
 	const nacimiento = estimarAnioNacimiento(docNumber);
 	if (nacimiento === null) return null;
 
