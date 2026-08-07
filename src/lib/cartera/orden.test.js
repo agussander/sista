@@ -259,10 +259,17 @@ describe('ordenar — por columna', () => {
 
 	it('sin la columna ni la direccion, ordena por defecto', () => {
 		const filas = [
-			fila({ cliente: { code: 'a', nombre: 'a', connections: [] }, alta: '2020-01-01' }),
-			fila({ cliente: { code: 'b', nombre: 'b', connections: [] }, alta: '2026-01-01' })
+			fila({ cliente: { code: 'nuevoSinAlerta', nombre: 'a', connections: [] }, alta: '2026-08-01' }),
+			fila({
+				cliente: { code: 'viejoConAlerta', nombre: 'b', connections: [] },
+				alertas: [{ tipo: 'mora_2', desde: '2026-08' }],
+				urgencia: 'alta',
+				alta: '2020-01-01'
+			})
 		];
-		expect(codes(ordenar(filas))).toEqual(['b', 'a']);
+		// El de la alerta primero aunque su alta sea mucho mas vieja: eso es lo
+		// que distingue el orden por defecto de un `alta desc`.
+		expect(codes(ordenar(filas))).toEqual(['viejoConAlerta', 'nuevoSinAlerta']);
 	});
 
 	it('la direccion invierte de verdad en cada columna, no solo en alta', () => {
@@ -276,6 +283,102 @@ describe('ordenar — por columna', () => {
 		const conCode = (code) => fila({ cliente: { code, nombre: code, connections: [] } });
 		const filas = [conCode('015614'), conCode('003566'), conCode('015601')];
 		expect(codes(ordenar(filas, 'codigo', 'asc'))).toEqual(['003566', '015601', '015614']);
+	});
+
+	it('la cola de sin-dato tambien queda ordenada, no en cualquier orden', () => {
+		const conEdad = (code, edad, alta) =>
+			fila({ cliente: { code, nombre: code, connections: [] }, edad, alta });
+		const filas = [
+			conEdad('sinVieja', null, '2020-01-01'),
+			conEdad('conEdad', 40, '2021-01-01'),
+			conEdad('sinNueva', null, '2026-01-01')
+		];
+		// Los dos sin edad van al final, y entre ellos por alta descendente.
+		expect(codes(ordenar(filas, 'edad', 'desc'))).toEqual(['conEdad', 'sinNueva', 'sinVieja']);
+		expect(codes(ordenar(filas, 'edad', 'asc'))).toEqual(['conEdad', 'sinNueva', 'sinVieja']);
+	});
+
+	it('el desempate NO se invierte con la direccion', () => {
+		const conCiudad = (code, alta) =>
+			fila({ cliente: { code, nombre: code, connections: [] }, ciudad: 'Ensenada', alta });
+		const filas = [conCiudad('vieja', '2020-01-01'), conCiudad('nueva', '2026-01-01')];
+		// Misma ciudad en las dos filas: el orden lo decide el desempate, que es
+		// el mismo mire para donde mire la columna.
+		expect(codes(ordenar(filas, 'ciudad', 'asc'))).toEqual(['nueva', 'vieja']);
+		expect(codes(ordenar(filas, 'ciudad', 'desc'))).toEqual(['nueva', 'vieja']);
+	});
+
+	it('el desempate por columna no mira alertas', () => {
+		const conAlerta = fila({
+			cliente: { code: 'conAlerta', nombre: 'a', connections: [{}] },
+			alertas: [{ tipo: 'mora_2', desde: '2026-08' }],
+			urgencia: 'alta',
+			alta: '2020-01-01'
+		});
+		const sinAlerta = fila({
+			cliente: { code: 'sinAlerta', nombre: 'b', connections: [{}] },
+			alta: '2026-08-01'
+		});
+
+		// Las dos empatan en conexiones -una cada una, que es el caso normal de
+		// casi toda la cartera-, asi que manda el desempate. Tiene que ser el
+		// alta y NO la alerta: si mirara alertas, "ordenar por conexiones"
+		// seria el orden por defecto con otro nombre, porque el grupo empatado
+		// es practicamente la lista entera.
+		expect(codes(ordenar([conAlerta, sinAlerta], 'conexiones', 'desc'))).toEqual([
+			'sinAlerta',
+			'conAlerta'
+		]);
+		expect(codes(ordenar([conAlerta, sinAlerta], 'conexiones', 'asc'))).toEqual([
+			'sinAlerta',
+			'conAlerta'
+		]);
+	});
+
+	it('pero el orden por defecto si las mira', () => {
+		const conAlerta = fila({
+			cliente: { code: 'conAlerta', nombre: 'a', connections: [{}] },
+			alertas: [{ tipo: 'mora_2', desde: '2026-08' }],
+			urgencia: 'alta',
+			alta: '2020-01-01'
+		});
+		const sinAlerta = fila({
+			cliente: { code: 'sinAlerta', nombre: 'b', connections: [{}] },
+			alta: '2026-08-01'
+		});
+
+		// Control del test de arriba: el mismo par de filas, y aca la alerta si
+		// manda aunque el alta sea seis anios mas vieja. Sin este contraste, el
+		// otro test podria estar pasando por cualquier motivo.
+		expect(codes(ordenar([sinAlerta, conAlerta], 'alertas', 'desc'))).toEqual([
+			'conAlerta',
+			'sinAlerta'
+		]);
+	});
+
+	it('sin puntos no es lo mismo que todos los puntos en verde', () => {
+		const conPuntos = (code, puntos, alta) =>
+			fila({ cliente: { code, nombre: code, connections: [] }, puntos, alta });
+		const filas = [
+			conPuntos('sinPuntos', [], '2026-01-01'),
+			conPuntos('sano', [{ estado: 'verde' }], '2020-01-01')
+		];
+		// `sano` pesa 0 igual que la ausencia de puntos, pero no es un dato
+		// faltante: compite, y por eso va antes aunque su alta sea mas vieja.
+		expect(codes(ordenar(filas, 'pagos', 'desc'))).toEqual(['sano', 'sinPuntos']);
+		expect(codes(ordenar(filas, 'pagos', 'asc'))).toEqual(['sano', 'sinPuntos']);
+	});
+
+	it('un nombre o un alta vacios ordenan ultimos, no primeros', () => {
+		const f = (code, over) => fila({ cliente: { code, nombre: code, connections: [] }, ...over });
+		const porNombre = [
+			fila({ cliente: { code: 'sin', nombre: '', connections: [] } }),
+			fila({ cliente: { code: 'con', nombre: 'Alvarez', connections: [] } })
+		];
+		expect(codes(ordenar(porNombre, 'nombre', 'asc'))).toEqual(['con', 'sin']);
+
+		const porAlta = [f('sinAlta', { alta: '' }), f('conAlta', { alta: '2020-01-01' })];
+		expect(codes(ordenar(porAlta, 'alta', 'asc'))).toEqual(['conAlta', 'sinAlta']);
 	});
 });
 
