@@ -1,7 +1,7 @@
 /**
  * Post-procesa el output de `adapter-node` antes de desplegarlo.
  *
- * Se ejecuta desde `npm run build:node`. Ver
+ * Se ejecuta desde `npm run build`. Ver
  * `docs/superpowers/specs/2026-07-28-migracion-adapter-node-hostinger-design.md`.
  */
 import fs from 'node:fs';
@@ -13,7 +13,7 @@ import {
 	writeServerEntry
 } from './lib/prepareNodeBuild.js';
 
-const buildDir = path.resolve('build-node');
+const buildDir = path.resolve('build');
 const clientDir = path.join(buildDir, 'client');
 
 if (!fs.existsSync(clientDir)) {

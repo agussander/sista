@@ -3,12 +3,24 @@ import adapterNode from '@sveltejs/adapter-node';
 
 // El repo buildea a dos targets desde el mismo código fuente:
 //
-//   npm run build       -> build/       estático (adapter-static), deploy por FTP
-//   npm run build:node  -> build-node/  app Node (adapter-node), deploy en Hostinger
+//   npm run build         -> build/         app Node (adapter-node), deploy en Hostinger
+//   npm run build:static  -> build-static/  estático (adapter-static), sitio legacy por FTP
 //
-// El `out: 'build-node'` NO es cosmético: ambos adapters escriben en `build/`
-// por defecto, y un build Node pisaría el estático que consume `deploy.sh`.
-const useNode = process.env.ADAPTER === 'node';
+// El target por DEFECTO es Node, y sale a `build/`, porque Hostinger no guarda
+// la configuración de build en ningún lado: cada push a la rama conectada dispara
+// un build que AUTODETECTA el proyecto, y para un SvelteKit la autodetección
+// siempre asume la convención `npm run build` -> `build/` -> `server.js` adentro
+// (verificado en 15 builds). Cuando el repo se salía de esa convención, el build
+// automático generaba el estático, no encontraba `build/server.js` y el sitio
+// quedaba en 503 hasta relanzarlo a mano por API. Con los nombres convencionales
+// apuntando acá, la autodetección acierta sola.
+//
+// Corolario: NO mover el output de adapter-node fuera de `build/` ni renombrar el
+// script `build`. Es lo único que mantiene el deploy automático funcionando.
+//
+// El estático es ahora el caso raro (sitio legacy sista.com.ar, actualizado a
+// mano). Sale a `build-static/` para no pisar el build Node.
+const useStatic = process.env.ADAPTER === 'static';
 
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
@@ -28,7 +40,9 @@ const config = {
 		// Esa página desaparece de `build/` -y de producción- en silencio, sin
 		// romper el build. Es justo el chequeo que gritó cuando se agregó el
 		// primer `+server.js`. Si falta una página en `build/`, empezar por acá.
-		adapter: useNode ? adapterNode({ out: 'build-node' }) : adapterStatic({ strict: false })
+		adapter: useStatic
+			? adapterStatic({ strict: false, pages: 'build-static', assets: 'build-static' })
+			: adapterNode({ out: 'build' })
 	}
 };
 

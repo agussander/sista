@@ -178,14 +178,14 @@ server.listen(port, host, () => {
  * con una copia de `robotsHeader.js`.
  *
  * Hostinger resuelve el `entry_file` **relativo al output directory**, no a la
- * raiz del proyecto. Un `server.js` en la raiz que importe `./build-node/...`
+ * raiz del proyecto. Un `server.js` en la raiz que importe `./build/...`
  * nunca lo encuentra: el proceso no arranca y el sitio responde 503. Por eso el
  * entry se genera adentro y solo referencia hermanos.
  *
  * `robotsHeader.js` se copia (en vez de importarse desde `src/`) para que el
  * build sea autocontenido y la regla siga viviendo en un unico lugar del fuente.
  *
- * @param {string} buildDir Raiz del output de adapter-node (`build-node/`)
+ * @param {string} buildDir Raiz del output de adapter-node (`build/`)
  * @param {{ robotsHeaderPath: string }} options Ruta al modulo fuente del header
  * @returns {string} Ruta absoluta del `server.js` emitido
  */

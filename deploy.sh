@@ -1,14 +1,19 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────────────────────
-# Deploy de Sista (SvelteKit estático) por FTP.
+# Deploy del sitio LEGACY (SvelteKit estático) por FTP.
 #
-# Genera el build de producción y lo sube por FTP a sista.ar, a las carpetas
-# httpdocs y sista.com.ar. La subida es INCREMENTAL: lftp compara local vs
-# remoto y sólo transfiere los archivos nuevos o que cambiaron (por tamaño).
+# OJO: este NO es el deploy principal. El sitio vive en Hostinger como app Node
+# y se despliega solo con `git push` (ver DEPLOY.md). Esto quedó para el sitio
+# legacy de sista.com.ar, que se actualiza a mano y cada vez menos.
+#
+# Genera el build ESTÁTICO (`npm run build:static` -> `build-static/`) y lo sube
+# por FTP a sista.ar, a las carpetas httpdocs y sista.com.ar. La subida es
+# INCREMENTAL: lftp compara local vs remoto y sólo transfiere los archivos
+# nuevos o que cambiaron (por tamaño).
 #
 # Uso:
 #   ./deploy.sh                 build + subida incremental a las 2 carpetas
-#   ./deploy.sh --no-build      no regenera el build, sube lo que ya hay en build/
+#   ./deploy.sh --no-build      no regenera el build, sube lo que ya hay en build-static/
 #   ./deploy.sh --dry-run       muestra qué subiría/borraría, sin tocar el server
 #   ./deploy.sh --delete        además borra del server lo que ya no existe local
 #   ./deploy.sh --full          re-sube TODO (ignora la comparación)
@@ -35,7 +40,7 @@ FTP_PASS="${FTP_PASS:-}"
 FTP_SSL="${FTP_SSL:-true}"
 FTP_PARALLEL="${FTP_PARALLEL:-2}"   # transferencias en paralelo. Bajo = más amable
                                     # con servers que limitan conexiones (este lo hace).
-LOCAL_DIR="${LOCAL_DIR:-build}"
+LOCAL_DIR="${LOCAL_DIR:-build-static}"
 REMOTE_DIRS=("httpdocs" "sista.com.ar")
 
 # ── Flags ───────────────────────────────────────────────────────────────────
@@ -67,11 +72,28 @@ fi
 
 # ── Build ─────────────────────────────────────────────────────────────────────
 if [[ "$DO_BUILD" -eq 1 ]]; then
-  echo "▶ Generando build de producción (npm run build)…"
-  npm run build
+  echo "▶ Generando build estático (npm run build:static)…"
+  npm run build:static
 fi
 if [[ ! -d "$LOCAL_DIR" ]]; then
   echo "✖ No existe la carpeta '$LOCAL_DIR/'. Corré el build primero (sin --no-build)." >&2
+  exit 1
+fi
+
+# ── Guard: nunca subir un build Node por FTP ─────────────────────────────────
+# El hosting legacy es Apache: un build de adapter-node ahí no arranca, y encima
+# publicaría el código del server como archivos sueltos. Como `npm run build`
+# ahora ES el build Node, un LOCAL_DIR mal apuntado es un error plausible y
+# destructivo (sobrescribe producción por FTP). Se chequea la forma del
+# directorio, no el nombre.
+if [[ -f "$LOCAL_DIR/server.js" || -f "$LOCAL_DIR/handler.js" || -d "$LOCAL_DIR/prerendered" ]]; then
+  echo "✖ '$LOCAL_DIR/' parece un build NODE (tiene server.js/handler.js/prerendered/)." >&2
+  echo "  Esto es el deploy FTP del sitio legacy y necesita el build ESTÁTICO." >&2
+  echo "  Corré 'npm run build:static' (sale a build-static/) y reintentá." >&2
+  exit 1
+fi
+if [[ ! -f "$LOCAL_DIR/index.html" ]]; then
+  echo "✖ '$LOCAL_DIR/' no tiene index.html: no parece un build estático. Abortado." >&2
   exit 1
 fi
 

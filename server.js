@@ -13,12 +13,13 @@
  *
  * Este archivo es para correr la app LOCALMENTE desde la raiz del repo. El entry
  * que se despliega NO es este: `prepare-node-build.js` emite un `server.js`
- * equivalente dentro de `build-node/`, porque Hostinger resuelve el `entry_file`
+ * equivalente dentro de `build/`, porque Hostinger resuelve el `entry_file`
  * relativo al output directory y desde ahi no se ve la raiz del proyecto.
- * Mantener los dos en sync, o correr `npm run build:node` y usar el generado.
+ * Mantener los dos en sync, o correr `npm run build` y usar el generado
+ * (`node build/server.js`), que es exactamente lo que corre en produccion.
  */
 import { createServer } from 'node:http';
-import { handler } from './build-node/handler.js';
+import { handler } from './build/handler.js';
 // Se importa del fuente (no del build) para no duplicar la regla: es un modulo
 // JS puro, sin imports de SvelteKit, asi que Node lo resuelve sin problema.
 import { shouldBlockIndexing, NOINDEX_VALUE } from './src/lib/server/robotsHeader.js';

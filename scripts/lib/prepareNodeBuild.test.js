@@ -209,7 +209,7 @@ describe('writeServerEntry', () => {
 			if (spec.startsWith('node:')) continue;
 			expect(spec.startsWith('./')).toBe(true);
 			expect(spec).not.toContain('..');
-			expect(spec).not.toContain('build-node');
+			expect(spec).not.toContain('build');
 		}
 	});
 
