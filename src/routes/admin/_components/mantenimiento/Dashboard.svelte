@@ -43,9 +43,18 @@ onDestroy(() => llamenmeStore.stop());
 $effect(() => {
     if (selected === 'llamenme') llamenmeStore.markRead();
 });
-let sidebarCollapsed = $state(false);
+const SIDEBAR_COLLAPSED_KEY = 'admin.sidebarCollapsed';
+let sidebarCollapsed = $state(
+    typeof localStorage !== 'undefined' && localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1'
+);
 let sidebarOpen = $state(false);
 let windowWidth = $state(0);
+
+$effect(() => {
+    if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(SIDEBAR_COLLAPSED_KEY, sidebarCollapsed ? '1' : '0');
+    }
+});
 
 const logout = async()=>{
     pb.authStore.clear();
@@ -173,7 +182,6 @@ $effect(() => {
     z-index: 10;
     transition: width 0.3s ease, min-width 0.3s ease;
     overflow: hidden;
-    padding-top: 7.5em;
 }
 .sidebar.collapsed {
     width: 3.5em;
@@ -224,7 +232,7 @@ $effect(() => {
 .main-content {
     flex: 1 1 0%;
     min-width: 0;
-    padding: 7.5em 2em 2em 2em;
+    padding: 2em;
     background: #faf9fd;
     overflow-x: auto;
 }
@@ -250,7 +258,7 @@ $effect(() => {
         min-width: 3.5em;
     }
     .main-content {
-        padding: 4.5em 1em 1em 1em;
+        padding: 1em;
     }
 }
 
@@ -259,7 +267,7 @@ $effect(() => {
         display: flex;
         align-items: center;
         justify-content: center;
-        top: 7em;
+        top: 1em;
         left: 1em;
         z-index: 1001;
         background: var(--violeta2);
@@ -307,8 +315,7 @@ $effect(() => {
         transition: transform 0.3s ease;
         width: 17em;
         min-width: 17em;
-    padding-top: 7.5em;
-}
+    }
     
     .sidebar.mobile-open {
         transform: translateX(0);
@@ -321,7 +328,7 @@ $effect(() => {
     
     .main-content {
         padding: 1em;
-        padding-top: 7.5em;
+        padding-top: 4.5em;
         width: 100%;
     }
     
@@ -350,7 +357,7 @@ $effect(() => {
     align-items: center;
     justify-content: center;
     gap: 2.5em;
-    min-height: calc(100vh - 12em);
+    min-height: calc(100vh - 6.5em);
 }
 .home-intro {
     text-align: center;

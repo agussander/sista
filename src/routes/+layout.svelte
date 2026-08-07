@@ -80,13 +80,16 @@
 	const setMobile = () => ($mobile = $windowX < 750);
 	// `/puntos` es la pantalla que ve el comercio al escanear el QR de un
 	// cliente: un kiosco de un solo boton. El nav y el footer ahi son ruido y
-	// obligan a scrollear para llegar al unico control que importa.
+	// obligan a scrollear para llegar al unico control que importa. `/admin`
+	// es otro caso de pagina de proposito unico: tiene su propio layout
+	// (sidebar + contenido) y el nav/footer publicos no pintan nada ahi.
 	let hideChrome = $derived(
 		$page.url.pathname.startsWith('/conectarlaciudad') ||
 			$page.url.pathname.startsWith('/tolosano') ||
 			$page.url.pathname.startsWith('/mail-banner') ||
 			$page.url.pathname.startsWith('/experto-wifi') ||
-			$page.url.pathname.startsWith('/puntos')
+			$page.url.pathname.startsWith('/puntos') ||
+			$page.url.pathname.startsWith('/admin')
 	);
 
 	let isAllowedPath = $derived(() => {

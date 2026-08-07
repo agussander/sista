@@ -148,7 +148,7 @@ const handleMainItemClick = (item) => {
     padding: 1.2em 1.2em 1.2em 1.2em;
     background: transparent;
     width: 100%;
-    height: calc(100vh - 7.5em);
+    height: calc(100vh - 4.5em);
     display: flex;
     flex-flow: column;
     justify-content: space-between;
