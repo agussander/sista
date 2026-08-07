@@ -359,6 +359,28 @@ describe('fechaDeAlerta', () => {
 			])
 		).toBe('2026-08-01');
 	});
+
+	it('un `desde` con basura no se cuela como fecha', () => {
+		expect(fechaDeAlerta([{ tipo: 'x', desde: 'ayer' }])).toBe('');
+		expect(fechaDeAlerta([{ tipo: 'x', desde: '2026' }])).toBe('');
+		expect(fechaDeAlerta([{ tipo: 'x', desde: 20260804 }])).toBe('');
+		expect(fechaDeAlerta([{ tipo: 'x', desde: undefined }])).toBe('');
+	});
+
+	it('el mes completado al dia 1 gana contra cualquier dia de ese mismo mes', () => {
+		// "2026-08" (mora, desde principio de mes) tiene que salir ANTES que un
+		// ticket del 4 de agosto, no despues.
+		expect(
+			fechaDeAlerta([
+				{ tipo: 'tickets', desde: '2026-08-04 09:00:00' },
+				{ tipo: 'mora_1', desde: '2026-08' }
+			])
+		).toBe('2026-08-01');
+	});
+
+	it('sin argumento no explota', () => {
+		expect(fechaDeAlerta(undefined)).toBe('');
+	});
 });
 
 describe('pesoPagos', () => {
@@ -373,6 +395,12 @@ describe('pesoPagos', () => {
 
 	it('suma todos los puntos', () => {
 		expect(pesoPagos([{ estado: 'rojo' }, { estado: 'rojo' }, { estado: 'amarillo' }])).toBe(7);
+	});
+
+	it('un estado desconocido o ausente no suma ni rompe', () => {
+		expect(pesoPagos([{ estado: 'violeta' }, {}, null])).toBe(0);
+		expect(pesoPagos([])).toBe(0);
+		expect(pesoPagos(undefined)).toBe(0);
 	});
 });
 
@@ -534,6 +562,62 @@ describe('ordenar — por columna', () => {
 			fila({ cliente: { code: 'b', nombre: 'b', connections: [] }, alta: '2026-01-01' })
 		];
 		expect(codes(ordenar(filas, 'inventada', 'asc'))).toEqual(['b', 'a']);
+	});
+
+	it('una lista vacia sigue siendo una lista vacia', () => {
+		expect(ordenar([], 'alta', 'desc')).toEqual([]);
+		expect(ordenar([], 'alertas', 'desc')).toEqual([]);
+	});
+
+	it('sin la columna ni la direccion, ordena por defecto', () => {
+		const filas = [
+			fila({ cliente: { code: 'a', nombre: 'a', connections: [] }, alta: '2020-01-01' }),
+			fila({ cliente: { code: 'b', nombre: 'b', connections: [] }, alta: '2026-01-01' })
+		];
+		expect(codes(ordenar(filas))).toEqual(['b', 'a']);
+	});
+
+	it('la direccion invierte de verdad en cada columna, no solo en alta', () => {
+		const conCiudad = (code, ciudad) => fila({ cliente: { code, nombre: code, connections: [] }, ciudad });
+		const filas = [conCiudad('e', 'Ensenada'), conCiudad('p', 'Punta Lara')];
+		expect(codes(ordenar(filas, 'ciudad', 'asc'))).toEqual(['e', 'p']);
+		expect(codes(ordenar(filas, 'ciudad', 'desc'))).toEqual(['p', 'e']);
+	});
+
+	it('por codigo ordena numericamente gracias a los ceros a la izquierda', () => {
+		const conCode = (code) => fila({ cliente: { code, nombre: code, connections: [] } });
+		const filas = [conCode('015614'), conCode('003566'), conCode('015601')];
+		expect(codes(ordenar(filas, 'codigo', 'asc'))).toEqual(['003566', '015601', '015614']);
+	});
+});
+
+describe('ordenar — estabilidad', () => {
+	// Dos clientes con TODO igual salvo el code no pueden salir en un orden
+	// distinto entre renders: la lista se repinta sola cada 30 s y las filas
+	// saltarian de lugar solas.
+	it('el code desempata cuando el alta tambien empata', () => {
+		const conCode = (code) =>
+			fila({ cliente: { code, nombre: 'Igual', connections: [] }, alta: '2026-01-01' });
+		expect(codes(ordenar([conCode('c'), conCode('a'), conCode('b')], 'alertas', 'desc'))).toEqual([
+			'a',
+			'b',
+			'c'
+		]);
+	});
+
+	it('el resultado no depende del orden de entrada', () => {
+		const armar = (codesEntrada) =>
+			codesEntrada.map((code) =>
+				fila({
+					cliente: { code, nombre: code, connections: [] },
+					alertas: [{ tipo: 'mora_1', desde: '2026-08' }],
+					urgencia: 'media',
+					alta: '2026-01-01'
+				})
+			);
+		const unaVuelta = codes(ordenar(armar(['x', 'y', 'z']), 'alertas', 'desc'));
+		const otraVuelta = codes(ordenar(armar(['z', 'x', 'y']), 'alertas', 'desc'));
+		expect(unaVuelta).toEqual(otraVuelta);
 	});
 });
 
@@ -776,7 +860,7 @@ export function ordenar(filas, columna = 'alertas', direccion = 'desc') {
 - [ ] **Step 4: Correr el test y verificar que pasa**
 
 Run: `npx vitest run src/lib/cartera/orden.test.js`
-Expected: PASS — 24 tests.
+Expected: PASS — 37 tests.
 
 - [ ] **Step 5: Commit**
 
@@ -828,8 +912,32 @@ describe('paginasVisibles', () => {
 	});
 
 	it('no pone elipsis por un solo numero salteado', () => {
-		expect(paginasVisibles(4, 8)).toEqual([1, '…', 3, 4, 5, '…', 8]);
+		// El hueco entre 1 y 3 es un solo numero: se dibuja el 2, no "…".
+		expect(paginasVisibles(4, 8)).toEqual([1, 2, 3, 4, 5, '…', 8]);
 		expect(paginasVisibles(3, 8)).toEqual([1, 2, 3, 4, '…', 8]);
+	});
+
+	it('el umbral de las siete paginas es exacto', () => {
+		expect(paginasVisibles(4, 7)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+		expect(paginasVisibles(4, 8)).toContain('…');
+	});
+
+	it('nunca repite un numero ni sale desordenado', () => {
+		for (let total = 1; total <= 40; total++) {
+			for (let actual = 1; actual <= total; actual++) {
+				const salida = paginasVisibles(actual, total);
+				const numeros = salida.filter((n) => n !== '…');
+
+				expect(new Set(numeros).size).toBe(numeros.length);
+				expect([...numeros].sort((a, b) => a - b)).toEqual(numeros);
+				// La actual, la primera y la ultima siempre son alcanzables de un click.
+				expect(numeros).toContain(actual);
+				expect(numeros).toContain(1);
+				expect(numeros).toContain(total);
+				// Dos elipsis seguidas no tienen sentido.
+				expect(salida.some((n, i) => n === '…' && salida[i - 1] === '…')).toBe(false);
+			}
+		}
 	});
 });
 
@@ -899,7 +1007,7 @@ export function paginasVisibles(actual, total) {
 - [ ] **Step 4: Correr el test y verificar que pasa**
 
 Run: `npx vitest run src/lib/cartera/paginacion.test.js`
-Expected: PASS — 8 tests.
+Expected: PASS — 10 tests.
 
 - [ ] **Step 5: Commit**
 
