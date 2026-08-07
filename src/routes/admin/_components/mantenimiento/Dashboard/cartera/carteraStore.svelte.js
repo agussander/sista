@@ -239,9 +239,9 @@ async function completarRecordatorio(recordatorio) {
 	);
 }
 
-/** Mueve un recordatorio pendiente a otra fecha, sin tocar su texto. */
-async function reprogramarRecordatorio(recordatorio, fecha) {
-	const guardado = await pb.collection(RECORDATORIOS).update(recordatorio.id, { fecha });
+/** Edita fecha y texto de un recordatorio pendiente. */
+async function editarRecordatorio(recordatorio, fecha, texto) {
+	const guardado = await pb.collection(RECORDATORIOS).update(recordatorio.id, { fecha, texto });
 
 	recordatorios.set(
 		recordatorio.cliente,
@@ -252,9 +252,23 @@ async function reprogramarRecordatorio(recordatorio, fecha) {
 
 	await notaDeRecordatorio(
 		recordatorio.cliente,
-		`Recordatorio reprogramado para el ${fmtFecha(fecha)}: ${recordatorio.texto}`
+		`Recordatorio editado, para el ${fmtFecha(fecha)}: ${texto}`
 	);
 	return guardado;
+}
+
+/** Elimina un recordatorio pendiente. */
+async function eliminarRecordatorio(recordatorio) {
+	await pb.collection(RECORDATORIOS).delete(recordatorio.id);
+
+	const lista = recordatoriosDe(recordatorio.cliente).filter((r) => r.id !== recordatorio.id);
+	if (lista.length > 0) recordatorios.set(recordatorio.cliente, lista);
+	else recordatorios.delete(recordatorio.cliente);
+
+	await notaDeRecordatorio(
+		recordatorio.cliente,
+		`Recordatorio eliminado: ${recordatorio.texto} (${fmtFecha(recordatorio.fecha)})`
+	);
 }
 
 // No se exporta suelta: como el resto de la logica del store, solo se expone
@@ -289,7 +303,10 @@ async function refrescarVencidos() {
  */
 async function descubrirCandidatosDeVendedor() {
 	const idVendedor = pb.authStore.record?.id_vendedor;
-	if (!idVendedor) return;
+	if (!idVendedor) {
+		console.error('[cartera] sin id_vendedor en el usuario autenticado, no se descubren candidatos');
+		return;
+	}
 
 	// Ventana fija de 30 dias, siempre -no "el cliente mas viejo que ya
 	// tengo"-. Un vendedor con cartera historica (años de clientes) tiene un
@@ -306,22 +323,30 @@ async function descubrirCandidatosDeVendedor() {
 			`/api/cartera/candidatos?vendedor=${encodeURIComponent(idVendedor)}&antes=${antes}`,
 			{ headers: { Authorization: `Bearer ${pb.authStore.token}` } }
 		);
-		if (!res.ok) return;
+		if (!res.ok) {
+			console.error(`[cartera] /api/cartera/candidatos respondio ${res.status}`, await res.text());
+			return;
+		}
 
 		const { candidatos } = await res.json();
 		const conocidos = new Set(clientes.map((c) => c.code));
+		const nuevos = candidatos.filter((c) => !conocidos.has(c.code));
+		if (nuevos.length === 0) return;
 
-		for (const candidato of candidatos) {
-			if (conocidos.has(candidato.code)) continue;
+		// `conocidos` sale de `clientes`, que solo trae activos (cargar() filtra
+		// archivado = false): un cliente archivado a proposito, cuyo registro de
+		// IspCube todavia cae dentro de la ventana de descubrimiento, no aparece
+		// ahi y sin este chequeo se reintentaria el create() en cada carga de
+		// pagina, rebotando siempre contra el indice unico (asesor, code).
+		//
+		// Una sola consulta por TODOS los codes de `nuevos`, no un
+		// getFirstListItem por candidato: con la ventana de 30 dias esto podia
+		// ser decenas o cientos de requests a PocketBase en cada carga de la
+		// Cartera, y fue lo que agoto el limite por IP el 2026-08-06.
+		const existentes = await buscarExistentes(nuevos.map((c) => c.code));
 
-			// `conocidos` sale de `clientes`, que solo trae activos (cargar() filtra
-			// archivado = false): un cliente archivado a proposito, cuyo registro de
-			// IspCube todavia cae dentro de la ventana de descubrimiento, no aparece
-			// ahi y sin este chequeo se reintentaria el create() en cada carga de
-			// pagina, rebotando siempre contra el indice unico (asesor, code).
-			const existente = await buscarExistente(candidato.code);
-			conocidos.add(candidato.code);
-			if (existente) continue;
+		for (const candidato of nuevos) {
+			if (existentes.has(candidato.code)) continue;
 
 			try {
 				const creado = await pb.collection(CLIENTES).create({
@@ -358,7 +383,11 @@ async function descubrirCandidatosDeVendedor() {
 				// Un create que rebota (por ejemplo el indice unico si dos pestanias
 				// corren el descubrimiento a la vez) no debe tumbar a los demas
 				// candidatos del lote.
-				console.error('[cartera] no se pudo sumar el candidato', candidato.code, e);
+				console.error(
+					'[cartera] no se pudo sumar el candidato',
+					candidato.code,
+					JSON.stringify(e?.response ?? e)
+				);
 			}
 		}
 	} catch (e) {
@@ -531,6 +560,26 @@ async function buscarExistente(code) {
 	}
 }
 
+/**
+ * Igual que `buscarExistente`, pero para varios codes a la vez: una sola
+ * consulta con un OR de todos ellos, en vez de un `getFirstListItem` por
+ * code. La usa `descubrirCandidatosDeVendedor`, donde `codes` puede tener
+ * decenas de entradas por carga de la Cartera.
+ *
+ * @returns {Promise<Set<string>>} los codes de `codes` que ya existen.
+ */
+async function buscarExistentes(codes) {
+	if (codes.length === 0) return new Set();
+
+	const filtroCodes = codes.map((code) => pb.filter('code = {:code}', { code })).join(' || ');
+	const filtroAsesor = pb.filter('asesor = {:asesor}', { asesor: pb.authStore.record.id });
+
+	const items = await pb.collection(CLIENTES).getFullList({
+		filter: `${filtroAsesor} && (${filtroCodes})`
+	});
+	return new Set(items.map((i) => i.code));
+}
+
 async function agregar(code) {
 	if (!/^\d{1,12}$/.test(code)) {
 		return { ok: false, error: 'El número de cliente son solo dígitos.' };
@@ -553,9 +602,16 @@ async function agregar(code) {
 			return { ok: true, cliente: restaurado };
 		}
 
-		const res = await fetch(`/api/cartera/cliente/${encodeURIComponent(code)}`, {
-			headers: { Authorization: `Bearer ${pb.authStore.token}` }
-		});
+		// `areas`/`cerrados` en la query: sin ellos el endpoint los toma como
+		// listas vacias y `resumenAltaNap` no puede reconocer ningun estado
+		// como "cerrado", asi que un cliente agregado a mano con el ticket de
+		// NAP ya cerrado en IspCube quedaba marcado "NAP faltante" igual.
+		const areas = (config.areas_soporte ?? []).join(',');
+		const cerrados = (config.estados_cerrados ?? []).join(',');
+		const res = await fetch(
+			`/api/cartera/cliente/${encodeURIComponent(code)}?areas=${encodeURIComponent(areas)}&cerrados=${encodeURIComponent(cerrados)}`,
+			{ headers: { Authorization: `Bearer ${pb.authStore.token}` } }
+		);
 
 		if (res.status === 404) return { ok: false, error: 'No encontramos ese número de cliente.' };
 		if (res.status === 401) return { ok: false, error: ERROR_401 };
@@ -711,7 +767,8 @@ export const carteraStore = {
 	recordatoriosDe,
 	crearRecordatorio,
 	completarRecordatorio,
-	reprogramarRecordatorio,
+	editarRecordatorio,
+	eliminarRecordatorio,
 	marcarTicketsVistos,
 	archivar,
 	refrescoFallido,

@@ -57,7 +57,9 @@ const ETIQUETA_ALERTA = {
     seguimiento: 'Contactar: pasaron 2 meses de la instalación',
     mora_1: 'No registró pago este mes',
     mora_2: 'Mora: pasó el segundo vencimiento',
-    tickets: 'Tiene tickets de soporte nuevos'
+    tickets: 'Tiene tickets de soporte nuevos',
+    nap_faltante: 'Sin reserva de NAP',
+    nap_anulado: 'NAP anulado'
 };
 
 let marcando = $state(false);
@@ -95,7 +97,7 @@ function datosDe(iso) {
     if (!iso) return 'Datos sin sincronizar';
     const horas = Math.floor((Date.now() - Date.parse(iso)) / 3600_000);
     if (!Number.isFinite(horas)) return 'Datos sin sincronizar';
-    if (horas < 1) return 'Datos actualizados recién';
+    if (horas < 1) return 'actualizado recientemente';
     if (horas < 24) return `Datos de hace ${horas} h`;
     return `Datos de hace ${Math.floor(horas / 24)} d`;
 }
@@ -195,8 +197,7 @@ onMount(() => {
                         {:else if categoria === 'tv'}
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                 stroke-linecap="round" stroke-linejoin="round">
-                                <rect x="2" y="7" width="20" height="15" rx="2" ry="2" />
-                                <polyline points="17 2 12 7 7 2" />
+                                <path d="M10 20H14M5 18H19C20.1046 18 21 17.1046 21 16V7C21 5.89543 20.1046 5 19 5H5C3.89543 5 3 5.89543 3 7V16C3 17.1046 3.89543 18 5 18Z" />
                             </svg>
                         {:else if categoria === 'telefonia'}
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -314,7 +315,7 @@ header { display: flex; flex-wrap: wrap; justify-content: space-between; align-i
 h3 { margin: 0; color: var(--violeta2); }
 .code { color: #9ca3af; font-size: 0.88em; }
 .instalacion { color: #c1c7d0; font-size: 0.78em; margin-left: 0.6em; }
-.datos-de { color: #b9a7d9; font-size: 0.78em; margin: 0.3em 0 0; }
+.datos-de { color: #c1c7d0; font-size: 0.78em; margin: 0.3em 0 0; }
 /* Mismo tono que las alertas de mora (amber), no rojo: el snapshot desactualizado
    es el modo degradado esperado del diseño, no un error. */
 .aviso-refresco { color: #92400e; font-size: 0.78em; margin: 0.2em 0 0; }

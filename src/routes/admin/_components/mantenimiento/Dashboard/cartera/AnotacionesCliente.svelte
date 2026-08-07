@@ -21,8 +21,7 @@ let error = $state('');
 const TIPOS = [
     { value: 'llamada', label: 'Llamada' },
     { value: 'whatsapp', label: 'WhatsApp' },
-    { value: 'visita', label: 'Visita' },
-    { value: 'nota', label: 'Nota interna' }
+    { value: 'nota', label: 'Nota' }
 ];
 
 async function cargar() {

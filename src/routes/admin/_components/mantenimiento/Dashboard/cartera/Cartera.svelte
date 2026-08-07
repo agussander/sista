@@ -321,11 +321,18 @@ onMount(() => {
         <div class="acciones-header">
             <button
                 class="refrescar"
+                class:girando={carteraStore.sincronizando}
                 onclick={refrescarVisibles}
                 disabled={!puedeRefrescar}
+                aria-label={carteraStore.sincronizando ? 'Actualizando' : 'Actualizar'}
                 title="Volver a consultar IspCube para los clientes que estás viendo"
             >
-                {carteraStore.sincronizando ? 'Actualizando…' : '↻ Actualizar'}
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="23 4 23 10 17 10" />
+                    <polyline points="1 20 1 14 7 14" />
+                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                </svg>
             </button>
             <button class="agregar" onclick={() => (agregando = true)}>+ Agregar cliente</button>
         </div>
@@ -442,16 +449,26 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 h2 { color: var(--violeta2); margin: 0; }
 .acciones-header { display: flex; gap: 0.6em; align-items: center; }
 .refrescar {
-    background: #fff; border: 1.5px solid #e0e0e0; color: var(--violeta2);
-    border-radius: 2em; padding: 0.6em 1.1em; font-size: 0.95em; cursor: pointer;
-    transition: background 0.18s, border-color 0.18s;
+    background: none; border: none; color: #9ca3af; cursor: pointer;
+    width: 2.2em; height: 2.2em; padding: 0; border-radius: 0.5em;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.18s, color 0.18s;
 }
-.refrescar:hover:not(:disabled) { background: #f5f2fa; border-color: #d1c4e9; }
+.refrescar svg { width: 1.2em; height: 1.2em; }
+.refrescar:hover:not(:disabled) { background: #f5f2fa; color: var(--violeta2); }
 .refrescar:disabled { opacity: 0.55; cursor: not-allowed; }
-.agregar {
-    background: var(--violeta2); color: #fff; border: none; border-radius: 2em;
-    padding: 0.7em 1.4em; font-size: 1em; font-weight: 600; cursor: pointer;
+/* Gira mientras `sincronizando` esta activo, no un spinner aparte: el mismo
+   icono da el feedback de "en curso" sin sumar otro elemento al lado. */
+.refrescar.girando svg { animation: girar 0.9s linear infinite; }
+@keyframes girar {
+    to { transform: rotate(360deg); }
 }
+.agregar {
+    background: #fff; color: #6b7280; border: 1.5px solid #e0e0e0;
+    border-radius: 0.6em; padding: 0.5em 0.9em; font-size: 0.88em;
+    font-weight: 400; cursor: pointer; transition: background 0.18s, border-color 0.18s, color 0.18s;
+}
+.agregar:hover { background: #f5f2fa; border-color: #d1c4e9; color: var(--violeta2); }
 .config {
     background: #fff; border: 1.5px solid #e0e0e0; color: var(--violeta2);
     border-radius: 50%; width: 2.4em; height: 2.4em; font-size: 1em; cursor: pointer;
@@ -469,7 +486,10 @@ input[type='search']:focus { outline: none; border-color: var(--violeta2); }
 }
 .filtros button.activo { background: var(--violeta2); color: #fff; border-color: var(--violeta2); }
 .lista { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.5em; }
-li { border: 1.5px solid #ececec; border-radius: 1em; background: #fff; border-left-width: 1.5px; transition: border-color 0.15s; }
+/* overflow: hidden asi el fondo de `.fila:hover` (un boton que ocupa todo el
+   li) queda recortado al radio del li: sin esto, el hover pintaba un
+   rectangulo que sobresalia de las esquinas redondeadas. */
+li { border: 1.5px solid #ececec; border-radius: 1em; background: #fff; border-left-width: 1.5px; overflow: hidden; transition: border-color 0.15s; }
 li.con-alerta { border-color: #f0c674; }
 /* La urgencia se ve antes de leer los chips: el borde izquierdo se engrosa y
    se tiñe segun el peso de las alertas activas. */
