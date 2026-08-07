@@ -120,7 +120,9 @@ Los que importan para la Cartera:
 | `expiration_type_id` | Esquema de vencimiento. |
 | `seller_id` | Vendedor asignado *en IspCube*. |
 | `collector_id` | Cobrador asignado. |
-| `phones[]`, `contact_emails[]`, `city{}`, `connections[]`, `customer_cbu[]` | Anidados. |
+| `doc_number` | **Documento del titular.** DNI pelado (`"20909528"`) o el CUIT/CUIL entero. La Cartera lo guarda crudo y lo interpreta [`edad.js`](../src/lib/cartera/edad.js) para estimar la edad. |
+| `city {id, name, province, postal_code}` | **Ciudad del cliente.** La Cartera guarda `city.name` (`"PUNTA LARA"`, en mayúsculas) en `ciudad`. |
+| `phones[]`, `contact_emails[]`, `connections[]`, `customer_cbu[]` | Anidados. |
 
 > **`entity_id` es el medio de pago.** No hay un campo `payment_method`. Lo
 > confirma la descripción del `PUT /api/customers/:id` ("aquí puedes actualizar
