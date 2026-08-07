@@ -8,10 +8,15 @@ import ClienteDetalle from './ClienteDetalle.svelte';
 import CarteraConfig from './CarteraConfig.svelte';
 import { puntosPorMes } from '$lib/cartera/pagos.js';
 import { diaCorteDe, promosActivas } from '$lib/cartera/alertas.js';
-import { partesFecha } from '$lib/cartera/fechas.js';
+import { partesFecha, diferenciaDias } from '$lib/cartera/fechas.js';
 import { fechaLegible } from '$lib/cartera/tickets.js';
 import { desdeCuando } from '$lib/cartera/relativo.js';
 import { estadoInstalacionDe } from '$lib/cartera/instalacion.js';
+import { describirConexion } from '$lib/cartera/planes.js';
+import { estimarEdad } from '$lib/cartera/edad.js';
+import { ordenar, direccionInicial } from '$lib/cartera/orden.js';
+import { paginasVisibles, POR_PAGINA } from '$lib/cartera/paginacion.js';
+import { toTitleCase } from '$lib/formatName.js';
 
 const clientes = $derived(carteraStore.clientes);
 const loading = $derived(carteraStore.loading);
@@ -22,6 +27,12 @@ let filtro = $state('todos');
 let abierto = $state(null);
 let agregando = $state(false);
 let configurando = $state(false);
+
+// Columna activa y direccion. `alertas` es el orden compuesto por defecto: no
+// tiene direccion que invertir, porque no ordena por un campo sino por "que
+// atiendo hoy".
+let orden = $state({ columna: 'alertas', direccion: 'desc' });
+let pagina = $state(1);
 
 // El tiempo relativo de cada fila tiene que envejecer solo. Sin este reloj,
 // `desdeCuando` se evalua una sola vez al pintar y una pestania abierta desde
@@ -95,6 +106,9 @@ function urgenciaDe(alertas) {
 // que vence en 8 meses, o con un recordatorio para dentro de 10 dias, no tiene
 // nada urgente por eso. Se calculan en el mismo derived que ya arma la lista
 // para no recorrer los clientes tres veces.
+//
+// Los puntos de pago y la edad tambien se calculan aca y no en el template: son
+// las dos operaciones caras por fila, y `ordenar` las necesita igual.
 const conAlertas = $derived.by(() => {
     const hoy = hoyPartes();
     return clientes.map((c) => {
@@ -106,7 +120,15 @@ const conAlertas = $derived.by(() => {
             alertas,
             urgencia: urgenciaDe(alertas),
             chips: chipsDe(c, alertas, activas, proximo),
-            estadoInstalacion: estadoInstalacionDe(c)
+            estadoInstalacion: estadoInstalacionDe(c),
+            edad: estimarEdad(c.doc_number, hoy.anio),
+            ciudad: c.ciudad ? toTitleCase(c.ciudad) : '',
+            puntos: puntosDe(c, hoy).filter((p) => p.estado !== 'gris'),
+            ultimoContacto: c.ultimo_contacto ?? '',
+            // `created` de respaldo: `start_date` es la fecha de alta de
+            // IspCube y siempre viene, pero un registro a medio sincronizar
+            // podria no tenerla todavia, y la columna no puede quedar vacia.
+            alta: c.start_date || (c.created ?? '').slice(0, 10)
         };
     });
 });
@@ -123,6 +145,21 @@ const FILTROS = [
     { value: 'promo_venciendo', label: 'Promos por vencer' }
 ];
 
+// Los encabezados, en el mismo orden que las columnas de la grilla. Las
+// etiquetas son cortas a proposito: cada una tiene que entrar en el ancho de su
+// columna sin envolver.
+const COLUMNAS = [
+    { key: 'codigo', label: 'Código' },
+    { key: 'nombre', label: 'Nombre' },
+    { key: 'edad', label: 'Edad aprox' },
+    { key: 'ciudad', label: 'Ciudad' },
+    { key: 'conexiones', label: 'Conexiones' },
+    { key: 'contacto', label: 'Contacto' },
+    { key: 'pagos', label: 'Pagos' },
+    { key: 'alertas', label: 'Alertas' },
+    { key: 'alta', label: 'Alta' }
+];
+
 const visibles = $derived(
     conAlertas.filter(({ cliente, alertas }) => {
         const q = busqueda.trim().toLowerCase();
@@ -134,6 +171,60 @@ const visibles = $derived(
         return alertas.some((a) => a.tipo === filtro);
     })
 );
+
+const ordenadas = $derived(ordenar(visibles, orden.columna, orden.direccion));
+
+const totalPaginas = $derived(Math.max(1, Math.ceil(ordenadas.length / POR_PAGINA)));
+// La pagina se clampea al derivar y no al setear: si el filtro achica la lista
+// mientras estas en la 7, `pagina` sigue valiendo 7 hasta el proximo cambio, y
+// sin esto la tabla quedaria vacia por un frame.
+const paginaActual = $derived(Math.min(pagina, totalPaginas));
+const enPagina = $derived(
+    ordenadas.slice((paginaActual - 1) * POR_PAGINA, paginaActual * POR_PAGINA)
+);
+const numerosPagina = $derived(paginasVisibles(paginaActual, totalPaginas));
+const desdeFila = $derived(ordenadas.length === 0 ? 0 : (paginaActual - 1) * POR_PAGINA + 1);
+const hastaFila = $derived(Math.min(paginaActual * POR_PAGINA, ordenadas.length));
+
+// Cualquier cosa que cambie QUE se ve vuelve a la primera pagina. Sin esto,
+// buscar algo estando en la pagina 5 muestra una lista vacia y parece que no
+// hubo resultados.
+$effect(() => {
+    busqueda;
+    filtro;
+    orden.columna;
+    orden.direccion;
+    pagina = 1;
+});
+
+function ordenarPor(key) {
+    // `alertas` es un orden compuesto de cuatro criterios, no un campo: darlo
+    // vuelta pondria arriba a los clientes sin nada que hacer, que es
+    // exactamente lo contrario de para lo que existe.
+    if (key === 'alertas') {
+        orden = { columna: 'alertas', direccion: 'desc' };
+        return;
+    }
+    if (orden.columna === key) {
+        orden = { columna: key, direccion: orden.direccion === 'asc' ? 'desc' : 'asc' };
+        return;
+    }
+    orden = { columna: key, direccion: direccionInicial(key) };
+}
+
+function irA(n) {
+    if (n < 1 || n > totalPaginas) return;
+    pagina = n;
+}
+
+// Las celdas de codigo y nombre son seleccionables (ver los estilos), pero la
+// fila entera sigue siendo un boton: soltar el mouse al terminar de arrastrar
+// cuenta como click y abriria el detalle encima de lo que acabas de
+// seleccionar. Con esto, si hay algo seleccionado el click no hace nada.
+function abrir(cliente) {
+    if (window.getSelection?.()?.toString()) return;
+    abierto = cliente;
+}
 
 const ETIQUETAS = {
     seguimiento: 'Contactar (2 meses)',
@@ -203,6 +294,36 @@ function fmtFecha(iso) {
     return `${String(p.dia).padStart(2, '0')}/${String(p.mes).padStart(2, '0')}/${p.anio}`;
 }
 
+/** dd/mm/aa: la columna de alta tiene 5.4em y el anio de cuatro digitos no entra. */
+function fmtAlta(iso) {
+    const p = partesFecha(iso);
+    if (!p) return '—';
+    return `${String(p.dia).padStart(2, '0')}/${String(p.mes).padStart(2, '0')}/${String(p.anio).slice(-2)}`;
+}
+
+/**
+ * Hace cuanto fue el ultimo contacto, en la unidad mas grande que se lea bien.
+ *
+ * Toma `ahora` en vez de leer el reloj adentro para que Svelte sepa que
+ * depende de el: es lo que hace que la columna envejezca sola sin recargar.
+ * No usa `desdeCuando` porque `ultimo_contacto` es una FECHA sin hora
+ * (`"2026-08-04"`) y `Date.parse` la leeria en UTC, corriendo el dia en
+ * Argentina.
+ */
+function haceCuanto(iso, ahora) {
+    const p = partesFecha(iso);
+    if (!p) return null;
+
+    const d = new Date(ahora);
+    const dias = diferenciaDias(p, { anio: d.getFullYear(), mes: d.getMonth() + 1, dia: d.getDate() });
+
+    if (dias <= 0) return 'hoy';
+    if (dias === 1) return 'ayer';
+    if (dias < 30) return `hace ${dias} d`;
+    if (dias < 365) return `hace ${Math.floor(dias / 30)} m`;
+    return `hace ${Math.floor(dias / 365)} a`;
+}
+
 function cuandoVence(dias) {
     if (dias === 0) return 'vence hoy';
     if (dias < 0) return `hace ${-dias} ${dias === -1 ? 'día' : 'días'}`;
@@ -264,15 +385,14 @@ function chipsDe(cliente, alertas, activas, proximo) {
     return chips.sort((a, b) => ORDEN_CHIP[a.tipo] - ORDEN_CHIP[b.tipo]);
 }
 
-function puntosDe(cliente) {
+function puntosDe(cliente, hoy) {
     const instalacion = partesFecha(cliente.fecha_instalacion);
     if (!instalacion) return [];
-    const d = new Date();
     return puntosPorMes(cliente.pagos ?? [], {
         perfil: cliente.perfil_pago,
         diaCorte: diaCorteDe(cliente.perfil_pago, config),
         instalacion,
-        hoy: { anio: d.getFullYear(), mes: d.getMonth() + 1, dia: d.getDate() },
+        hoy,
         meses: 6
     });
 }
@@ -290,6 +410,11 @@ function tituloPunto(p) {
 // entera, por dos razones: es lo que espera que pase, y el endpoint de sync
 // rechaza mas de 20 codigos por llamada. El tope se aplica sobre los mas
 // desactualizados, que son los que mas ganan con el refresco.
+//
+// Es la lista filtrada COMPLETA y no la pagina actual: que los dos numeros sean
+// 20 es coincidencia -uno es el limite del endpoint, el otro el tamanio de
+// pagina- y priorizar por antiguedad del snapshot es mejor criterio que
+// "lo que quedo arriba".
 const MAX_REFRESCO_MANUAL = 20;
 
 const puedeRefrescar = $derived(visibles.length > 0 && !carteraStore.sincronizando);
@@ -358,7 +483,7 @@ onMount(() => {
 
     {#if loading}
         <Spinner />
-    {:else if visibles.length === 0}
+    {:else if ordenadas.length === 0}
         <div class="vacio">
             {#if clientes.length === 0 && carteraStore.error}
                 <p>No pudimos cargar tu cartera. Revisá tu conexión e intentá de nuevo.</p>
@@ -370,64 +495,168 @@ onMount(() => {
             {/if}
         </div>
     {:else}
-        <ul class="lista">
-            {#each visibles as { cliente, alertas, urgencia, chips, estadoInstalacion } (cliente.id)}
-                <li class:con-alerta={alertas.length > 0} class={urgencia ? `urgencia-${urgencia}` : ''}>
-                    <button class="fila" onclick={() => (abierto = cliente)}>
-                        <div class="quien">
-                            <div class="nombre-linea">
-                                <strong>{cliente.nombre}</strong>
-                                {#if cliente.nuevo}
-                                    <span
-                                        class="badge nuevo"
-                                        title="Sumado automáticamente por tu vendedor en IspCube"
-                                    >
-                                        Nuevo
-                                    </span>
-                                {/if}
-                                {#if cliente.instalado_aviso}
-                                    <span class="badge instalado" title="El ticket de reserva de NAP se cerró">
-                                        Instalado ✓
-                                    </span>
-                                {/if}
-                            </div>
-                            <span class="code">{cliente.code}</span>
-                            {#if estadoInstalacion !== 'instalado'}
-                                <span class="estado-instalacion">
-                                    {ETIQUETA_ESTADO_INSTALACION[estadoInstalacion]}
-                                </span>
-                            {/if}
-                        </div>
-
-                        <div class="pagos" title="Últimos 6 meses">
-                            {#each puntosDe(cliente).filter((p) => p.estado !== 'gris') as p}
-                                <span class="punto {p.estado}" title={tituloPunto(p)}>
-                                    <span class="sr-only">{ETIQUETA_ESTADO_PUNTO[p.estado] ?? p.estado}</span>
-                                </span>
-                            {/each}
-                        </div>
-
-                        <div class="alertas">
-                            {#each chips as chip}
-                                <span class="chip {chip.tipo} {chip.mod}" title={chip.titulo}>
-                                    {#if chip.sr}<span class="sr-only">{chip.sr}</span>{/if}
-                                    {chip.texto}
-                                </span>
-                            {/each}
-                        </div>
-
-                        <span class="sync">
-                            {desdeCuando(cliente.sincronizado, ahora)}
-                            {#if carteraStore.refrescoFallido(cliente.code)}
-                                <span class="sync-fallo" title="No pudimos actualizar contra IspCube. Mostrando el último snapshot.">
-                                    · sin actualizar
-                                </span>
-                            {/if}
+        <div class="tabla">
+            <div class="cabecera">
+                {#each COLUMNAS as col}
+                    {@const activa = orden.columna === col.key}
+                    <button
+                        class="th"
+                        class:activa
+                        onclick={() => ordenarPor(col.key)}
+                        aria-label={col.key === 'alertas'
+                            ? 'Ordenar por urgencia (orden por defecto)'
+                            : `Ordenar por ${col.label}`}
+                    >
+                        <span class="th-texto">{col.label}</span>
+                        <span class="flecha" aria-hidden="true">
+                            {#if !activa}⇅{:else if col.key === 'alertas'}★{:else if orden.direccion === 'asc'}↑{:else}↓{/if}
                         </span>
                     </button>
-                </li>
-            {/each}
-        </ul>
+                {/each}
+            </div>
+
+            <ul class="lista">
+                {#each enPagina as fila (fila.cliente.id)}
+                    {@const { cliente, urgencia, chips, estadoInstalacion, edad, ciudad, puntos, ultimoContacto, alta } = fila}
+                    <!-- Al nivel del {#each} y no dentro de la celda: Svelte
+                         solo acepta {@const} como hijo directo de un bloque. -->
+                    {@const desdeContacto = haceCuanto(ultimoContacto, ahora)}
+                    <li>
+                        <!-- Tres `class:` sueltos y no un `class={...}` calculado:
+                             un `class` dinamico en el mismo elemento que el
+                             estatico es un atributo duplicado y Svelte no
+                             compila. -->
+                        <button
+                            class="fila"
+                            class:urgencia-baja={urgencia === 'baja'}
+                            class:urgencia-media={urgencia === 'media'}
+                            class:urgencia-alta={urgencia === 'alta'}
+                            onclick={() => abrir(cliente)}
+                            title="Actualizado {desdeCuando(cliente.sincronizado, ahora)}"
+                        >
+                            <span class="celda codigo seleccionable">
+                                {cliente.code}
+                                {#if carteraStore.refrescoFallido(cliente.code)}
+                                    <span
+                                        class="sync-fallo"
+                                        title="No pudimos actualizar contra IspCube. Mostrando el último snapshot."
+                                    >
+                                        <span class="sr-only">Sin actualizar</span>
+                                        ⟳
+                                    </span>
+                                {/if}
+                            </span>
+
+                            <span class="celda quien seleccionable">
+                                <span class="nombre-linea">
+                                    <strong>{cliente.nombre}</strong>
+                                    {#if cliente.nuevo}
+                                        <span
+                                            class="badge nuevo"
+                                            title="Sumado automáticamente por tu vendedor en IspCube"
+                                        >
+                                            Nuevo
+                                        </span>
+                                    {/if}
+                                    {#if cliente.instalado_aviso}
+                                        <span class="badge instalado" title="El ticket de reserva de NAP se cerró">
+                                            Instalado ✓
+                                        </span>
+                                    {/if}
+                                </span>
+                                {#if estadoInstalacion !== 'instalado'}
+                                    <span class="estado-instalacion">
+                                        {ETIQUETA_ESTADO_INSTALACION[estadoInstalacion]}
+                                    </span>
+                                {/if}
+                            </span>
+
+                            <span class="celda edad">
+                                {#if edad === null}
+                                    <span class="vacia">—</span>
+                                {:else}
+                                    <span title="Estimado a partir del DNI (±3 años)">~{edad}</span>
+                                {/if}
+                            </span>
+
+                            <span class="celda ciudad">
+                                {#if ciudad}
+                                    <span class="texto" title={ciudad}>{ciudad}</span>
+                                {:else}
+                                    <span class="vacia">—</span>
+                                {/if}
+                            </span>
+
+                            <span class="celda conexiones">
+                                {#each cliente.connections ?? [] as cx}
+                                    {@const { etiqueta, categoria } = describirConexion(cx.plan_nombre)}
+                                    <span class="chip conexion {categoria}" title={cx.plan_nombre}>{etiqueta}</span>
+                                {:else}
+                                    <span class="vacia">—</span>
+                                {/each}
+                            </span>
+
+                            <span class="celda contacto">
+                                {#if desdeContacto}
+                                    <span title="Último contacto: {fmtFecha(ultimoContacto)}">
+                                        {desdeContacto}
+                                    </span>
+                                {:else}
+                                    <span class="vacia" title="Todavía no lo contactaron">nunca</span>
+                                {/if}
+                            </span>
+
+                            <span class="celda pagos" title="Últimos 6 meses">
+                                {#each puntos as p}
+                                    <span class="punto {p.estado}" title={tituloPunto(p)}>
+                                        <span class="sr-only">{ETIQUETA_ESTADO_PUNTO[p.estado] ?? p.estado}</span>
+                                    </span>
+                                {:else}
+                                    <span class="vacia">—</span>
+                                {/each}
+                            </span>
+
+                            <span class="celda alertas">
+                                {#each chips as chip}
+                                    <span class="chip {chip.tipo} {chip.mod}" title={chip.titulo}>
+                                        {#if chip.sr}<span class="sr-only">{chip.sr}</span>{/if}
+                                        {chip.texto}
+                                    </span>
+                                {:else}
+                                    <span class="vacia">—</span>
+                                {/each}
+                            </span>
+
+                            <span class="celda alta">{fmtAlta(alta)}</span>
+                        </button>
+                    </li>
+                {/each}
+            </ul>
+        </div>
+
+        <nav class="paginacion" aria-label="Paginación de la cartera">
+            <span class="rango">{desdeFila}–{hastaFila} de {ordenadas.length}</span>
+            {#if totalPaginas > 1}
+                <div class="paginas">
+                    <button onclick={() => irA(paginaActual - 1)} disabled={paginaActual === 1} aria-label="Página anterior">‹</button>
+                    {#each numerosPagina as n}
+                        {#if n === '…'}
+                            <span class="salto" aria-hidden="true">…</span>
+                        {:else}
+                            <button
+                                class:actual={n === paginaActual}
+                                onclick={() => irA(n)}
+                                aria-label="Página {n}"
+                                aria-current={n === paginaActual ? 'page' : undefined}
+                            >
+                                {n}
+                            </button>
+                        {/if}
+                    {/each}
+                    <button onclick={() => irA(paginaActual + 1)} disabled={paginaActual === totalPaginas} aria-label="Página siguiente">›</button>
+                </div>
+            {/if}
+        </nav>
     {/if}
 
     {#if agregando}
@@ -469,10 +698,6 @@ h2 { color: var(--violeta2); margin: 0; }
     font-weight: 400; cursor: pointer; transition: background 0.18s, border-color 0.18s, color 0.18s;
 }
 .agregar:hover { background: #f5f2fa; border-color: #d1c4e9; color: var(--violeta2); }
-.config {
-    background: #fff; border: 1.5px solid #e0e0e0; color: var(--violeta2);
-    border-radius: 50%; width: 2.4em; height: 2.4em; font-size: 1em; cursor: pointer;
-}
 .controles { display: flex; flex-wrap: wrap; gap: 1em; margin: 1.5em 0; align-items: center; }
 input[type='search'] {
     flex: 1 1 18em; padding: 0.7em 1em; border: 2px solid #e5e7eb;
@@ -485,45 +710,84 @@ input[type='search']:focus { outline: none; border-color: var(--violeta2); }
     border-radius: 2em; padding: 0.45em 1em; cursor: pointer; font-size: 0.92em;
 }
 .filtros button.activo { background: var(--violeta2); color: #fff; border-color: var(--violeta2); }
-.lista { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.5em; }
-/* overflow: hidden asi el fondo de `.fila:hover` (un boton que ocupa todo el
-   li) queda recortado al radio del li: sin esto, el hover pintaba un
-   rectangulo que sobresalia de las esquinas redondeadas. */
-li { border: 1.5px solid #ececec; border-radius: 1em; background: #fff; border-left-width: 1.5px; overflow: hidden; transition: border-color 0.15s; }
-li.con-alerta { border-color: #f0c674; }
-/* La urgencia se ve antes de leer los chips: el borde izquierdo se engrosa y
-   se tiñe segun el peso de las alertas activas. */
-li.urgencia-baja { border-left: 4px solid #b9a7d9; }
-li.urgencia-media { border-left: 4px solid #f0c674; }
-li.urgencia-alta { border-left: 4px solid #ef4444; box-shadow: 0 1px 8px rgba(239, 68, 68, 0.12); }
+
+/* Una sola definicion de columnas para el encabezado y las filas: si vivieran
+   en dos reglas distintas, tocar una sola descuadra la tabla entera.
+   minmax(0, …) y no 1fr pelado: con `1fr` la columna no puede achicarse por
+   debajo de su contenido, asi que un nombre largo empujaba a las demas fuera de
+   la fila. */
+.tabla {
+    --cols: 4.6em minmax(0, 1.5fr) 4.2em 6.4em 7.6em 6em 5em minmax(0, 1.7fr) 5.4em;
+    border: 1.5px solid #ececec; border-radius: 1em; background: #fff; overflow: hidden;
+}
+.cabecera, .fila {
+    display: grid; grid-template-columns: var(--cols);
+    gap: 0.7em; align-items: center;
+}
+.cabecera { background: #faf8fd; border-bottom: 1px solid #ececec; padding: 0 0.4em 0 0.9em; }
+.th {
+    display: flex; align-items: center; gap: 0.3em; min-width: 0;
+    background: none; border: none; padding: 0.7em 0.2em; margin: 0;
+    font: inherit; font-size: 0.72em; letter-spacing: 0.04em; color: #6b7280;
+    text-align: left; cursor: pointer; border-radius: 0.4em;
+    transition: color 0.15s;
+}
+.th-texto { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.th:hover { color: var(--violeta2); }
+.th.activa { color: var(--violeta2); font-weight: 700; }
+/* La flecha del criterio inactivo se ve igual, apagada: sin ella el encabezado
+   no parece clickeable hasta que lo tocas. */
+.flecha { opacity: 0.35; flex-shrink: 0; }
+.th.activa .flecha { opacity: 1; }
+
+.lista { list-style: none; padding: 0; margin: 0; }
+li + li .fila { border-top: 1px solid #f3f4f6; }
 .fila {
-    width: 100%; display: grid;
-    /* minmax(0, 1fr) y no 1fr: con `1fr` la columna no puede achicarse por
-       debajo de su contenido, asi que un nombre largo empujaba a las demas
-       fuera de la fila. */
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, auto) auto;
-    align-items: center; gap: 1.2em; padding: 0.9em 1.2em;
-    background: none; border: none; cursor: pointer; text-align: left; font-size: 1em;
+    width: 100%; padding: 0.6em 0.6em 0.6em 0.9em;
+    background: none; border: none; cursor: pointer; text-align: left;
+    font-size: 1em; font-family: inherit; color: inherit;
 }
 .fila:hover { background: #faf8fd; }
 /* Con teclado no habia ninguna senial de donde estabas parado. */
 .fila:focus-visible { outline: 2px solid var(--violeta2); outline-offset: -2px; background: #faf8fd; }
-.quien { display: flex; flex-direction: column; gap: 0.15em; min-width: 0; }
-.nombre-linea { display: flex; align-items: center; gap: 0.4em; min-width: 0; }
-.nombre-linea strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-.code { color: #9ca3af; font-size: 0.85em; }
+/* La urgencia se ve antes de leer los chips. `inset box-shadow` y no
+   `border-left`: el borde cambiaria el ancho de la fila y las filas con alerta
+   arrancarian corridas respecto de las que no tienen. */
+.fila.urgencia-baja { box-shadow: inset 3px 0 0 #b9a7d9; }
+.fila.urgencia-media { box-shadow: inset 3px 0 0 #f0c674; }
+.fila.urgencia-alta { box-shadow: inset 3px 0 0 #ef4444; }
+
+.celda { min-width: 0; display: flex; align-items: center; gap: 0.3em; font-size: 0.85em; }
+.codigo { color: #9ca3af; font-variant-numeric: tabular-nums; }
+/* Codigo y nombre se copian todo el dia. Dentro de un <button> el navegador no
+   deja seleccionar; esto lo habilita, y `abrir()` ignora el click cuando hay
+   algo seleccionado. */
+.seleccionable { cursor: text; user-select: text; }
+.quien { flex-direction: column; align-items: flex-start; gap: 0.05em; }
+.nombre-linea { display: flex; align-items: center; gap: 0.4em; min-width: 0; max-width: 100%; }
+.nombre-linea strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; font-weight: 600; }
+.edad, .contacto, .alta { color: #6b7280; white-space: nowrap; }
+.alta { font-variant-numeric: tabular-nums; }
+.ciudad { color: #6b7280; }
+/* El recorte va en el hijo y no en la celda: `.celda` es flex, y un nodo de
+   texto suelto adentro de un flex container no se puede elipsizar. */
+.ciudad .texto { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vacia { color: #d1d5db; }
+/* Mismo tono amber que las alertas de mora, no rojo: un refresco fallido deja
+   al cliente en el modo degradado esperado (snapshot viejo), no en un error. */
+.sync-fallo { color: #92400e; }
 /* "Nuevo": mismo cyan que .chip.promo (informativo, deducido de IspCube).
    "Instalado": mismo verde que .chip.rec-proximo. Cero paletas nuevas. */
 .badge {
-    font-size: 0.68em; font-weight: 700; padding: 0.15em 0.55em; border-radius: 1em;
+    font-size: 0.72em; font-weight: 700; padding: 0.15em 0.5em; border-radius: 1em;
     white-space: nowrap; text-transform: uppercase; letter-spacing: 0.02em; flex-shrink: 0;
 }
 .badge.nuevo { background: #cffafe; color: #155e75; }
 .badge.instalado { background: #d1fae5; color: #065f46; }
 /* Discreto a proposito: instalacion_pendiente/pendiente_pago se muestran,
    pero sin la fuerza visual de una alerta -no lo son-. */
-.estado-instalacion { color: #92400e; font-size: 0.78em; font-weight: 600; }
-.pagos { display: flex; gap: 0.3em; }
+.estado-instalacion { color: #92400e; font-size: 0.82em; font-weight: 600; }
+.pagos { gap: 0.25em; }
 .sr-only {
     position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
     overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
@@ -531,7 +795,7 @@ li.urgencia-alta { border-left: 4px solid #ef4444; box-shadow: 0 1px 8px rgba(23
 /* Cinco estados, cinco combinaciones de forma + borde + relleno: el color
    nunca es el unico canal, asi que siguen siendo distinguibles sin ver rojo
    ni verde. */
-.punto { width: 0.85em; height: 0.85em; display: inline-block; box-sizing: border-box; flex-shrink: 0; }
+.punto { width: 0.75em; height: 0.75em; display: inline-block; box-sizing: border-box; flex-shrink: 0; }
 .punto.verde { border-radius: 50%; background: #22c55e; border: 1.5px solid #16a34a; }
 .punto.amarillo {
     border-radius: 50%; border: 1.5px solid #a16207;
@@ -543,8 +807,11 @@ li.urgencia-alta { border-left: 4px solid #ef4444; box-shadow: 0 1px 8px rgba(23
 /* Los chips coexisten: mora + ticket + recordatorio + promo pueden estar los
    cuatro. Envuelven a una segunda linea antes que empujar o recortar las otras
    columnas. */
-.alertas { display: flex; gap: 0.4em; flex-wrap: wrap; justify-content: flex-end; min-width: 0; }
-.chip { font-size: 0.78em; padding: 0.25em 0.7em; border-radius: 1em; white-space: nowrap; font-weight: 600; }
+.alertas, .conexiones { flex-wrap: wrap; gap: 0.3em; }
+.chip {
+    font-size: 0.88em; padding: 0.15em 0.6em; border-radius: 1em;
+    white-space: nowrap; font-weight: 600;
+}
 .chip.seguimiento { background: #ede7f6; color: #5a1e7a; }
 .chip.mora_1 { background: #fef3c7; color: #92400e; }
 .chip.mora_2 { background: #fee2e2; color: #991b1b; }
@@ -554,7 +821,7 @@ li.urgencia-alta { border-left: 4px solid #ef4444; box-shadow: 0 1px 8px rgba(23
    deducido de IspCube. */
 .chip.promo {
     background: #cffafe; color: #155e75;
-    display: inline-block; max-width: 14em;
+    display: inline-block; max-width: 10em;
     overflow: hidden; text-overflow: ellipsis;
 }
 /* Mismo amber que mora_1: "atender pronto", no una falla ya consumada como mora_2. */
@@ -562,10 +829,11 @@ li.urgencia-alta { border-left: 4px solid #ef4444; box-shadow: 0 1px 8px rgba(23
 /* Mismo amber que mora_1/tickets: anomalia de proceso, no un vencimiento,
    pero tampoco algo para ignorar. */
 .chip.nap_faltante, .chip.nap_anulado { background: #fef3c7; color: #92400e; }
-/* El recordatorio se recorta -el texto completo va en el `title`- para que uno
-   largo no descuadre la fila. El color lo pone el modificador de estado. */
+/* Mas corto que en la version de tarjetas (era 14em): en una tabla de nueve
+   columnas un recordatorio largo envolvia a tres lineas y estiraba la fila.
+   El texto completo sigue en el `title`. */
 .chip.recordatorio {
-    display: inline-block; max-width: 14em;
+    display: inline-block; max-width: 8em;
     overflow: hidden; text-overflow: ellipsis;
 }
 /* Semaforo del recordatorio. Los tres colores ya existen en el panel: el verde
@@ -575,10 +843,29 @@ li.urgencia-alta { border-left: 4px solid #ef4444; box-shadow: 0 1px 8px rgba(23
 .chip.rec-proximo { background: #d1fae5; color: #065f46; }
 .chip.rec-hoy { background: #fef3c7; color: #92400e; }
 .chip.rec-vencido { background: #fee2e2; color: #991b1b; }
-.sync { color: #9ca3af; font-size: 0.8em; white-space: nowrap; min-width: 6.5em; text-align: right; }
-/* Mismo tono amber que las alertas de mora, no rojo: un refresco fallido deja
-   al cliente en el modo degradado esperado (snapshot viejo), no en un error. */
-.sync-fallo { color: #92400e; }
+/* Los chips de conexion reusan la escala de `describirConexion`: internet en
+   violeta (el color del panel), TV en cyan, telefonia en gris. */
+.chip.conexion { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.chip.conexion.internet { background: #ede7f6; color: #5a1e7a; }
+.chip.conexion.tv { background: #cffafe; color: #155e75; }
+.chip.conexion.telefonia { background: #f3f4f6; color: #4b5563; }
+.chip.conexion.otro { background: #f3f4f6; color: #6b7280; }
+
+.paginacion {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 1em; margin-top: 1em; font-size: 0.85em; color: #6b7280; flex-wrap: wrap;
+}
+.paginas { display: flex; gap: 0.3em; align-items: center; }
+.paginas button {
+    border: 1.5px solid #e5e7eb; background: #fff; color: var(--violeta2);
+    border-radius: 0.5em; padding: 0.3em 0.65em; cursor: pointer;
+    font-size: 1em; font-family: inherit; min-width: 2.1em;
+}
+.paginas button:hover:not(:disabled) { background: #f5f2fa; border-color: #d1c4e9; }
+.paginas button.actual { background: var(--violeta2); color: #fff; border-color: var(--violeta2); }
+.paginas button:disabled { opacity: 0.4; cursor: not-allowed; }
+.salto { color: #d1d5db; padding: 0 0.15em; }
+
 .vacio { color: #6b7280; padding: 2em 0; display: flex; flex-direction: column; align-items: flex-start; gap: 0.8em; }
 .error {
     color: #991b1b; background: #fef2f2; border: 1px solid #fecaca; border-radius: 0.8em;
@@ -589,22 +876,35 @@ li.urgencia-alta { border-left: 4px solid #ef4444; box-shadow: 0 1px 8px rgba(23
     background: #fff; border: 1.5px solid #e0e0e0; color: var(--violeta2);
     border-radius: 2em; padding: 0.5em 1.2em; cursor: pointer; font-size: 0.92em;
 }
-@media (max-width: 700px) {
+
+/* Nueve columnas no entran en un telefono. Se vuelve a la disposicion apilada,
+   con areas: el nombre toma el ancho completo y los datos cortos comparten
+   linea. Solo se ocultan edad, ciudad y conexiones -son contexto, no lo que se
+   busca en un telefono-. El encabezado de orden tambien, porque no hay
+   columnas contra las cuales alinearlo; el orden activo se conserva. */
+@media (max-width: 900px) {
     section { padding: 1em; }
-    /* Apilar las cuatro celdas sueltas dejaba una columna larguisima. Con
-       areas, el nombre toma el ancho completo y los puntos comparten linea con
-       la marca de sincronizacion. */
+    .cabecera { display: none; }
     .fila {
         grid-template-columns: 1fr auto;
         grid-template-areas:
+            'codigo alta'
             'quien quien'
-            'pagos sync'
+            'pagos contacto'
             'alertas alertas';
-        gap: 0.5em 0.8em;
+        gap: 0.3em 0.8em; padding: 0.8em 0.9em;
     }
+    /* El codigo se queda como celda propia en vez de colarse en la linea del
+       nombre con un `::before`: adentro vive el aviso de "sin actualizar", y
+       esconderlo dejaba al telefono sin la unica senial de que el snapshot
+       esta viejo. */
+    .codigo { grid-area: codigo; }
     .quien { grid-area: quien; }
     .pagos { grid-area: pagos; }
-    .sync { grid-area: sync; }
-    .alertas { grid-area: alertas; justify-content: flex-start; }
+    .contacto { grid-area: contacto; justify-content: flex-end; }
+    .alta { grid-area: alta; justify-content: flex-end; }
+    .alertas { grid-area: alertas; }
+    /* Contexto, no lo que se busca en un telefono. */
+    .edad, .ciudad, .conexiones { display: none; }
 }
 </style>
