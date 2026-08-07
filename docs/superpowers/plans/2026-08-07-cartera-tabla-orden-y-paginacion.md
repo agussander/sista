@@ -1700,6 +1700,9 @@ onMount(() => {
             <ul class="lista">
                 {#each enPagina as fila (fila.cliente.id)}
                     {@const { cliente, urgencia, chips, estadoInstalacion, edad, ciudad, puntos, ultimoContacto, alta } = fila}
+                    <!-- Al nivel del {#each} y no dentro de la celda: Svelte
+                         solo acepta {@const} como hijo directo de un bloque. -->
+                    {@const desdeContacto = haceCuanto(ultimoContacto, ahora)}
                     <li>
                         <!-- Tres `class:` sueltos y no un `class={...}` calculado:
                              un `class` dinamico en el mismo elemento que el
@@ -1726,10 +1729,7 @@ onMount(() => {
                                 {/if}
                             </span>
 
-                            <!-- `data-code` lo lee el `::before` del layout
-                                 mobile, donde la columna de codigo se oculta y
-                                 el numero pasa a la linea del nombre. -->
-                            <span class="celda quien seleccionable" data-code={cliente.code}>
+                            <span class="celda quien seleccionable">
                                 <span class="nombre-linea">
                                     <strong>{cliente.nombre}</strong>
                                     {#if cliente.nuevo}
@@ -1779,9 +1779,9 @@ onMount(() => {
                             </span>
 
                             <span class="celda contacto">
-                                {#if haceCuanto(ultimoContacto, ahora)}
+                                {#if desdeContacto}
                                     <span title="Último contacto: {fmtFecha(ultimoContacto)}">
-                                        {haceCuanto(ultimoContacto, ahora)}
+                                        {desdeContacto}
                                     </span>
                                 {:else}
                                     <span class="vacia" title="Todavía no lo contactaron">nunca</span>
@@ -2061,30 +2061,33 @@ li + li .fila { border-top: 1px solid #f3f4f6; }
 
 /* Nueve columnas no entran en un telefono. Se vuelve a la disposicion apilada,
    con areas: el nombre toma el ancho completo y los datos cortos comparten
-   linea. Edad, ciudad y conexiones se ocultan -son contexto, no lo que se
-   busca en un telefono-. El encabezado de orden tambien: no hay columnas
-   contra las cuales alinearlo. El orden activo se conserva. */
+   linea. Solo se ocultan edad, ciudad y conexiones -son contexto, no lo que se
+   busca en un telefono-. El encabezado de orden tambien, porque no hay
+   columnas contra las cuales alinearlo; el orden activo se conserva. */
 @media (max-width: 900px) {
     section { padding: 1em; }
     .cabecera { display: none; }
     .fila {
         grid-template-columns: 1fr auto;
         grid-template-areas:
+            'codigo alta'
             'quien quien'
-            'pagos alta'
+            'pagos contacto'
             'alertas alertas';
-        gap: 0.4em 0.8em; padding: 0.8em 0.9em;
+        gap: 0.3em 0.8em; padding: 0.8em 0.9em;
     }
+    /* El codigo se queda como celda propia en vez de colarse en la linea del
+       nombre con un `::before`: adentro vive el aviso de "sin actualizar", y
+       esconderlo dejaba al telefono sin la unica senial de que el snapshot
+       esta viejo. */
+    .codigo { grid-area: codigo; }
     .quien { grid-area: quien; }
     .pagos { grid-area: pagos; }
+    .contacto { grid-area: contacto; justify-content: flex-end; }
     .alta { grid-area: alta; justify-content: flex-end; }
     .alertas { grid-area: alertas; }
-    .codigo, .edad, .ciudad, .conexiones, .contacto { display: none; }
-    /* El codigo desaparece como celda pero no como dato: entra en la linea del
-       nombre, que en mobile tiene el ancho entero. */
-    .quien::before {
-        content: attr(data-code); color: #9ca3af; font-size: 0.85em;
-    }
+    /* Contexto, no lo que se busca en un telefono. */
+    .edad, .ciudad, .conexiones { display: none; }
 }
 </style>
 ````
