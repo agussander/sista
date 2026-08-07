@@ -50,6 +50,31 @@ describe('normalizarCliente', () => {
 		expect(c.start_date).toBe('');
 	});
 
+	it('guarda el documento crudo, sin interpretarlo', () => {
+		expect(normalizarCliente({ ...crudo, doc_number: '20909528' }).doc_number).toBe('20909528');
+	});
+
+	it('sin documento, string vacio', () => {
+		expect(normalizarCliente(crudo).doc_number).toBe('');
+		expect(normalizarCliente({ ...crudo, doc_number: null }).doc_number).toBe('');
+		// Un numero tampoco: el campo es texto libre del otro lado y el que lo
+		// interpreta es `edad.js`, que espera un string.
+		expect(normalizarCliente({ ...crudo, doc_number: 20909528 }).doc_number).toBe('');
+	});
+
+	it('saca la ciudad del objeto anidado, tal cual viene', () => {
+		// Sondeo real (cliente 003566): `city` llega anidada y en MAYUSCULAS.
+		// Se guarda asi; el title case lo pone la lista al mostrarla.
+		const c = normalizarCliente({ ...crudo, city: { id: 2, name: 'PUNTA LARA' } });
+		expect(c.ciudad).toBe('PUNTA LARA');
+	});
+
+	it('sin ciudad, string vacio', () => {
+		expect(normalizarCliente(crudo).ciudad).toBe('');
+		expect(normalizarCliente({ ...crudo, city: null }).ciudad).toBe('');
+		expect(normalizarCliente({ ...crudo, city: {} }).ciudad).toBe('');
+	});
+
 	it('conserva comercial_activity', () => {
 		// Sondeo real (cliente 003566): el campo llega tal cual, con el typo de
 		// IspCube ("comercial", no "commercial").

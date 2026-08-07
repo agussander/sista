@@ -64,7 +64,8 @@ function conexionesDe(crudo, nombrePorId) {
  * @param {any} crudo
  * @param {Map<number, string>} [nombrePorId] Ver `conexionesDe`.
  * @returns {{code: string, nombre: string, estado: string, start_date: string,
- *   entity_id: number | null, entity_nombre: string, comercial_activity: string,
+ *   entity_id: number | null, entity_nombre: string,
+ *   doc_number: string, ciudad: string, comercial_activity: string,
  *   debt: number, duedebt: number,
  *   connections: {plan_id: number|null, plan_nombre: string}[],
  *   promos: {conexion_id: number, plan_nombre: string, promo_nombre: string,
@@ -82,6 +83,13 @@ export function normalizarCliente(crudo, nombrePorId) {
 		start_date: typeof c.start_date === 'string' ? c.start_date.slice(0, 10) : '',
 		entity_id: c.entity_id ?? null,
 		entity_nombre: typeof c.entity?.name === 'string' ? c.entity.name : '',
+		// Documento y ciudad se guardan CRUDOS, tal como los manda IspCube. El
+		// documento lo interpreta `edad.js` (puede ser un DNI o un CUIL) y la
+		// ciudad la muestra la lista pasada por `toTitleCase`. Normalizar aca
+		// haria que el snapshot y la API dejaran de coincidir sin que quede
+		// registrado donde se transformo.
+		doc_number: typeof c.doc_number === 'string' ? c.doc_number : '',
+		ciudad: typeof c.city?.name === 'string' ? c.city.name : '',
 		// Campo de texto libre de "datos personales" en IspCube. Normalmente es
 		// la actividad comercial real, pero para debito automatico con tarjeta
 		// se usa como marca: ver `perfilDe`.
