@@ -1,11 +1,13 @@
 <!--
-  MODO MANTENIMIENTO ACTIVO
-
-  Layout anterior (Nav, Footer, GTM/GA, Meta, etc.):
+  Layout raíz. Copia de referencia del layout previo a este:
   src/lib/backup/original-root-layout.svelte
 
-  Restaurar: copia el contenido de ese archivo sobre este +layout.svelte
-  (no uses nombre +layout.backup en routes: SvelteKit lo reserva).
+  Este archivo nació como layout de "modo mantenimiento": tenía un
+  `allowedPrefixes` y todo lo que no estuviera en la lista se reemplazaba por una
+  pantalla de "Sitio en mantenimiento". Ese modo nunca llegó a funcionar (ver
+  `$lib/tracking.js`) y para cuando se detectó ya habría tapado 52 de las 68
+  páginas del sitio, así que se quitó. Hoy todas las páginas se renderizan
+  siempre; lo único condicional es la medición.
 -->
 
 <script>
@@ -14,6 +16,7 @@
 	import Nav from '$lib/components/layout/nav/Navs/Nav.svelte';
 	import { mobile, modal, windowX } from '$lib/stores';
 	import { SITE_ORIGIN, canonicalUrl } from '$lib/seo.js';
+	import { shouldTrack } from '$lib/tracking.js';
 	import { browser } from '$app/environment';
 	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
@@ -62,22 +65,6 @@
 		]
 	};
 
-	const allowedPrefixes = [
-		'/',
-		'/tv',
-		'/precios',
-		'/telefonia',
-		'/formasdepago',
-		'/acerca-de',
-		'/dgo',
-		'/antinaplay',
-		'/gigaredplay',
-		'/whatsapp',
-		'/experto-wifi',
-		'/elegirplan',
-		'/puntos'
-	];
-
 	const setMobile = () => ($mobile = $windowX < 750);
 	// `/puntos` es la pantalla que ve el comercio al escanear el QR de un
 	// cliente: un kiosco de un solo boton. El nav y el footer ahi son ruido y
@@ -93,11 +80,11 @@
 			$page.url.pathname.startsWith('/admin')
 	);
 
-	let isAllowedPath = $derived(() => {
-		const path = $page.url?.pathname ?? '/';
-		if (path === '/') return true;
-		return allowedPrefixes.some((p) => p !== '/' && (path === p || path.startsWith(`${p}/`)));
-	});
+	// OJO: `$derived(expr)` evalua la expresion. Si se le pasa una arrow function
+	// el valor derivado ES la funcion -siempre truthy- y el `{#if}` nunca es
+	// falso. Para envolver un bloque va `$derived.by(() => {...})`. Aca alcanza
+	// con la expresion porque `shouldTrack` ya es una funcion pura.
+	let trackea = $derived(shouldTrack($page.url?.pathname));
 
 	// URL canonica de la pagina actual. Hace falta porque `sista.ar` y
 	// `www.sista.ar` sirven las dos el mismo contenido con 200: sin declarar
@@ -146,14 +133,14 @@
 
 	// Trackear cambios de página con $effect (solo se ejecuta en el cliente)
 	$effect(() => {
-		if ($page.url.pathname && browser && isAllowedPath) {
+		if ($page.url.pathname && browser && trackea) {
 			trackPageView($page.url.pathname);
 		}
 	});
 </script>
 
 <svelte:head>
-	{#if isAllowedPath}
+	{#if trackea}
 		<!-- URL canónica: sista.ar es el host que vale, no www.sista.ar -->
 		<link rel="canonical" href={canonical} />
 
@@ -223,137 +210,32 @@
 		/></noscript>
 		<!-- End Meta Pixel Code -->
 	{:else}
-		<title>Sista · Sitio en mantenimiento</title>
+		<!--
+			Rutas internas (ver `$lib/tracking.js`): la página se renderiza normal,
+			pero no se mide ni se ofrece a Google. El `noindex` es lo único que se
+			conserva de la vieja rama de "modo mantenimiento": /admin es una pantalla
+			de login y no tiene por qué aparecer en los resultados de búsqueda.
+		-->
 		<meta name="robots" content="noindex, nofollow" />
 	{/if}
 </svelte:head>
 
 <svelte:window bind:innerWidth={$windowX}></svelte:window>
 
-{#if isAllowedPath}
-	{#if !hideChrome}
-		<Nav />
-	{/if}
+{#if !hideChrome}
+	<Nav />
+{/if}
 
-	{#if $modal && !hideChrome}
-		<Modal />
-	{/if}
+{#if $modal && !hideChrome}
+	<Modal />
+{/if}
 
-	{@render _children()}
+{@render _children()}
 
-	{#if !hideChrome}
-		<Footer />
-	{/if}
-{:else}
-	<div class="mantenimiento">
-		<div class="mantenimiento__inner">
-			<img
-				class="mantenimiento__logo"
-				src="/images/Sista-logo-violeta.svg"
-				alt="Sista"
-				width="200"
-				height="auto"
-			/>
-			<h1 class="mantenimiento__titulo">Sitio en mantenimiento</h1>
-			<p class="mantenimiento__texto">
-				Estamos trabajando para mejorar el sitio. Mientras tanto, podés ver la info comercial y
-				comunicarte por WhatsApp.
-			</p>
-
-			<div class="mantenimiento__cta">
-				<a class="mantenimiento__btn mantenimiento__btn--primary" href="/whatsapp">Hablar por WhatsApp</a>
-				<div class="mantenimiento__links">
-					<a href="/tv">TV</a>
-					<a href="/precios">Precios</a>
-					<a href="/formasdepago">Formas de pago</a>
-					<a href="/acerca-de">Sobre nosotros</a>
-				</div>
-			</div>
-		</div>
-	</div>
+{#if !hideChrome}
+	<Footer />
 {/if}
 
 <style>
 	@import '$lib/global.css';
-
-	.mantenimiento {
-		min-height: 100dvh;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		padding: 2rem 1.25rem;
-		background: linear-gradient(
-			160deg,
-			var(--background) 0%,
-			rgb(245, 240, 250) 45%,
-			rgb(255, 248, 252) 100%
-		);
-	}
-
-	.mantenimiento__inner {
-		max-width: 28rem;
-		text-align: center;
-	}
-
-	.mantenimiento__logo {
-		display: block;
-		margin: 0 auto 2rem;
-		max-width: min(220px, 70vw);
-		height: auto;
-	}
-
-	.mantenimiento__titulo {
-		margin: 0 0 1rem;
-		font-size: clamp(1.5rem, 4vw, 2rem);
-		line-height: 1.2;
-	}
-
-	.mantenimiento__texto {
-		margin: 0;
-		font-size: 1.05rem;
-		line-height: 1.5;
-		color: var(--violeta1);
-		opacity: 0.92;
-	}
-
-	.mantenimiento__cta {
-		margin-top: 1.5rem;
-		display: grid;
-		gap: 1rem;
-		justify-items: center;
-	}
-
-	.mantenimiento__btn {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		padding: 0.85rem 1.1rem;
-		border-radius: 999px;
-		border: 1px solid color-mix(in srgb, var(--violeta1) 25%, transparent);
-		text-decoration: none;
-		font-weight: 700;
-	}
-
-	.mantenimiento__btn--primary {
-		background: var(--magenta);
-		color: white;
-		border-color: transparent;
-	}
-
-	.mantenimiento__btn--primary:hover {
-		opacity: 0.9;
-	}
-
-	.mantenimiento__links {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.9rem 1.1rem;
-		justify-content: center;
-	}
-
-	.mantenimiento__links a {
-		font-weight: 700;
-		text-decoration: underline;
-		text-underline-offset: 3px;
-	}
 </style>
