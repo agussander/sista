@@ -26,8 +26,10 @@ const datosInstalado = (extra = {}) => ({
 	start_date: '2026-07-01',
 	entity_id: 3,
 	entity_nombre: 'CAJA',
-	debt: 0,
-	duedebt: 0,
+	// Distintos entre si a proposito: con los dos en 0, transponer las dos
+	// asignaciones en construirParche pasaria el test sin que nadie se entere.
+	debt: 1500,
+	duedebt: 900,
 	connections: [{ id: 1 }],
 	promos: [],
 	alta_nap: { existe: true, cerrado: true, anulado: false, closed_date: '2026-08-05' },
@@ -118,8 +120,8 @@ describe('construirParche', () => {
 			start_date: '2026-07-01',
 			entity_id: 3,
 			entity_nombre: 'CAJA',
-			debt: 0,
-			duedebt: 0
+			debt: 1500,
+			duedebt: 900
 		});
 	});
 
