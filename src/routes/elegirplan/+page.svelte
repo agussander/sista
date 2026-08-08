@@ -1,4 +1,5 @@
 <script>
+	import { SITE_ORIGIN } from '$lib/seo.js';
 	import ElegirPlanWizard from '$lib/components/elegirplan/ElegirPlanWizard.svelte';
 	import { MetaTags } from 'svelte-meta-tags';
 </script>
@@ -14,7 +15,7 @@
 		siteName: 'Sista',
 		images: [
 			{
-				url: 'https://sista.com.ar/images/Og-sista.png',
+				url: `${SITE_ORIGIN}/images/Og-sista.png`,
 				width: 2500,
 				height: 1307,
 				alt: 'Sista'
@@ -23,7 +24,7 @@
 	}}
 	twitter={{
 		cardType: 'summary_large_image',
-		image: 'https://sista.com.ar/images/Og-sista.png',
+		image: `${SITE_ORIGIN}/images/Og-sista.png`,
 		imageAlt: 'Sista'
 	}}
 />

@@ -1,4 +1,5 @@
 <script>
+	import { SITE_ORIGIN } from '$lib/seo.js';
     import { onMount } from 'svelte';
     import { MetaTags } from 'svelte-meta-tags';
     import { pb } from '$lib/pocketbase';
@@ -33,7 +34,7 @@
         type: 'website',
         images: [
             {
-                url: 'https://sista.com.ar/images/tv/logo-antina-meta.png',
+                url: `${SITE_ORIGIN}/images/tv/logo-antina-meta.png`,
                 width: 1200,
                 height: 630,
                 alt: 'Antina Play'
@@ -42,7 +43,7 @@
     }}
     twitter={{
         cardType: 'summary_large_image',
-        image: 'https://sista.com.ar/images/tv/logo-antina-meta.png',
+        image: `${SITE_ORIGIN}/images/tv/logo-antina-meta.png`,
         imageAlt: 'Antina Play'
     }}
 />

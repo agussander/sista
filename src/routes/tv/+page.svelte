@@ -1,4 +1,5 @@
 <script>
+	import { SITE_ORIGIN } from '$lib/seo.js';
 	import { goto } from '$app/navigation';
 	import { MetaTags } from 'svelte-meta-tags';
 	import StepHeader from '$lib/components/elegirplan/StepHeader.svelte';
@@ -13,7 +14,7 @@
 		type: 'website',
 		images: [
 			{
-				url: 'https://sista.com.ar/images/tv/tv-meta-img.png',
+				url: `${SITE_ORIGIN}/images/tv/tv-meta-img.png`,
 				width: 600,
 				height: 600,
 				alt: 'TV de Sista'
@@ -22,7 +23,7 @@
 	}}
 	twitter={{
 		cardType: 'summary',
-		image: 'https://sista.com.ar/images/tv/tv-meta-img.png',
+		image: `${SITE_ORIGIN}/images/tv/tv-meta-img.png`,
 		imageAlt: 'TV de Sista'
 	}}
 />

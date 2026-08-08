@@ -13,6 +13,7 @@
 	import Modal from '$lib/components/layout/Modal.svelte';
 	import Nav from '$lib/components/layout/nav/Navs/Nav.svelte';
 	import { mobile, modal, windowX } from '$lib/stores';
+	import { SITE_ORIGIN, canonicalUrl } from '$lib/seo.js';
 	import { browser } from '$app/environment';
 	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
@@ -27,10 +28,10 @@
 		'@graph': [
 			{
 				'@type': 'Organization',
-				'@id': 'https://www.sista.com.ar/#organization',
+				'@id': `${SITE_ORIGIN}/#organization`,
 				name: 'Sista',
-				url: 'https://www.sista.com.ar/',
-				logo: 'https://www.sista.com.ar/images/Sista-logo-violeta.svg',
+				url: `${SITE_ORIGIN}/`,
+				logo: `${SITE_ORIGIN}/images/Sista-logo-violeta.svg`,
 				description:
 					'Internet por fibra óptica y TV en Ensenada, Punta Lara y Tolosa. Alta velocidad, instalación rápida y soporte local.',
 				telephone: '+5492213541906',
@@ -53,10 +54,10 @@
 			},
 			{
 				'@type': 'WebSite',
-				'@id': 'https://www.sista.com.ar/#website',
-				url: 'https://www.sista.com.ar/',
+				'@id': `${SITE_ORIGIN}/#website`,
+				url: `${SITE_ORIGIN}/`,
 				name: 'Sista',
-				publisher: { '@id': 'https://www.sista.com.ar/#organization' }
+				publisher: { '@id': `${SITE_ORIGIN}/#organization` }
 			}
 		]
 	};
@@ -97,6 +98,13 @@
 		if (path === '/') return true;
 		return allowedPrefixes.some((p) => p !== '/' && (path === p || path.startsWith(`${p}/`)));
 	});
+
+	// URL canonica de la pagina actual. Hace falta porque `sista.ar` y
+	// `www.sista.ar` sirven las dos el mismo contenido con 200: sin declarar
+	// cual vale, Google elige por su cuenta y puede partir el ranking entre las
+	// dos. `canonicalUrl` normaliza a la forma que el sitio realmente sirve
+	// (barra final), que es condicion para que Google no lo ignore.
+	let canonical = $derived(canonicalUrl($page.url?.pathname));
 
 	onMount(async () => setMobile());
 
@@ -146,6 +154,9 @@
 
 <svelte:head>
 	{#if isAllowedPath}
+		<!-- URL canónica: sista.ar es el host que vale, no www.sista.ar -->
+		<link rel="canonical" href={canonical} />
+
 		<!-- Datos estructurados (Organización + WebSite) -->
 		{@html `<script type="application/ld+json">${JSON.stringify(orgSchema)}</script>`}
 

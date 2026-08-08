@@ -1,4 +1,5 @@
 <script>
+	import { SITE_ORIGIN } from '$lib/seo.js';
 	import { onMount } from 'svelte';
 	import { MetaTags } from 'svelte-meta-tags';
 	import { pb } from '$lib/pocketbase';
@@ -28,7 +29,7 @@
 		type: 'website',
 		images: [
 			{
-				url: 'https://sista.com.ar/images/tv/tv-meta-img.png',
+				url: `${SITE_ORIGIN}/images/tv/tv-meta-img.png`,
 				width: 600,
 				height: 600,
 				alt: 'TV de Sista'
@@ -37,7 +38,7 @@
 	}}
 	twitter={{
 		cardType: 'summary',
-		image: 'https://sista.com.ar/images/tv/tv-meta-img.png',
+		image: `${SITE_ORIGIN}/images/tv/tv-meta-img.png`,
 		imageAlt: 'TV de Sista'
 	}}
 />

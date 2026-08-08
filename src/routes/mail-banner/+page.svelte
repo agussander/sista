@@ -5,11 +5,12 @@
 </svelte:head>
 
 <script>
+	import { SITE_ORIGIN } from '$lib/seo.js';
 	let nombre = '';
 	let puesto = '';
-	let telIconUrl = 'https://sista.com.ar/assets/mail-assets/tel.png';
-	let whatsappIconUrl = 'https://sista.com.ar/assets/mail-assets/whatsapp.png';
-	let logoUrl = 'https://sista.com.ar/assets/mail-assets/logo.png';
+	let telIconUrl = `${SITE_ORIGIN}/assets/mail-assets/tel.png`;
+	let whatsappIconUrl = `${SITE_ORIGIN}/assets/mail-assets/whatsapp.png`;
+	let logoUrl = `${SITE_ORIGIN}/assets/mail-assets/logo.png`;
 
 	function escapeHtml(str) {
 		return String(str)
