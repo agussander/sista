@@ -4,8 +4,10 @@
  *
  * Vive separado del store por dos motivos. Uno, es la logica con mas sutileza
  * del sync -la transicion de `instalado_aviso`- y aca se puede testear sin
- * PocketBase de por medio. Dos, el store necesita armar todos los parches
- * ANTES de escribir ninguno, para poder mandarlos en un solo lote.
+ * PocketBase de por medio. Dos, una tarea futura va a necesitar que el store
+ * arme todos los parches ANTES de escribir ninguno, para mandarlos en un solo
+ * lote al Batch API de PocketBase (hoy `guardarSnapshot` todavia escribe uno
+ * por uno, en un loop).
  */
 import { perfilDe } from './normalizar.js';
 import { estadoInstalacionDe } from './instalacion.js';

@@ -102,6 +102,67 @@ describe('construirParche', () => {
 		expect(p).not.toHaveProperty('tickets');
 	});
 
+	it('agrega tickets tal cual si /sync los trajo', () => {
+		const tickets = [{ id: 1, ticket_category_id: 69 }];
+		const p = construirParche(clienteBase(), datosInstalado({ tickets }), CONFIG, HOY);
+		expect(p.tickets).toEqual(tickets);
+	});
+
+	it('copia los campos planos de /sync tal cual, sin mezclarlos entre si', () => {
+		const p = construirParche(clienteBase(), datosInstalado(), CONFIG, HOY);
+		expect(p).toMatchObject({
+			nombre: 'PEREZ JUAN',
+			doc_number: '20123456',
+			ciudad: 'PUNTA LARA',
+			estado: 'activo',
+			start_date: '2026-07-01',
+			entity_id: 3,
+			entity_nombre: 'CAJA',
+			debt: 0,
+			duedebt: 0
+		});
+	});
+
+	it('en pagos, el mes que trae /sync pisa al guardado cuando coinciden', () => {
+		// Mismo mes en los dos lados, con datos distintos: si `fusionarPagos`
+		// se llamara con los argumentos invertidos, ganaria el guardado (viejo)
+		// en vez del que acaba de traer /sync.
+		const actual = clienteBase({ pagos: [{ mes: '2026-07', dia: 5, monto: 100 }] });
+		const datos = datosInstalado({ pagos: [{ mes: '2026-07', dia: 20, monto: 250 }] });
+		const p = construirParche(actual, datos, CONFIG, HOY);
+		expect(p.pagos.find((x) => x.mes === '2026-07')).toEqual({
+			mes: '2026-07',
+			dia: 20,
+			monto: 250
+		});
+	});
+
+	it('poda del historial de pagos lo anterior a los 12 meses contados desde `hoy`', () => {
+		// HOY es 2026-08, asi que la ventana de 12 meses arranca en 2025-09:
+		// 2025-08 queda afuera. Si `hoy` se reemplazara por una fecha fija
+		// vieja, este pago no se podaria.
+		const actual = clienteBase({ pagos: [{ mes: '2025-08', dia: 10, monto: 50 }] });
+		const datos = datosInstalado({ pagos: [{ mes: '2026-08', dia: 1, monto: 10 }] });
+		const p = construirParche(actual, datos, CONFIG, HOY);
+		const meses = p.pagos.map((x) => x.mes);
+		expect(meses).not.toContain('2025-08');
+		expect(meses).toContain('2026-08');
+	});
+
+	it('con la marca de debito automatico fuerza tarjeta aunque la entidad no este configurada', () => {
+		// La marca viene en `datos.comercial_activity` (lo que trajo /sync),
+		// no en `actual.comercial_activity`: el snapshot guardado no tiene ese
+		// campo. entity_id 3 no esta en `entidades_tarjeta` ([7]), asi que si
+		// esto da 'tarjeta' es por la marca, no por la entidad.
+		const p = construirParche(
+			clienteBase(),
+			datosInstalado({ entity_id: 3, comercial_activity: 'FACTURA EN DEBITO AUTOMATICO' }),
+			CONFIG,
+			HOY
+		);
+		expect(p.perfil_pago).toBe('tarjeta');
+	});
+
 	it('normaliza connections y promos a array', () => {
 		const p = construirParche(
 			clienteBase(),
