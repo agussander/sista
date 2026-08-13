@@ -14,7 +14,9 @@ const base = {
 	perfil_pago: 'ventanilla',
 	pagos: [{ mes: '2026-07', dia: 5, monto: 12000 }],
 	tickets: { abiertos: 0, cerrados: 3, ultimo: null },
-	tickets_vistos_hasta: '2026-07-01'
+	tickets_vistos_hasta: '2026-07-01',
+	connections: [{ plan_id: 1 }],
+	alta_nap: { existe: true, cerrado: true, anulado: false }
 };
 
 const tipos = (r) => r.map((a) => a.tipo);
@@ -292,6 +294,51 @@ describe('alertas de mora', () => {
 
 		expect(tipos(r)).not.toContain('mora_1');
 		expect(tipos(r)).not.toContain('mora_2');
+	});
+
+	it('no hay mora en un cliente no instalado, aunque tenga fecha de instalacion vieja y deuda', () => {
+		// `fecha_instalacion` puede venir cargada (a mano, o de un dato migrado)
+		// sin que la conexion este activa todavia: eso no es una instalacion real.
+		const r = alertasDe(
+			{ ...sinPagos, connections: [], alta_nap: { existe: false, cerrado: false, anulado: false } },
+			{ anio: 2026, mes: 7, dia: 25 },
+			CONFIG
+		);
+
+		expect(tipos(r)).not.toContain('mora_1');
+		expect(tipos(r)).not.toContain('mora_2');
+	});
+
+	it('no hay mora en un cliente con conexion pero con el alta de NAP todavia sin cerrar', () => {
+		const r = alertasDe(
+			{
+				...sinPagos,
+				connections: [{ plan_id: 1 }],
+				alta_nap: { existe: true, cerrado: false, anulado: false }
+			},
+			{ anio: 2026, mes: 7, dia: 25 },
+			CONFIG
+		);
+
+		expect(tipos(r)).not.toContain('mora_1');
+		expect(tipos(r)).not.toContain('mora_2');
+	});
+
+	it('sin fecha de instalacion y sin instalar, tampoco hay mora', () => {
+		const r = alertasDe(
+			{ ...sinPagos, fecha_instalacion: '', connections: [] },
+			{ anio: 2026, mes: 7, dia: 25 },
+			CONFIG
+		);
+
+		expect(tipos(r)).not.toContain('mora_1');
+		expect(tipos(r)).not.toContain('mora_2');
+	});
+
+	it('instalado de verdad, la mora sigue funcionando como antes', () => {
+		const r = alertasDe(sinPagos, { anio: 2026, mes: 7, dia: 25 }, CONFIG);
+
+		expect(tipos(r)).toContain('mora_1');
 	});
 });
 

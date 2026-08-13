@@ -21,6 +21,7 @@ import {
 	diferenciaDias
 } from './fechas.js';
 import { primerMesFacturable } from './pagos.js';
+import { estadoInstalacionDe } from './instalacion.js';
 
 /** Meses desde la instalacion hasta el llamado de seguimiento. */
 const MESES_SEGUIMIENTO = 2;
@@ -161,11 +162,17 @@ export function alertasDe(cliente, hoy, config, recordatorios = [], promos = [])
 	const primerMes = primerMesFacturable(instalacion);
 	const recienInstalado = primerMes && mesActual < primerMes;
 
+	// `fecha_instalacion` puede tener una fecha cargada (a mano, o migrada de
+	// cuando era un campo obligatorio) sin que la conexion este activa
+	// todavia: eso no es una instalacion real. `estadoInstalacionDe` es la
+	// fuente de verdad (connections + alta_nap.cerrado), no la fecha.
+	const instalado = estadoInstalacionDe(cliente) === 'instalado';
+
 	// Deliberadamente asimetrico con los puntos de pago (`puntosPorMes`): ahi
 	// el punto sigue reflejando cuando llego el primer recibo del mes, sin
 	// mirar duedebt, porque es historial de comportamiento, no un estado de
 	// cuenta. Que no se "corrija" para que combine con esto.
-	if (!recienInstalado && (!pagoDelMes || duedebt > 0)) {
+	if (instalado && !recienInstalado && (!pagoDelMes || duedebt > 0)) {
 		const corte1 = diaCorteDe(perfil, config);
 		if (hoy.dia > corte1) {
 			alertas.push({ tipo: 'mora_1', desde: mesActual });
