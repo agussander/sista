@@ -346,11 +346,14 @@ async function descubrirCandidatosDeVendedor() {
 		// Cartera, y fue lo que agoto el limite por IP el 2026-08-06.
 		const existentes = await buscarExistentes(nuevos.map((c) => c.code));
 
+		const aCrear = [];
 		for (const candidato of nuevos) {
 			if (existentes.has(candidato.code)) continue;
 
-			try {
-				const creado = await pb.collection(CLIENTES).create({
+			aCrear.push({
+				coleccion: CLIENTES,
+				accion: 'create',
+				datos: {
 					asesor: pb.authStore.record.id,
 					code: candidato.code,
 					fecha_instalacion: '',
@@ -361,7 +364,11 @@ async function descubrirCandidatosDeVendedor() {
 					start_date: candidato.start_date,
 					entity_id: candidato.entity_id,
 					entity_nombre: candidato.entity_nombre,
-					perfil_pago: perfilDe(candidato.entity_id, config.entidades_tarjeta, candidato.comercial_activity),
+					perfil_pago: perfilDe(
+						candidato.entity_id,
+						config.entidades_tarjeta,
+						candidato.comercial_activity
+					),
 					perfil_manual: false,
 					debt: candidato.debt,
 					duedebt: candidato.duedebt,
@@ -380,19 +387,29 @@ async function descubrirCandidatosDeVendedor() {
 					// llega pronto y no hay que esperar las 12h de FRESCO_MS.
 					sincronizado: '',
 					archivado: false
-				});
-				clientes = [creado, ...clientes];
-			} catch (e) {
-				// Un create que rebota (por ejemplo el indice unico si dos pestanias
-				// corren el descubrimiento a la vez) no debe tumbar a los demas
-				// candidatos del lote.
+				}
+			});
+		}
+
+		if (aCrear.length === 0) return;
+
+		// Un solo request para todas las altas. Si el lote rebota -por ejemplo
+		// porque dos pestanias corrieron el descubrimiento a la vez y una alta
+		// choca contra el indice unico (asesor, code)-, escribirLote las rehace
+		// una por una y solo se pierde la que choco, igual que antes.
+		const creados = await escribirLote(pb, aCrear);
+
+		const nuevosRegistros = [];
+		for (const c of creados) {
+			if (c.ok) nuevosRegistros.push(c.record);
+			else
 				console.error(
 					'[cartera] no se pudo sumar el candidato',
-					candidato.code,
-					JSON.stringify(e?.response ?? e)
+					c.operacion.datos.code,
+					JSON.stringify(c.error?.response ?? c.error)
 				);
-			}
 		}
+		if (nuevosRegistros.length > 0) clientes = [...nuevosRegistros, ...clientes];
 	} catch (e) {
 		console.error('[cartera] fallo el descubrimiento de candidatos por vendedor:', e);
 	}
