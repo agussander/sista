@@ -15,6 +15,7 @@ import { estadoInstalacionDe } from '$lib/cartera/instalacion.js';
 import { CONFIG_DEFAULT, normalizarConfig } from '$lib/cartera/config.js';
 import { construirParche } from '$lib/cartera/parche.js';
 import { escribirLote } from '$lib/pbLote.js';
+import { almacenDeSesion, leerConfigCache, guardarConfigCache } from '$lib/cartera/configCache.js';
 
 const CLIENTES = 'cartera_clientes';
 const NOTAS = 'cartera_notas';
@@ -96,6 +97,17 @@ function hoyISO() {
 }
 
 async function cargarConfig() {
+	const almacen = almacenDeSesion();
+
+	// El cacheado ya paso por normalizarConfig cuando se guardo, pero se
+	// vuelve a normalizar igual: es barato, y asi un JSON viejo de una version
+	// anterior del esquema no se cuela sin validar.
+	const cacheada = leerConfigCache(almacen);
+	if (cacheada) {
+		config = normalizarConfig(cacheada);
+		return;
+	}
+
 	try {
 		const lista = await pb.collection(CONFIG).getList(1, 1);
 		// `normalizarConfig` (no un `{ ...CONFIG_DEFAULT, ...record }` a mano)
@@ -103,7 +115,10 @@ async function cargarConfig() {
 		// spread o un `?? 10` sin que nadie lo note, y `alertas.js` lo usaria
 		// tal cual: `hoy.dia > 0` es cierto todos los dias, para todos los
 		// clientes de la cartera.
-		if (lista.items.length > 0) config = normalizarConfig(lista.items[0]);
+		if (lista.items.length > 0) {
+			config = normalizarConfig(lista.items[0]);
+			guardarConfigCache(almacen, config);
+		}
 	} catch (e) {
 		// Sin config el panel funciona con los defaults: todos ventanilla, todas
 		// las areas cuentan como soporte.

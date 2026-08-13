@@ -16,6 +16,7 @@ import Spinner from '$lib/components/ui/Spinner.svelte';
 import { pb } from '$lib/pocketbase';
 import { carteraStore } from './carteraStore.svelte.js';
 import { diaCorteValido, diaCorteONormal, CONFIG_DEFAULT } from '$lib/cartera/config.js';
+import { almacenDeSesion, olvidarConfigCache } from '$lib/cartera/configCache.js';
 
 let { onCerrar } = $props();
 
@@ -102,6 +103,10 @@ async function guardar() {
 
         if (lista.items.length > 0) await pb.collection('cartera_config').update(lista.items[0].id, datos);
         else await pb.collection('cartera_config').create(datos);
+
+        // Antes del cargar(): si no, el store releeria el cache viejo y la
+        // pantalla se cerraria mostrando la config anterior.
+        olvidarConfigCache(almacenDeSesion());
 
         await carteraStore.cargar();
         onCerrar();
