@@ -154,4 +154,44 @@ describe('escribirLote', () => {
 			{ accion: 'update', id: 'rec0', datos: { nombre: 'X' } }
 		]);
 	});
+
+	// Los tres que siguen cubren el caso "el lote SE ESCRIBIO pero la respuesta
+	// no es la esperada". Es el unico lugar donde se puede perder informacion
+	// en silencio, porque reintentar ya no es una opcion: lo que se mando ya
+	// esta guardado.
+
+	it('un sub-request con status de error no se da por bueno', async () => {
+		const { pb, registro } = pbFalso({
+			batchSend: (o) => [
+				{ status: 200, body: { id: o[0].id } },
+				{ status: 400, body: { message: 'validacion' } },
+				{ status: 200, body: { id: o[2].id } }
+			]
+		});
+
+		const r = await escribirLote(pb, ops(3));
+
+		expect(r[0].ok).toBe(true);
+		expect(r[1].ok).toBe(false);
+		expect(r[1].operacion.id).toBe('rec1');
+		expect(r[2].ok).toBe(true);
+		// No se reescribe: el lote ya entro, reintentar duplicaria.
+		expect(registro.sueltas).toHaveLength(0);
+	});
+
+	it('si vuelven menos resultados que operaciones, falla en vez de reescribir', async () => {
+		const { pb, registro } = pbFalso({
+			batchSend: (o) => [{ status: 200, body: { id: o[0].id } }]
+		});
+
+		await expect(escribirLote(pb, ops(3))).rejects.toThrow(/no se puede interpretar/);
+		expect(registro.sueltas).toHaveLength(0);
+	});
+
+	it('si la respuesta no es un array, falla en vez de reescribir', async () => {
+		const { pb, registro } = pbFalso({ batchSend: () => ({ mensaje: 'raro' }) });
+
+		await expect(escribirLote(pb, ops(2))).rejects.toThrow(/no se puede interpretar/);
+		expect(registro.sueltas).toHaveLength(0);
+	});
 });

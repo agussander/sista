@@ -78,32 +78,60 @@ export async function escribirLote(pb, operaciones) {
  * @returns {Promise<Resultado[]>}
  */
 async function escribirTrozo(pb, trozo) {
-	if (loteDisponible) {
-		try {
-			const batch = pb.createBatch();
-			for (const op of trozo) {
-				const sub = batch.collection(op.coleccion);
-				if (op.accion === 'create') sub.create(op.datos);
-				else sub.update(op.id, op.datos);
-			}
+	if (!loteDisponible) return unaPorUna(pb, trozo);
 
-			const respuesta = await batch.send();
-			return respuesta.map((r) => ({ ok: true, record: r.body }));
-		} catch (e) {
-			// 403: la Batch API esta apagada. 404: el servidor es anterior a
-			// PocketBase 0.23 y no tiene /api/batch. Un 403 tambien puede ser una
-			// regla de coleccion que rechazo una escritura puntual, y en ese caso
-			// apagar el lote es de mas -pero es inofensivo: lo unico que pasa es
-			// que la sesion escribe una por una, como antes de este modulo-.
-			if (e?.status === 403 || e?.status === 404) loteDisponible = false;
-
-			// Cualquier otro fallo tambien cae aca. El lote es transaccional, asi
-			// que no se escribio nada: se rehace una por una para no perder las
-			// que si habrian andado.
+	let respuesta;
+	try {
+		const batch = pb.createBatch();
+		for (const op of trozo) {
+			const sub = batch.collection(op.coleccion);
+			if (op.accion === 'create') sub.create(op.datos);
+			else sub.update(op.id, op.datos);
 		}
+
+		respuesta = await batch.send();
+	} catch (e) {
+		// 403: la Batch API esta apagada. 404: el servidor es anterior a
+		// PocketBase 0.23 y no tiene /api/batch. Un 403 tambien puede ser una
+		// regla de coleccion que rechazo una escritura puntual, y en ese caso
+		// apagar el lote es de mas -pero es inofensivo: lo unico que pasa es
+		// que la sesion escribe una por una, como antes de este modulo-.
+		if (e?.status === 403 || e?.status === 404) loteDisponible = false;
+
+		// Cualquier otro fallo tambien cae aca. El lote es transaccional, asi
+		// que no se escribio nada: se rehace una por una para no perder las
+		// que si habrian andado.
+		return unaPorUna(pb, trozo);
 	}
 
-	return unaPorUna(pb, trozo);
+	// De aca para abajo el lote YA SE ESCRIBIO, y por eso nada puede volver a
+	// `unaPorUna`: seria escribir por segunda vez lo que ya esta escrito, y en
+	// el caso de los `create` duplicar filas. Por eso el armado de la respuesta
+	// vive fuera del try -adentro, un `.map` sobre algo que no es array caia en
+	// el catch y reejecutaba la tanda entera-.
+	//
+	// Si la respuesta no es la esperada no se sabe que quedo escrito: lo unico
+	// honesto es fallar ruidosamente. Los dos llamadores tienen su propio
+	// try/catch, asi que esto no tumba la pantalla.
+	if (!Array.isArray(respuesta) || respuesta.length !== trozo.length) {
+		throw new Error(
+			`[pbLote] el lote se escribio pero la respuesta no se puede interpretar: ` +
+				`${trozo.length} operaciones enviadas, ${
+					Array.isArray(respuesta) ? respuesta.length : typeof respuesta
+				} de vuelta`
+		);
+	}
+
+	// Se mira el `status` de cada sub-request en vez de darlos todos por
+	// buenos. Hoy PocketBase devuelve 400 y el SDK tira si alguna falla -o sea
+	// que un 200 significa que entraron todas-, pero darlo por sentado es
+	// justo la forma de un bug silencioso: un `ok: true` sobre una escritura
+	// que no ocurrio deja la fila con `sincronizado` fresco y los datos viejos.
+	return respuesta.map((r, i) =>
+		r?.status >= 200 && r?.status < 300
+			? { ok: true, record: r.body }
+			: { ok: false, error: r, operacion: trozo[i] }
+	);
 }
 
 /**
