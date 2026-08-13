@@ -451,6 +451,10 @@ async function sincronizar(codesEntrada) {
 		// Se arman TODOS los parches antes de escribir ninguno: es lo que
 		// permite mandarlos en un solo request en vez de 20.
 		const aEscribir = [];
+		// id de PocketBase -> code del cliente, solo para poder loguear un
+		// fallo por el numero que el asesor reconoce y puede buscar en IspCube.
+		// `escribirLote` devuelve la operacion, y ahi el cliente es un id.
+		const codePorId = new Map();
 		for (const r of resultados) {
 			if (!r.ok) {
 				// El fetch a /sync funciono, pero IspCube no pudo responder para
@@ -467,6 +471,7 @@ async function sincronizar(codesEntrada) {
 			// El cliente pudo haberse archivado mientras /sync estaba en vuelo.
 			if (!actual) continue;
 
+			codePorId.set(actual.id, r.code);
 			aEscribir.push({
 				coleccion: CLIENTES,
 				accion: 'update',
@@ -481,7 +486,12 @@ async function sincronizar(codesEntrada) {
 			const porId = new Map();
 			for (const e of escritos) {
 				if (e.ok) porId.set(e.record.id, e.record);
-				else console.error('[cartera] no se pudo guardar el snapshot', e.operacion.id, e.error);
+				else
+					console.error(
+						'[cartera] no se pudo guardar el snapshot de',
+						codePorId.get(e.operacion.id),
+						e.error
+					);
 			}
 			// Una sola reasignacion de `clientes` para toda la tanda, en vez de
 			// una por cliente como hacia el loop de guardarSnapshot.
