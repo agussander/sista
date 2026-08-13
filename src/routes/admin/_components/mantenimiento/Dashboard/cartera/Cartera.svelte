@@ -115,12 +115,12 @@ const conAlertas = $derived.by(() => {
         const alertas = carteraStore.alertasDeCliente(c);
         const activas = promosActivas(c.promos ?? [], hoy);
         const proximo = carteraStore.proximoRecordatorioDe(c);
+        const estadoInstalacion = estadoInstalacionDe(c);
         return {
             cliente: c,
             alertas,
             urgencia: urgenciaDe(alertas),
-            chips: chipsDe(c, alertas, activas, proximo),
-            estadoInstalacion: estadoInstalacionDe(c),
+            chips: chipsDe(c, alertas, activas, proximo, estadoInstalacion),
             edad: estimarEdad(c.doc_number, hoy.anio),
             ciudad: c.ciudad ? toTitleCase(c.ciudad) : '',
             puntos: puntosDe(c, hoy).filter((p) => p.estado !== 'gris'),
@@ -151,7 +151,6 @@ const FILTROS = [
 const COLUMNAS = [
     { key: 'codigo', label: 'Código' },
     { key: 'nombre', label: 'Nombre' },
-    { key: 'edad', label: 'Edad aprox' },
     { key: 'ciudad', label: 'Ciudad' },
     { key: 'conexiones', label: 'Conexiones' },
     { key: 'contacto', label: 'Contacto' },
@@ -249,7 +248,7 @@ const ETIQUETA_ESTADO_PUNTO = {
 };
 
 const ETIQUETA_ESTADO_INSTALACION = {
-    pendiente_pago: 'Pendiente de pago',
+    pendiente_pago: 'Inst. pendiente de pago',
     instalacion_pendiente: 'Instalación pendiente'
 };
 
@@ -263,6 +262,7 @@ const ORDEN_CHIP = {
     tickets: 2,
     nap_faltante: 3,
     nap_anulado: 3,
+    estado_instalacion: 3.5,
     recordatorio: 4,
     promo_venciendo: 5,
     seguimiento: 6,
@@ -342,8 +342,22 @@ function tituloTicket(cliente) {
  * posicion en `ORDEN_CHIP`, `mod` es una clase extra (solo la usa el semaforo
  * del recordatorio) y `sr` es el texto que solo oye un lector de pantalla.
  */
-function chipsDe(cliente, alertas, activas, proximo) {
+function chipsDe(cliente, alertas, activas, proximo, estadoInstalacion) {
     const chips = [];
+
+    // No es una alerta deducida de `alertasDe`: es el estado de instalacion
+    // (`estadoInstalacionDe`), pero se muestra como un chip mas para que se
+    // note al mismo golpe de vista que el resto, no como una linea de texto
+    // aparte debajo del nombre.
+    if (estadoInstalacion !== 'instalado') {
+        chips.push({
+            tipo: 'estado_instalacion',
+            mod: '',
+            texto: ETIQUETA_ESTADO_INSTALACION[estadoInstalacion],
+            titulo: null,
+            sr: ''
+        });
+    }
 
     for (const a of alertas) {
         // El recordatorio se dibuja aparte, desde `proximoRecordatorioDe`: la
@@ -509,7 +523,7 @@ onMount(() => {
                     >
                         <span class="th-texto">{col.label}</span>
                         <span class="flecha" aria-hidden="true">
-                            {#if !activa}⇅{:else if col.key === 'alertas'}★{:else if orden.direccion === 'asc'}↑{:else}↓{/if}
+                            {#if !activa}⇅{:else if orden.direccion === 'asc'}↑{:else}↓{/if}
                         </span>
                     </button>
                 {/each}
@@ -517,7 +531,7 @@ onMount(() => {
 
             <ul class="lista">
                 {#each enPagina as fila (fila.cliente.id)}
-                    {@const { cliente, urgencia, chips, estadoInstalacion, edad, ciudad, puntos, ultimoContacto, alta } = fila}
+                    {@const { cliente, urgencia, chips, ciudad, puntos, ultimoContacto, alta } = fila}
                     <!-- Al nivel del {#each} y no dentro de la celda: Svelte
                          solo acepta {@const} como hijo directo de un bloque. -->
                     {@const desdeContacto = haceCuanto(ultimoContacto, ahora)}
@@ -564,19 +578,6 @@ onMount(() => {
                                         </span>
                                     {/if}
                                 </span>
-                                {#if estadoInstalacion !== 'instalado'}
-                                    <span class="estado-instalacion">
-                                        {ETIQUETA_ESTADO_INSTALACION[estadoInstalacion]}
-                                    </span>
-                                {/if}
-                            </span>
-
-                            <span class="celda edad">
-                                {#if edad === null}
-                                    <span class="vacia">—</span>
-                                {:else}
-                                    <span title="Estimado a partir del DNI (±3 años)">~{edad}</span>
-                                {/if}
                             </span>
 
                             <span class="celda ciudad">
@@ -590,7 +591,21 @@ onMount(() => {
                             <span class="celda conexiones">
                                 {#each cliente.connections ?? [] as cx}
                                     {@const { etiqueta, categoria } = describirConexion(cx.plan_nombre)}
-                                    <span class="chip conexion {categoria}" title={cx.plan_nombre}>{etiqueta}</span>
+                                    {#if categoria === 'tv'}
+                                        <!-- En la columna la TV va solo como icono: el nombre del pack
+                                             (Gigared, Antina, DGO...) no cambia como se atiende la fila y
+                                             comia el ancho de la celda. El nombre completo sigue en el
+                                             `title` y en el modal. -->
+                                        <span class="chip conexion tv" title={cx.plan_nombre}>
+                                            <span class="sr-only">{etiqueta}</span>
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                                <path d="M10 20H14M5 18H19C20.1046 18 21 17.1046 21 16V7C21 5.89543 20.1046 5 19 5H5C3.89543 5 3 5.89543 3 7V16C3 17.1046 3.89543 18 5 18Z" />
+                                            </svg>
+                                        </span>
+                                    {:else}
+                                        <span class="chip conexion {categoria}" title={cx.plan_nombre}>{etiqueta}</span>
+                                    {/if}
                                 {:else}
                                     <span class="vacia">—</span>
                                 {/each}
@@ -706,9 +721,11 @@ input[type='search'] {
 input[type='search']:focus { outline: none; border-color: var(--violeta2); }
 .filtros { display: flex; flex-wrap: wrap; gap: 0.4em; }
 .filtros button {
-    border: 1.5px solid #e0e0e0; background: #fff; color: var(--violeta2);
+    border: 1.5px solid #e0e0e0; background: #fff; color: #6b7280;
     border-radius: 2em; padding: 0.45em 1em; cursor: pointer; font-size: 0.92em;
+    font-weight: 400; transition: background 0.18s, border-color 0.18s, color 0.18s;
 }
+.filtros button:hover:not(.activo) { background: #f5f2fa; border-color: #d1c4e9; color: var(--violeta2); }
 .filtros button.activo { background: var(--violeta2); color: #fff; border-color: var(--violeta2); }
 
 /* Una sola definicion de columnas para el encabezado y las filas: si vivieran
@@ -717,7 +734,7 @@ input[type='search']:focus { outline: none; border-color: var(--violeta2); }
    debajo de su contenido, asi que un nombre largo empujaba a las demas fuera de
    la fila. */
 .tabla {
-    --cols: 4.6em minmax(0, 1.5fr) 4.2em 6.4em 7.6em 6em 5em minmax(0, 1.7fr) 5.4em;
+    --cols: 4.6em minmax(0, 1.5fr) 6.4em 7.6em 6em 5em minmax(0, 1.7fr) 5.4em;
     border: 1.5px solid #ececec; border-radius: 1em; background: #fff; overflow: hidden;
 }
 .cabecera, .fila {
@@ -761,12 +778,15 @@ li + li .fila { border-top: 1px solid #f3f4f6; }
 .codigo { color: #9ca3af; font-variant-numeric: tabular-nums; }
 /* Codigo y nombre se copian todo el dia. Dentro de un <button> el navegador no
    deja seleccionar; esto lo habilita, y `abrir()` ignora el click cuando hay
-   algo seleccionado. */
-.seleccionable { cursor: text; user-select: text; }
+   algo seleccionado. Sin `cursor: text`: la celda es un flex de todo el ancho
+   de columna, asi que el cursor de texto se veia cambiar ya desde el borde de
+   la celda, lejos de donde estaba la letra. Se deja el cursor heredado de
+   `.fila` (pointer). */
+.seleccionable { user-select: text; }
 .quien { flex-direction: column; align-items: flex-start; gap: 0.05em; }
 .nombre-linea { display: flex; align-items: center; gap: 0.4em; min-width: 0; max-width: 100%; }
 .nombre-linea strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; font-weight: 600; }
-.edad, .contacto, .alta { color: #6b7280; white-space: nowrap; }
+.contacto, .alta { color: #6b7280; white-space: nowrap; }
 .alta { font-variant-numeric: tabular-nums; }
 .ciudad { color: #6b7280; }
 /* El recorte va en el hijo y no en la celda: `.celda` es flex, y un nodo de
@@ -784,9 +804,6 @@ li + li .fila { border-top: 1px solid #f3f4f6; }
 }
 .badge.nuevo { background: #cffafe; color: #155e75; }
 .badge.instalado { background: #d1fae5; color: #065f46; }
-/* Discreto a proposito: instalacion_pendiente/pendiente_pago se muestran,
-   pero sin la fuerza visual de una alerta -no lo son-. */
-.estado-instalacion { color: #92400e; font-size: 0.82em; font-weight: 600; }
 .pagos { gap: 0.25em; }
 .sr-only {
     position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
@@ -829,6 +846,9 @@ li + li .fila { border-top: 1px solid #f3f4f6; }
 /* Mismo amber que mora_1/tickets: anomalia de proceso, no un vencimiento,
    pero tampoco algo para ignorar. */
 .chip.nap_faltante, .chip.nap_anulado { background: #fef3c7; color: #92400e; }
+/* Mismo amber: instalacion_pendiente/pendiente_pago tampoco es un vencimiento,
+   pero el asesor tiene que verlo igual de rapido que el resto de la columna. */
+.chip.estado_instalacion { background: #fef3c7; color: #92400e; }
 /* Mas corto que en la version de tarjetas (era 14em): en una tabla de nueve
    columnas un recordatorio largo envolvia a tres lineas y estiraba la fila.
    El texto completo sigue en el `title`. */
@@ -843,11 +863,18 @@ li + li .fila { border-top: 1px solid #f3f4f6; }
 .chip.rec-proximo { background: #d1fae5; color: #065f46; }
 .chip.rec-hoy { background: #fef3c7; color: #92400e; }
 .chip.rec-vencido { background: #fee2e2; color: #991b1b; }
-/* Los chips de conexion reusan la escala de `describirConexion`: internet en
-   violeta (el color del panel), TV en cyan, telefonia en gris. */
+/* Los chips de conexion reusan la escala de `describirConexion`: internet y TV
+   en violeta (el color del panel), telefonia en gris. Internet y TV comparten
+   color porque el icono ya los distingue y son los dos servicios "principales";
+   el cyan quedaba para .chip.promo. */
 .chip.conexion { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
-.chip.conexion.internet { background: #ede7f6; color: #5a1e7a; }
-.chip.conexion.tv { background: #cffafe; color: #155e75; }
+.chip.conexion.internet, .chip.conexion.tv { background: #ede7f6; color: #5a1e7a; }
+/* Solo icono: sin texto que centrar, el padding lateral se achica para que no
+   quede una pastilla vacia al lado del chip de internet. */
+.chip.conexion.tv {
+    display: inline-flex; align-items: center; padding: 0.15em 0.5em;
+}
+.chip.conexion.tv svg { width: 1.15em; height: 1.15em; display: block; }
 .chip.conexion.telefonia { background: #f3f4f6; color: #4b5563; }
 .chip.conexion.otro { background: #f3f4f6; color: #6b7280; }
 
@@ -877,9 +904,9 @@ li + li .fila { border-top: 1px solid #f3f4f6; }
     border-radius: 2em; padding: 0.5em 1.2em; cursor: pointer; font-size: 0.92em;
 }
 
-/* Nueve columnas no entran en un telefono. Se vuelve a la disposicion apilada,
+/* Ocho columnas no entran en un telefono. Se vuelve a la disposicion apilada,
    con areas: el nombre toma el ancho completo y los datos cortos comparten
-   linea. Solo se ocultan edad, ciudad y conexiones -son contexto, no lo que se
+   linea. Solo se ocultan ciudad y conexiones -son contexto, no lo que se
    busca en un telefono-. El encabezado de orden tambien, porque no hay
    columnas contra las cuales alinearlo; el orden activo se conserva. */
 @media (max-width: 900px) {
@@ -905,6 +932,6 @@ li + li .fila { border-top: 1px solid #f3f4f6; }
     .alta { grid-area: alta; justify-content: flex-end; }
     .alertas { grid-area: alertas; }
     /* Contexto, no lo que se busca en un telefono. */
-    .edad, .ciudad, .conexiones { display: none; }
+    .ciudad, .conexiones { display: none; }
 }
 </style>

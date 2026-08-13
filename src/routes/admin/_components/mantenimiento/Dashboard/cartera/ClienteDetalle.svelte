@@ -11,6 +11,7 @@ import { puntosPorMes } from '$lib/cartera/pagos.js';
 import { diaCorteDe, promosActivas } from '$lib/cartera/alertas.js';
 import { partesFecha } from '$lib/cartera/fechas.js';
 import { describirConexion } from '$lib/cartera/planes.js';
+import { estimarEdad } from '$lib/cartera/edad.js';
 
 let { cliente, onCerrar } = $props();
 
@@ -43,6 +44,8 @@ const puntos = $derived.by(() => {
 });
 
 const activas = $derived(promosActivas(actual.promos ?? [], hoy));
+
+const edad = $derived(estimarEdad(actual.doc_number, hoy.anio));
 
 // El recordatorio ya tiene su propio chip fijo en el header (RecordatorioChip),
 // asi que se lo excluye de esta fila para no mostrarlo dos veces cuando esta
@@ -229,6 +232,9 @@ onMount(() => {
                 {/if}
             </dd></div>
             <div><dt>Cuenta</dt><dd class:negativa={cuenta > 0}>{plata(cuenta)}</dd></div>
+            {#if edad !== null}
+                <div><dt>Edad aprox</dt><dd title="Estimado a partir del DNI (±3 años)">~{edad}</dd></div>
+            {/if}
         </dl>
 
         <!-- Los tickets salieron del `<dl>` de arriba: ahi eran una celda mas,
