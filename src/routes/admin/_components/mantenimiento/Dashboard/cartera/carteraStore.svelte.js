@@ -14,6 +14,7 @@ import { partesFecha, sumarMeses } from '$lib/cartera/fechas.js';
 import { estadoInstalacionDe } from '$lib/cartera/instalacion.js';
 import { CONFIG_DEFAULT, normalizarConfig } from '$lib/cartera/config.js';
 import { construirParche } from '$lib/cartera/parche.js';
+import { escribirLote } from '$lib/pbLote.js';
 
 const CLIENTES = 'cartera_clientes';
 const NOTAS = 'cartera_notas';
@@ -447,6 +448,9 @@ async function sincronizar(codesEntrada) {
 
 		const { resultados } = await res.json();
 
+		// Se arman TODOS los parches antes de escribir ninguno: es lo que
+		// permite mandarlos en un solo request en vez de 20.
+		const aEscribir = [];
 		for (const r of resultados) {
 			if (!r.ok) {
 				// El fetch a /sync funciono, pero IspCube no pudo responder para
@@ -458,7 +462,30 @@ async function sincronizar(codesEntrada) {
 				continue;
 			}
 			fallosRefresco.delete(r.code);
-			await guardarSnapshot(r.code, r.datos);
+
+			const actual = clientes.find((c) => c.code === r.code);
+			// El cliente pudo haberse archivado mientras /sync estaba en vuelo.
+			if (!actual) continue;
+
+			aEscribir.push({
+				coleccion: CLIENTES,
+				accion: 'update',
+				id: actual.id,
+				datos: construirParche(actual, r.datos, config, hoyPartes())
+			});
+		}
+
+		if (aEscribir.length > 0) {
+			const escritos = await escribirLote(pb, aEscribir);
+
+			const porId = new Map();
+			for (const e of escritos) {
+				if (e.ok) porId.set(e.record.id, e.record);
+				else console.error('[cartera] no se pudo guardar el snapshot', e.operacion.id, e.error);
+			}
+			// Una sola reasignacion de `clientes` para toda la tanda, en vez de
+			// una por cliente como hacia el loop de guardarSnapshot.
+			if (porId.size > 0) clientes = clientes.map((c) => porId.get(c.id) ?? c);
 		}
 	} catch (e) {
 		// fetch rechazado (red caida) o un status que no sea 401/403/2xx: no se
@@ -477,20 +504,6 @@ async function sincronizar(codesEntrada) {
 /** Si el ultimo intento de refrescar `code` contra IspCube fallo. */
 function refrescoFallido(code) {
 	return fallosRefresco.has(code);
-}
-
-async function guardarSnapshot(code, datos) {
-	const actual = clientes.find((c) => c.code === code);
-	if (!actual) return;
-
-	const parche = construirParche(actual, datos, config, hoyPartes());
-
-	try {
-		const guardado = await pb.collection(CLIENTES).update(actual.id, parche);
-		clientes = clientes.map((c) => (c.id === guardado.id ? guardado : c));
-	} catch (e) {
-		console.error('[cartera] no se pudo guardar el snapshot de', code, e);
-	}
 }
 
 /**
