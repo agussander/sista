@@ -1,4 +1,7 @@
+# El host canónico es sista.ar (apex, sin www). Si cambia, actualizar también
+# static/sitemap.xml y SITE_ORIGIN en src/lib/seo.js: este archivo es estático,
+# se copia tal cual al build y no puede importar la constante.
 User-agent: *
 Allow: /
 
-Sitemap: https://www.sista.com.ar/sitemap.xml
+Sitemap: https://sista.ar/sitemap.xml

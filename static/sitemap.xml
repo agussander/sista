@@ -4,47 +4,51 @@
   sumá su <url> acá (con la barra final, porque el sitio usa trailingSlash:'always').
   No incluir páginas con <meta name="robots" content="noindex"> (ej: /tv, /precios,
   /elegirplan) ni redirects (/whatsapp).
+
+  El host canónico es sista.ar (apex, sin www). Si cambia, actualizar también
+  static/robots.txt y SITE_ORIGIN en src/lib/seo.js: este archivo es estático,
+  se copia tal cual al build y no puede importar la constante.
 -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://www.sista.com.ar/</loc>
-    <lastmod>2026-06-23</lastmod>
+    <loc>https://sista.ar/</loc>
+    <lastmod>2026-08-08</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://www.sista.com.ar/dgo/</loc>
-    <lastmod>2026-06-23</lastmod>
+    <loc>https://sista.ar/dgo/</loc>
+    <lastmod>2026-08-08</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://www.sista.com.ar/antinaplay/</loc>
-    <lastmod>2026-06-23</lastmod>
+    <loc>https://sista.ar/antinaplay/</loc>
+    <lastmod>2026-08-08</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://www.sista.com.ar/gigaredplay/</loc>
-    <lastmod>2026-06-23</lastmod>
+    <loc>https://sista.ar/gigaredplay/</loc>
+    <lastmod>2026-08-08</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://www.sista.com.ar/experto-wifi/</loc>
-    <lastmod>2026-06-23</lastmod>
+    <loc>https://sista.ar/experto-wifi/</loc>
+    <lastmod>2026-08-08</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://www.sista.com.ar/formasdepago/</loc>
-    <lastmod>2026-06-23</lastmod>
+    <loc>https://sista.ar/formasdepago/</loc>
+    <lastmod>2026-08-08</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://www.sista.com.ar/acerca-de/</loc>
-    <lastmod>2026-06-23</lastmod>
+    <loc>https://sista.ar/acerca-de/</loc>
+    <lastmod>2026-08-08</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>

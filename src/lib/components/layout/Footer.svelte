@@ -12,7 +12,7 @@
         <div>
             <a href="/formasdepago">Formas de pago</a>
             <a href="/solicitudbaja">Solicitud de baja</a>
-            <a href="http://www.sista.com.ar/condiciones" target="_blank">Condiciones</a>
+            <a href="/condiciones">Condiciones</a>
         </div>
     </div>
     <div class="bottom">
