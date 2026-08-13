@@ -5,17 +5,23 @@
     import { onMount } from 'svelte';
     import { scrollElement, setGlobalOptions } from 'svelte-scrolling';
     import { pb } from '$lib/pocketbase';
-    import { computeInCallWindow } from '$lib/llamenme/visibility.js';
+    import { computeInCallWindow, isFormVisible } from '$lib/llamenme/visibility.js';
     import { fetchOverride } from '$lib/llamenme/config.js';
 
     setGlobalOptions({offset: -100});
 
     let mounted = false;
-    // El form "quiero que me llamen" se muestra siempre. inCallWindow decide si,
-    // al enviar, se avisa directo (dentro del horario 9–16:40 L–V ART, o forzado
-    // "abierto") o se abre el modal de preferencia (fuera de horario / "cerrado").
+    // El form "quiero que me llamen" se muestra salvo que el admin lo apague
+    // ('oculto'). inCallWindow decide si, al enviar, se avisa directo (dentro
+    // del horario 9–16:40 L–V ART, o forzado "abierto") o se abre el modal de
+    // preferencia (fuera de horario / "cerrado").
     // Default con horario real hasta que llega el override del admin.
     let inCallWindow = computeInCallWindow('auto');
+    // Ambos se resuelven recién con el override: no renderizamos el bloque ni
+    // achicamos el hero antes de saberlo, así un form que el admin apagó no
+    // llega a aparecer y desaparecer, y el layout no pega un salto.
+    let overrideLoaded = false;
+    let formVisible = true;
 
     const handleChipClick = () => {
         scrollElement('cobertura');
@@ -25,10 +31,12 @@
         mounted = true;
         const override = await fetchOverride(pb);
         inCallWindow = computeInCallWindow(override);
+        formVisible = isFormVisible(override);
+        overrideLoaded = true;
     });
 </script>
 
-<section class="hero-section">
+<section class="hero-section" class:no-form={overrideLoaded && !formVisible}>
     <div class="hero-content">
         <div class="text">
             {#if mounted}
@@ -67,7 +75,7 @@
                 </div>
             {/if}
         </div>
-        {#if mounted}
+        {#if mounted && overrideLoaded && formVisible}
             <div class="form-col" transition:fly={{ y: 30, duration: 700, delay: 800 }}>
                 <LlamenmeForm {inCallWindow} />
             </div>
@@ -218,6 +226,13 @@
             padding-bottom: 3em;
             display: flex;
             flex-direction: column;
+        }
+        /* Los 130vh están calculados para texto + bloque del form apilados.
+           Con el form oculto sobraban ~2/3 de violeta vacío. 90vh es lo mínimo
+           que deja la cresta de la curva (.lines-cont, 30em anclada abajo) por
+           debajo de los chips de localidad sin taparlos. */
+        .hero-section.no-form {
+            min-height: 90vh;
         }
         .hero-content {
             flex: 1;

@@ -1,7 +1,8 @@
 // Horario de atención de "Quiero que me llamen": lunes a viernes de 9:00 a
-// 16:40, hora de Buenos Aires (GMT-3). El formulario ahora se muestra siempre;
-// este horario decide si, al enviar, se avisa directo en la tarjeta (dentro de
-// horario) o se abre el modal de preferencia de contacto (fuera de horario).
+// 16:40, hora de Buenos Aires (GMT-3). El formulario se muestra siempre salvo
+// que el admin lo apague a mano (override 'oculto'); este horario decide si, al
+// enviar, se avisa directo en la tarjeta (dentro de horario) o se abre el modal
+// de preferencia de contacto (fuera de horario).
 // Se calcula la hora en esa zona horaria sin depender del reloj/zona del
 // dispositivo del visitante.
 
@@ -53,13 +54,21 @@ export function computeWhatsappSublabel(now = new Date()) {
 	return 'En línea hasta las 22:00';
 }
 
-export const OVERRIDE_VALUES = ['auto', 'abierto', 'cerrado'];
+export const OVERRIDE_VALUES = ['auto', 'abierto', 'cerrado', 'oculto'];
 
 // Combina el override manual del admin con el horario automático para decidir
 // si estamos "en ventana de llamado" (aviso directo) o no (modal de preferencia).
-// override: 'auto' | 'abierto' | 'cerrado' (cualquier otro valor => 'auto').
+// override: 'auto' | 'abierto' | 'cerrado' | 'oculto' (cualquier otro => 'auto').
+// 'oculto' es ortogonal a esto (ver isFormVisible) y cae al horario automático.
 export function computeInCallWindow(override, now = new Date()) {
 	if (override === 'abierto') return true;
 	if (override === 'cerrado') return false;
 	return isWithinCallHours(now);
+}
+
+// Único estado que esconde el bloque "Quiero que me llamen" de la home (el
+// form y los botones Clientes / Ver planes). Fail-open: cualquier otro valor
+// -- incluido un override corrupto o ausente -- deja el bloque visible.
+export function isFormVisible(override) {
+	return override !== 'oculto';
 }

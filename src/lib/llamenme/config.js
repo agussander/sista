@@ -1,7 +1,7 @@
 // Acceso a la colección genérica "config" de PocketBase.
 // Cada registro es { key, values } — este módulo maneja el registro
 // key="llamenme", cuyo values.state guarda el override del formulario
-// "Quiero que me llamen": 'auto' | 'abierto' | 'cerrado'.
+// "Quiero que me llamen": 'auto' | 'abierto' | 'cerrado' | 'oculto'.
 import { OVERRIDE_VALUES } from './visibility.js';
 
 const COLLECTION = 'config';

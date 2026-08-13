@@ -2,7 +2,7 @@
 import Spinner from '$lib/components/ui/Spinner.svelte';
 import { llamenmeStore } from './llamenmeStore.svelte.js';
 import { paginate, totalPages as totalPagesOf, clampPage, formatExtra } from './llamenmeLogic.js';
-import { computeInCallWindow, isWithinCallHours } from '$lib/llamenme/visibility.js';
+import { computeInCallWindow, isWithinCallHours, isFormVisible } from '$lib/llamenme/visibility.js';
 
 // Agentes disponibles para asignar. El "value" debe coincidir con el valor
 // guardado en el campo select "agente" de PocketBase (en minúscula).
@@ -20,24 +20,27 @@ const newIds = $derived(llamenmeStore.newIds);
 const override = $derived(llamenmeStore.override);
 const setOverride = (value) => llamenmeStore.setOverride(value);
 
-// Modelo de presencia: como el panel lo administra una sola persona, los
-// botones hablan de "estoy / no estoy" en vez de mostrar/ocultar el form.
-// El valor interno guardado en PocketBase sigue siendo auto/abierto/cerrado
-// (ver $lib/llamenme/config.js); acá sólo cambia la etiqueta visible.
+// Modelo de presencia: como el panel lo administra una sola persona, los tres
+// primeros botones hablan de "estoy / no estoy" en vez de mostrar/ocultar el
+// form. El valor interno guardado en PocketBase es el override de
+// $lib/llamenme/config.js; acá sólo cambia la etiqueta visible.
 //   Automático → sigue el horario real (respeta que vie tarde/sáb esté cerrado)
-//   En línea   → fuerza el form visible (estás atendiendo)
-//   No estoy   → fuerza el estado fuera de horario (form oculto)
+//   En línea   → estás atendiendo: al enviar se llama en el momento
+//   No estoy   → fuerza el estado fuera de horario (modal de preferencia)
+//   Oculto     → único estado que saca el bloque entero de la home
 const overrideOptions = [
     { value: 'auto', label: 'Automático' },
     { value: 'abierto', label: 'En línea' },
-    { value: 'cerrado', label: 'No estoy' }
+    { value: 'cerrado', label: 'No estoy' },
+    { value: 'oculto', label: 'Oculto' }
 ];
 
-// Estado "ahora" del formulario público. El form está siempre visible; esto
-// indica si, al enviar, se llama en el momento (en horario) o se le pide al
-// visitante una preferencia de horario en un modal (fuera de horario). Es
-// informativo: se calcula al renderizar, no se actualiza en vivo.
+// Estado "ahora" del formulario público: si se muestra, y en ese caso si al
+// enviar se llama en el momento (en horario) o se le pide al visitante una
+// preferencia de horario en un modal (fuera de horario). Es informativo: se
+// calcula al renderizar, no se actualiza en vivo.
 const now = new Date();
+const formVisible = $derived(isFormVisible(override));
 const enHorarioNow = $derived(computeInCallWindow(override, now));
 const reasonNow = $derived(
     override === 'abierto'
@@ -116,8 +119,13 @@ function timeAgo(d) {
             {/each}
         </div>
         <p class="override-status">
-            Al enviar, ahora se <strong>{enHorarioNow ? 'llama en el momento' : 'pide preferencia de horario'}</strong>
-            ({reasonNow}).
+            {#if !formVisible}
+                El formulario <strong>no se muestra</strong> en la web (tampoco los botones
+                Clientes y Ver planes del hero).
+            {:else}
+                Al enviar, ahora se <strong>{enHorarioNow ? 'llama en el momento' : 'pide preferencia de horario'}</strong>
+                ({reasonNow}).
+            {/if}
         </p>
     </div>
 

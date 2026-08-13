@@ -4,6 +4,7 @@ import {
 	computeInCallWindow,
 	computeCallHeading,
 	computeWhatsappSublabel,
+	isFormVisible,
 	OVERRIDE_VALUES
 } from './visibility.js';
 
@@ -60,6 +61,28 @@ describe('computeInCallWindow', () => {
 	it('un valor desconocido se comporta como "auto"', () => {
 		expect(computeInCallWindow('lo-que-sea', dentroDeHorario)).toBe(true);
 	});
+
+	it('"oculto" no toca la ventana de llamado: sigue el horario', () => {
+		expect(computeInCallWindow('oculto', dentroDeHorario)).toBe(true);
+		expect(computeInCallWindow('oculto', fueraDeHorario)).toBe(false);
+	});
+});
+
+describe('isFormVisible', () => {
+	it('"oculto" esconde el formulario', () => {
+		expect(isFormVisible('oculto')).toBe(false);
+	});
+
+	it('los otros estados lo dejan visible', () => {
+		expect(isFormVisible('auto')).toBe(true);
+		expect(isFormVisible('abierto')).toBe(true);
+		expect(isFormVisible('cerrado')).toBe(true);
+	});
+
+	it('un valor desconocido deja el formulario visible', () => {
+		expect(isFormVisible('lo-que-sea')).toBe(true);
+		expect(isFormVisible(undefined)).toBe(true);
+	});
 });
 
 describe('computeCallHeading', () => {
@@ -109,7 +132,7 @@ describe('computeWhatsappSublabel', () => {
 });
 
 describe('OVERRIDE_VALUES', () => {
-	it('contiene los 3 estados válidos', () => {
-		expect(OVERRIDE_VALUES).toEqual(['auto', 'abierto', 'cerrado']);
+	it('contiene los 4 estados válidos', () => {
+		expect(OVERRIDE_VALUES).toEqual(['auto', 'abierto', 'cerrado', 'oculto']);
 	});
 });
