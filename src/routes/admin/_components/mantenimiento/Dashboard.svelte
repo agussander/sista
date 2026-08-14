@@ -26,8 +26,12 @@ $effect(() => {
 });
 
 // Realtime de "Quiero que me llamen": vive a nivel admin para que el sonido y el
-// puntito funcionen estés en la sección que estés.
+// puntito funcionen estés en la sección que estés. Solo para quien tenga el
+// permiso: el filtro de permisos tapa los botones, no la suscripción, asi que
+// sin este guardia a un asesor al que le sacaban "llamenme" le desaparecia la
+// seccion pero le seguia sonando el gallo con cada pedido nuevo.
 onMount(() => {
+    if (!seccionPermitida('llamenme', $record?.permisos)) return;
     llamenmeStore.start();
     llamenmeStore.loadOverride();
     // El autoplay de audio requiere un gesto previo del usuario: lo habilitamos
