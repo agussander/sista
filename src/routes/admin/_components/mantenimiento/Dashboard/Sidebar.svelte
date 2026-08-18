@@ -1,11 +1,12 @@
 <script>
 import { slide } from 'svelte/transition';
+import { goto } from '$app/navigation';
 import { seccionPermitida } from '$lib/adminPermisos.js';
 import { PANEL_SECCIONES } from './panelSecciones.js';
 let {
     record,
     logout,
-    selected = $bindable(null),
+    selected = null,
     collapsed = false,
     llamenmeUnread = 0
 } = $props();
@@ -75,7 +76,7 @@ const switch_ = (c) =>{
 }
 
 const handleMainItemClick = (item) => {
-    selected = item.content;
+    goto(`/admin/${item.content}`, { noScroll: true, keepFocus: true });
 };
 </script>
 
@@ -125,7 +126,7 @@ const handleMainItemClick = (item) => {
                         {#each c.childs as child}
                             <button class="child"
                             class:selected={selected==child.content}
-                            onclick={() => { selected = child.content; }}
+                            onclick={() => goto(`/admin/${child.content}`, { noScroll: true, keepFocus: true })}
                             >
                                 <span>{child.title}</span>
                             </button>

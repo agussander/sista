@@ -116,7 +116,7 @@ $effect(() => {
                 <h1 class="sidebar-title">Panel Admin</h1>
             {/if}
         </div>
-        <Sidebar bind:selected {logout} record={$record} collapsed={sidebarCollapsed} llamenmeUnread={llamenmeStore.unread}></Sidebar>
+        <Sidebar {selected} {logout} record={$record} collapsed={sidebarCollapsed} llamenmeUnread={llamenmeStore.unread}></Sidebar>
     </aside>
     <main class="main-content">
         <button class="mobile-menu-btn" onclick={toggleMobileSidebar} aria-label="Abrir menú">
