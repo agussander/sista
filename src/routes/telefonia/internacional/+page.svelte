@@ -3,7 +3,7 @@ import { onMount } from 'svelte';
 import { MetaTags } from 'svelte-meta-tags';
 import ContactButtons from '$lib/components/ui/ContactButtons.svelte';
 import Spinner from '$lib/components/ui/Spinner.svelte';
-import { fetchTarifario } from '$lib/tarifario/fetchTarifario.js';
+import { fetchTarifario, mensajeDeError } from '$lib/tarifario/fetchTarifario.js';
 import { formatearFecha } from '$lib/tarifario/formato.js';
 
 /** @type {import('$lib/tarifario/parseTarifario.js').Internacional | null} */
@@ -16,7 +16,7 @@ onMount(async () => {
 	try {
 		data = (await fetchTarifario()).internacional;
 	} catch (e) {
-		error = e instanceof Error ? e.message : 'Error al cargar las tarifas.';
+		error = mensajeDeError(e);
 		console.error('Tarifas internacionales:', e);
 	} finally {
 		loading = false;

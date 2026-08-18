@@ -38,6 +38,24 @@ function json(valor, porDefecto) {
 }
 
 /**
+ * Mensaje para el visitante a partir del error crudo de PocketBase.
+ *
+ * PocketBase contesta en ingles y contando de mas ("Only superusers can perform
+ * this action"): eso no puede terminar impreso en /tarifas. Aca se traduce a
+ * algo que le sirva a quien esta mirando la pagina, y el error original queda
+ * en la consola para quien la este arreglando.
+ *
+ * @param {unknown} error
+ * @returns {string}
+ */
+export function mensajeDeError(error) {
+	// getFirstListItem tira 404 cuando la coleccion existe pero no hay registro.
+	const status = /** @type {{status?: unknown}} */ (error)?.status;
+	if (status === 404) return 'Todavía no hay un tarifario publicado.';
+	return 'No pudimos cargar el tarifario. Probá de nuevo en un rato.';
+}
+
+/**
  * Tarifario vigente.
  *
  * @param {{ requestKey?: string | null }} [opciones] `requestKey: null` evita la
