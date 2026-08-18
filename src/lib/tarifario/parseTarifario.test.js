@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { leerLibro } from './xlsx.js';
+import { calcularPrecios } from './mapeoPrecios.js';
 import {
 	parseInternacional,
 	parseLineaVip,
@@ -165,5 +166,34 @@ describe('parseTarifario', () => {
 		incompleto.delete('Internacional');
 
 		expect(() => parseTarifario(incompleto)).toThrow(/Internacional/);
+	});
+});
+
+describe('mapeo contra el Excel real', () => {
+	it('resuelve los 17 campos sin avisos', () => {
+		const { valores, avisos } = calcularPrecios(parseTarifario(libro).mostrador);
+
+		expect(avisos).toEqual([]);
+		expect(Object.keys(valores)).toHaveLength(17);
+
+		expect(valores).toMatchObject({
+			home: 25152,
+			fast: 31058,
+			power: 32205,
+			gamer: 41981,
+			worker: 45799,
+			max: 54689,
+			antina: 19890,
+			antina_futbol: 29500,
+			dgo_full: 35050,
+			dgo_futbol: 25610, // en PocketBase estaba 29500, pegado a antina_futbol
+			dgo_paramount: 9135,
+			dgo_universal: 15120,
+			gigared: 13100,
+			gigared_futbol: 25610,
+			telefono: 9972,
+			instalacion: 20000,
+			antina_cine: 26060 // 45950 - 19890
+		});
 	});
 });
