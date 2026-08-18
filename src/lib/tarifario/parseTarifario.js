@@ -213,3 +213,58 @@ export function parseInternacional(libro) {
 
 	return { vigencia: texto(h, 'E3'), unidad: 'U$S', destinos };
 }
+
+/**
+ * @typedef {{ label: string, cargoInicial: number | null, abonoMensual: number | null }} FilaMostrador
+ * @typedef {{
+ *   version: string | null, vigencia: string | null,
+ *   tarifasWeb: TarifasWeb, lineaVip: LineaVip,
+ *   internacional: Internacional, mostrador: FilaMostrador[]
+ * }} Tarifario
+ */
+
+/**
+ * Pestaña "Precios Mostrador": de acá salen los precios de la colección `precios`.
+ *
+ * Se toman las columnas de precio final (con impuestos), que son las que se
+ * publican: `G` para el cargo inicial y `I` para el abono mensual.
+ *
+ * @param {Map<string, Map<string, any>>} libro
+ * @returns {FilaMostrador[]}
+ */
+export function parseMostrador(libro) {
+	const h = hoja(libro, HOJA_MOSTRADOR);
+
+	return filasConEtiqueta(h, 'B', 5).map((f) => ({
+		label: (texto(h, `B${f}`) ?? '').trim(),
+		cargoInicial: numero(h, `G${f}`),
+		abonoMensual: numero(h, `I${f}`)
+	}));
+}
+
+/**
+ * Tarifario completo a partir del libro ya leído.
+ *
+ * @param {Map<string, Map<string, any>>} libro
+ * @returns {Tarifario}
+ */
+export function parseTarifario(libro) {
+	const tarifasWeb = parseTarifasWeb(libro);
+	const lineaVip = parseLineaVip(libro);
+	const internacional = parseInternacional(libro);
+	const mostrador = parseMostrador(libro);
+
+	const version = numero(hoja(libro, HOJA_MOSTRADOR), 'B2');
+
+	return {
+		// `String` y no `toFixed`: la version es un numero (26.081) y hay que
+		// mostrarlo tal como esta escrito. `toFixed(3)` convertiria una futura
+		// 5.2 en "5.200"; `String` da la representacion mas corta que round-trippea.
+		version: version === null ? null : String(version),
+		vigencia: texto(hoja(libro, HOJA_TARIFAS), 'B5'),
+		tarifasWeb,
+		lineaVip,
+		internacional,
+		mostrador
+	};
+}

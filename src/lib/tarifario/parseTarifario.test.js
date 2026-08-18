@@ -1,7 +1,13 @@
 import { readFile } from 'node:fs/promises';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { leerLibro } from './xlsx.js';
-import { parseInternacional, parseLineaVip, parseTarifasWeb } from './parseTarifario.js';
+import {
+	parseInternacional,
+	parseLineaVip,
+	parseMostrador,
+	parseTarifario,
+	parseTarifasWeb
+} from './parseTarifario.js';
 
 const FIXTURE = new URL('./__fixtures__/tarifario-26.081.xlsx', import.meta.url);
 
@@ -115,5 +121,49 @@ describe('parseInternacional', () => {
 
 		expect(new Set(nombres).size).toBe(nombres.length);
 		expect(nombres[1]).toBe('ALASKA');
+	});
+});
+
+describe('parseMostrador', () => {
+	it('lee las 35 filas con cargo inicial y abono, precio final', () => {
+		const filas = parseMostrador(libro);
+
+		expect(filas).toHaveLength(35);
+
+		expect(filas[0].label).toBe('MUNDIAL F99 (EDICIÓN LIMITADA) SÓLO LO INFORMA VENTAS');
+		expect(filas[0].cargoInicial).toBe(20000);
+		expect(filas[0].abonoMensual).toBeCloseTo(25152.2330009, 6);
+
+		const home = filas.find((f) => f.label === 'HOME F111');
+		expect(home.cargoInicial).toBe(20000);
+		expect(home.abonoMensual).toBeCloseTo(25152.31293307282, 9);
+	});
+
+	it('corta antes de las notas al pie', () => {
+		const filas = parseMostrador(libro);
+		expect(filas.some((f) => f.label.startsWith('(*)'))).toBe(false);
+	});
+});
+
+describe('parseTarifario', () => {
+	it('arma el tarifario completo con version y vigencia', () => {
+		const t = parseTarifario(libro);
+
+		// La version es un numero en la planilla (26.081). `String` da la
+		// representacion mas corta: con toFixed(3) una futura 5.2 saldria "5.200".
+		expect(t.version).toBe('26.081');
+		expect(t.vigencia).toBe('2026-08-01');
+
+		expect(t.tarifasWeb.filas).toHaveLength(28);
+		expect(t.lineaVip.planes).toHaveLength(4);
+		expect(t.internacional.destinos).toHaveLength(346);
+		expect(t.mostrador).toHaveLength(35);
+	});
+
+	it('falla ruidosamente si falta una pestana', () => {
+		const incompleto = new Map(libro);
+		incompleto.delete('Internacional');
+
+		expect(() => parseTarifario(incompleto)).toThrow(/Internacional/);
 	});
 });
