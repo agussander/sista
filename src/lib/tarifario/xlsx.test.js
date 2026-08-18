@@ -1,5 +1,8 @@
+import { readFile } from 'node:fs/promises';
 import { describe, expect, it } from 'vitest';
-import { leerCeldas, serialAFecha } from './xlsx.js';
+import { leerCeldas, leerLibro, serialAFecha } from './xlsx.js';
+
+const FIXTURE = new URL('./__fixtures__/tarifario-26.081.xlsx', import.meta.url);
 
 describe('leerCeldas', () => {
 	it('lee numeros, compartidas y strings de formula', () => {
@@ -60,5 +63,35 @@ describe('serialAFecha', () => {
 	it('convierte el serial de Excel a ISO', () => {
 		expect(serialAFecha(46235)).toBe('2026-08-01');
 		expect(serialAFecha(46174)).toBe('2026-06-01');
+	});
+});
+
+describe('leerLibro', () => {
+	it('abre el libro real y devuelve las 5 hojas con sus celdas', async () => {
+		const libro = await leerLibro(await readFile(FIXTURE));
+
+		expect([...libro.keys()]).toEqual([
+			'Tarifario completo',
+			'Tarifas Web',
+			'Precios Mostrador',
+			'Linea VIP - Tarifas Web',
+			'Internacional'
+		]);
+
+		const tarifas = libro.get('Tarifas Web');
+		expect(tarifas.get('B5')).toBe('2026-08-01'); // serial de fecha
+		expect(tarifas.get('B6')).toBe('HOME F111');
+		expect(tarifas.get('D6')).toBeCloseTo(25152.31293307282, 6);
+		expect(tarifas.get('B14')).toBe('   Básico + Cine'); // xml:space
+		expect(tarifas.get('B7')).toBe('FAST F121'); // celda auto-cerrada previa
+		expect(tarifas.get('D42')).toBeCloseTo(0.21, 9);
+
+		expect(libro.get('Internacional').size).toBeGreaterThan(13000);
+	});
+
+	it('rechaza un archivo que no es un ZIP', async () => {
+		await expect(leerLibro(new TextEncoder().encode('esto no es un xlsx'))).rejects.toThrow(
+			/no es un \.xlsx/i
+		);
 	});
 });
