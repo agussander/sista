@@ -98,3 +98,18 @@ export function seccionPermitida(seccion, permisos) {
 	if (!clave) return false;
 	return tienePermiso(permisos, clave);
 }
+
+/**
+ * Si `seccion` es una de las claves declaradas en `PERMISO_POR_SECCION`,
+ * sin mirar permisos (a diferencia de `seccionPermitida`).
+ *
+ * Para distinguir "la URL trae una seccion que no existe" (typo, link viejo a
+ * algo que se saco) de "la seccion existe pero al usuario no le toca" — el
+ * primer caso no es un problema de permisos y no deberia mostrarse como tal.
+ *
+ * @param {unknown} seccion
+ * @returns {boolean}
+ */
+export function seccionExiste(seccion) {
+	return typeof seccion === 'string' && seccion in PERMISO_POR_SECCION;
+}

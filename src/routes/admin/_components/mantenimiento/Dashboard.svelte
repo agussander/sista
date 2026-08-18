@@ -8,9 +8,14 @@ import { llamenmeStore, primeAudio } from './Dashboard/llamenme/llamenmeStore.sv
 import Sidebar from './Dashboard/Sidebar.svelte';
 import Content from './Dashboard/Content.svelte';
 import { PANEL_SECCIONES } from './Dashboard/panelSecciones.js';
-import { seccionPermitida } from '$lib/adminPermisos.js';
+import { seccionPermitida, seccionExiste } from '$lib/adminPermisos.js';
 
-let selected = $derived($page.params.section ?? null);
+// Una seccion que no existe (typo, link viejo a algo que se saco) no debe
+// caer en Content.svelte: ese componente trata "selected truthy pero sin
+// permiso" como "no tenes permiso", y para una seccion que directamente no
+// existe ese mensaje es enganoso. Validar aca hace que una URL invalida se
+// comporte como si no hubiera seccion elegida: la grilla de inicio.
+let selected = $derived(seccionExiste($page.params.section) ? $page.params.section : null);
 
 // Misma lista y mismo filtro que usa el Sidebar (ver panelSecciones.js): antes
 // esta grilla tenia sus cinco botones hardcodeados aparte, sin filtrar por

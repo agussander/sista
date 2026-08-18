@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { PERMISOS, tienePermiso, PERMISO_POR_SECCION, seccionPermitida } from './adminPermisos.js';
+import {
+	PERMISOS,
+	tienePermiso,
+	PERMISO_POR_SECCION,
+	seccionPermitida,
+	seccionExiste
+} from './adminPermisos.js';
 
 describe('PERMISOS', () => {
 	it('incluye cartera, la seccion nueva que exige el guardia de la Cartera', () => {
@@ -106,5 +112,29 @@ describe('seccionPermitida', () => {
 	it('devuelve false ante una seccion que no es string', () => {
 		expect(seccionPermitida(null, ['cartera'])).toBe(false);
 		expect(seccionPermitida(undefined, ['cartera'])).toBe(false);
+	});
+});
+
+describe('seccionExiste', () => {
+	it('devuelve true para cada clave declarada en PERMISO_POR_SECCION', () => {
+		for (const clave of Object.keys(PERMISO_POR_SECCION)) {
+			expect(seccionExiste(clave)).toBe(true);
+		}
+	});
+
+	it('devuelve false ante una seccion inventada (typo, link viejo)', () => {
+		expect(seccionExiste('seccion-inventada')).toBe(false);
+	});
+
+	it('no mira permisos: existe aunque nadie tenga acceso', () => {
+		// A diferencia de seccionPermitida, esto es solo "esta declarada", no
+		// "el usuario puede verla".
+		expect(seccionExiste('cartera')).toBe(true);
+	});
+
+	it('devuelve false ante valores que no son string', () => {
+		expect(seccionExiste(null)).toBe(false);
+		expect(seccionExiste(undefined)).toBe(false);
+		expect(seccionExiste(42)).toBe(false);
 	});
 });
