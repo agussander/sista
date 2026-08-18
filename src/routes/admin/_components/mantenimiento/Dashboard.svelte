@@ -1,5 +1,6 @@
 <script>
 import { onMount, onDestroy } from 'svelte';
+import { goto } from '$app/navigation';
 import { pb } from '$lib/pocketbase';
 import { page } from '$app/stores';
 import { token, record } from '../adminStore';
@@ -9,7 +10,7 @@ import Content from './Dashboard/Content.svelte';
 import { PANEL_SECCIONES } from './Dashboard/panelSecciones.js';
 import { seccionPermitida } from '$lib/adminPermisos.js';
 
-let selected = $state(null);
+let selected = $derived($page.params.section ?? null);
 
 // Misma lista y mismo filtro que usa el Sidebar (ver panelSecciones.js): antes
 // esta grilla tenia sus cinco botones hardcodeados aparte, sin filtrar por
@@ -18,12 +19,6 @@ let selected = $state(null);
 const seccionesPermitidas = $derived(
     PANEL_SECCIONES.filter((item) => seccionPermitida(item.content, $record?.permisos))
 );
-
-$effect(() => {
-    const view = $page.url.searchParams.get('view');
-    if (view === 'sorteo-conectarlaciudad') selected = 'sorteo-conectarlaciudad';
-    else if (view === 'conectarlaciudad') selected = 'conectarlaciudad';
-});
 
 // Realtime de "Quiero que me llamen": vive a nivel admin para que el sonido y el
 // puntito funcionen estés en la sección que estés. Solo para quien tenga el
@@ -66,7 +61,7 @@ const logout = async()=>{
 }
 
 const handlePanelSelect = (option) => {
-    selected = option;
+    goto(`/admin/${option}`, { noScroll: true, keepFocus: true });
     sidebarOpen = false; // Cerrar sidebar en móvil al seleccionar
 }
 
