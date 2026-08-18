@@ -3,16 +3,17 @@ import { onMount } from 'svelte';
 import { MetaTags } from 'svelte-meta-tags';
 import ContactButtons from '$lib/components/ui/ContactButtons.svelte';
 import Spinner from '$lib/components/ui/Spinner.svelte';
-import { fetchLineaVipPrecios } from '$lib/telefonia/fetchLineaVip.js';
+import { fetchTarifario } from '$lib/tarifario/fetchTarifario.js';
+import { formatearFecha } from '$lib/tarifario/formato.js';
 
-/** @type {import('$lib/telefonia/parseLineaVip.js').LineaVipData | null} */
+/** @type {import('$lib/tarifario/parseTarifario.js').LineaVip | null} */
 let data = $state(null);
 let loading = $state(true);
 let error = $state(null);
 
 onMount(async () => {
 	try {
-		data = await fetchLineaVipPrecios();
+		data = (await fetchTarifario()).lineaVip;
 	} catch (e) {
 		error = e instanceof Error ? e.message : 'Error al cargar los precios.';
 		console.error('Linea VIP precios:', e);
@@ -21,17 +22,23 @@ onMount(async () => {
 	}
 });
 
+const vigencia = $derived(formatearFecha(data?.vigencia));
+
 /**
- * Formatea un precio al estilo argentino: separador de miles con punto y
- * decimales con coma. El parser puede traer miles separados por espacio
- * ("$ 9 588") y decimales con punto ("$ 82.92").
- * @param {string | null | undefined} value
+ * Precio en pesos, estilo argentino: miles con punto y decimales con coma.
+ *
+ * Antes el símbolo venía pegado al dato ("$ 9 588"), porque el valor salía de
+ * scrapear el HTML que exportaba Word. Ahora el tarifario guarda números y el
+ * símbolo lo pone la página.
+ *
+ * @param {number | null | undefined} value
+ * @param {number} [decimales]
  */
-function formatPrecio(value) {
-	if (!value) return '—';
-	return value
-		.replace(/\./g, ',') // punto decimal -> coma
-		.replace(/(?<=\d) (?=\d)/g, '.'); // espacio de miles -> punto
+function formatPrecio(value, decimales = 0) {
+	if (typeof value !== 'number' || !Number.isFinite(value)) return '—';
+	const [entera, decimal] = value.toFixed(decimales).split('.');
+	const miles = entera.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+	return `$ ${decimal ? `${miles},${decimal}` : miles}`;
 }
 
 /** @param {string[]} footnotes */
@@ -65,8 +72,8 @@ function displayFootnotes(footnotes) {
 <section class="page">
 	<header class="hero">
 		<h1>Línea de teléfono fijo</h1>
-		{#if data?.vigencia}
-			<p class="vigencia">Precios vigentes desde el {data.vigencia}</p>
+		{#if vigencia}
+			<p class="vigencia">Precios vigentes desde el {vigencia}</p>
 		{/if}
 	</header>
 
@@ -80,7 +87,7 @@ function displayFootnotes(footnotes) {
 			<p class="hint">Los valores se actualizan desde la fuente oficial de Sista.</p>
 		</div>
 	{:else if data}
-		{@const plan = data.plans.find((p) => /221/i.test(p.nombre) && /fibra/i.test(p.clientes)) ?? data.plans[0]}
+		{@const plan = data.planes.find((p) => /221/i.test(p.nombre) && /fibra/i.test(p.clientes ?? '')) ?? data.planes[0]}
 		{#if plan}
 			<div class="detail">
 				<!-- Identidad de la línea: número local destacado -->
@@ -120,15 +127,15 @@ function displayFootnotes(footnotes) {
 					<dl class="rates-list">
 						<div class="rate-row">
 							<dt>Llamadas a celulares</dt>
-							<dd>{formatPrecio(plan.llamadasCelulares)}<span class="per-min">/min</span></dd>
+							<dd>{formatPrecio(plan.llamadasCelulares, 2)}<span class="per-min">/min</span></dd>
 						</div>
 						<div class="rate-row">
 							<dt>Excedente · destino local</dt>
-							<dd>{formatPrecio(plan.excedenteLocal)}<span class="per-min">/min</span></dd>
+							<dd>{formatPrecio(plan.excedenteLocal, 2)}<span class="per-min">/min</span></dd>
 						</div>
 						<div class="rate-row">
 							<dt>Excedente · destino nacional</dt>
-							<dd>{formatPrecio(plan.excedenteNacional)}<span class="per-min">/min</span></dd>
+							<dd>{formatPrecio(plan.excedenteNacional, 2)}<span class="per-min">/min</span></dd>
 						</div>
 					</dl>
 				</div>
@@ -140,7 +147,7 @@ function displayFootnotes(footnotes) {
 				Precio de llamadas internacionales:
 				<a href="/telefonia/internacional">ver tarifas por país</a>
 			</li>
-			{#each displayFootnotes(data.footnotes) as note}
+			{#each displayFootnotes(data.notas) as note}
 				<li>{note}</li>
 			{/each}
 		</ul>
