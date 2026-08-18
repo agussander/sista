@@ -55,8 +55,8 @@ export function tienePermiso(permisos, clave) {
  * `formulario_calidad` y `formulario_calidad_2` — las dos entradas de la
  * encuesta de calidad — comparten `encuestas`: son una sola funcion de
  * negocio, no dos permisos. `sorteo-conectarlaciudad` no tiene boton propio en
- * el sidebar (se llega por un `?view=` en la URL) pero comparte el permiso de
- * `conectarlaciudad` porque es la misma seccion.
+ * el sidebar (se llega por la ruta real `/admin/sorteo-conectarlaciudad`) pero
+ * comparte el permiso de `conectarlaciudad` porque es la misma seccion.
  *
  * @type {Readonly<Record<string, string>>}
  */
