@@ -65,6 +65,16 @@
     "url_logo": "/images/gigaredplay/dnews.jpeg"
   },
   {
+    "categoria": "Aire y Noticias",
+    "nombre": "Canal Rural",
+    "url_logo": "/images/antina/canal-rural.webp"
+  },
+  {
+    "categoria": "Aire y Noticias",
+    "nombre": "Chacra TV",
+    "url_logo": "/images/gigaredplay/chacra-tv.jpeg"
+  },
+  {
     "categoria": "Deportes",
     "nombre": "DeporTV",
     "url_logo": "/images/gigaredplay/deportv.jpg"
@@ -155,9 +165,25 @@
     "url_logo": "/images/gigaredplay/zoomoo.jpg"
   },
   {
+    "categoria": "Infantiles",
+    "nombre": "Cartoon Network",
+    "url_logo": "/images/dgo/c_n_cn_brand_logo_1color_white_1_1.png",
+    "logoBlanco": true
+  },
+  {
+    "categoria": "Infantiles",
+    "nombre": "DreamWorks",
+    "url_logo": "/images/gigaredplay/dreamworks.png"
+  },
+  {
     "categoria": "Cine y Series",
     "nombre": "Cine AR",
     "url_logo": "/images/gigaredplay/incaatv.jpg"
+  },
+  {
+    "categoria": "Cine y Series",
+    "nombre": "Cinemax",
+    "url_logo": "/images/dgo/c_i_cinemax.png"
   },
   {
     "categoria": "Cine y Series",
@@ -186,6 +212,11 @@
   },
   {
     "categoria": "Cine y Series",
+    "nombre": "Space",
+    "url_logo": "/images/dgo/5_1_518_-_space_2.png"
+  },
+  {
+    "categoria": "Cine y Series",
     "nombre": "Universal",
     "url_logo": "/images/gigaredplay/universal.jpg"
   },
@@ -206,8 +237,20 @@
   },
   {
     "categoria": "Cine y Series",
-    "nombre": "Syfy",
-    "url_logo": "/images/gigaredplay/syfy.png"
+    "nombre": "Warner Channel",
+    "url_logo": "/images/dgo/0_0_0000_all_l_warner-logo_warner_2018_-_blanco_1.png",
+    "logoBlanco": true
+  },
+  {
+    "categoria": "Cine y Series",
+    "nombre": "USA Network",
+    "url_logo": "/images/antina/usa-network.svg"
+  },
+  {
+    "categoria": "Cine y Series",
+    "nombre": "TNT Series",
+    "url_logo": "/images/dgo/t_n_tnt_series.png",
+    "logoBlanco": true
   },
   {
     "categoria": "Cine y Series",
@@ -251,6 +294,11 @@
   },
   {
     "categoria": "Cine y Series",
+    "nombre": "DHE",
+    "url_logo": "/images/gigaredplay/dhe.png"
+  },
+  {
+    "categoria": "Cine y Series",
     "nombre": "Cine Familiar",
     "url_logo": "/images/gigaredplay/cine-familiar.png"
   },
@@ -263,6 +311,11 @@
     "categoria": "Cine y Series",
     "nombre": "Telenovelas",
     "url_logo": "/images/gigaredplay/telenovelas.png"
+  },
+  {
+    "categoria": "Cine y Series",
+    "nombre": "Europa Europa",
+    "url_logo": "/images/gigaredplay/europa-europa.png"
   },
   {
     "categoria": "Documentales y Estilo",
@@ -283,6 +336,11 @@
     "categoria": "Documentales y Estilo",
     "nombre": "AMC Series",
     "url_logo": "/images/gigaredplay/maschic.jpg"
+  },
+  {
+    "categoria": "Documentales y Estilo",
+    "nombre": "Food Network",
+    "url_logo": "/images/dgo/f_o_food_network_1.png"
   },
   {
     "categoria": "Documentales y Estilo",
@@ -331,6 +389,11 @@
   },
   {
     "categoria": "Documentales y Estilo",
+    "nombre": "Lifetime",
+    "url_logo": "/images/dgo/l_i_lifetime.png"
+  },
+  {
+    "categoria": "Documentales y Estilo",
     "nombre": "Museum TV",
     "url_logo": "/images/gigaredplay/museum-tv.png"
   },
@@ -341,8 +404,38 @@
   },
   {
     "categoria": "Documentales y Estilo",
+    "nombre": "History 2",
+    "url_logo": "/images/dgo/h_2_h2_rgb.png"
+  },
+  {
+    "categoria": "Documentales y Estilo",
+    "nombre": "Discovery Theater",
+    "url_logo": "/images/dgo/d_i_discovery_theater.png"
+  },
+  {
+    "categoria": "Documentales y Estilo",
     "nombre": "Discovery World",
     "url_logo": "/images/gigaredplay/discoveryworld.jpg"
+  },
+  {
+    "categoria": "Documentales y Estilo",
+    "nombre": "Sun Channel",
+    "url_logo": "/images/gigaredplay/sun-channel.png"
+  },
+  {
+    "categoria": "Documentales y Estilo",
+    "nombre": "Telemundo",
+    "url_logo": "/images/dgo/t_e_telemundo.png"
+  },
+  {
+    "categoria": "Documentales y Estilo",
+    "nombre": "Caras TV",
+    "url_logo": "/images/gigaredplay/caras-tv.jpg"
+  },
+  {
+    "categoria": "Documentales y Estilo",
+    "nombre": "María Visión",
+    "url_logo": "/images/gigaredplay/maria-vision.jpg"
   },
   {
     "categoria": "Internacionales",
@@ -358,6 +451,21 @@
     "categoria": "Internacionales",
     "nombre": "Canal 24h",
     "url_logo": "/images/gigaredplay/24.jpg"
+  },
+  {
+    "categoria": "Internacionales",
+    "nombre": "Las Estrellas",
+    "url_logo": "/images/antina/las-estrellas.png"
+  },
+  {
+    "categoria": "Internacionales",
+    "nombre": "Euronews",
+    "url_logo": "/images/gigaredplay/euronews.png"
+  },
+  {
+    "categoria": "Internacionales",
+    "nombre": "France 24 Español",
+    "url_logo": "/images/dgo/7_4_747px-france24.png"
   },
   {
     "categoria": "Música",
