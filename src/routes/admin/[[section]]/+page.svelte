@@ -1,10 +1,10 @@
 <script>
 import { onMount } from 'svelte';
 import { pb } from '$lib/pocketbase';
-import EncuestaDeCalidad from './_components/mantenimiento/Dashboard/encuestas/EncuestaDeCalidad.svelte';
-import Login from './_components/Login.svelte';
-import {token, record} from './_components/adminStore'
-import Dashboard from './_components/mantenimiento/Dashboard.svelte';
+import EncuestaDeCalidad from '../_components/mantenimiento/Dashboard/encuestas/EncuestaDeCalidad.svelte';
+import Login from '../_components/Login.svelte';
+import {token, record} from '../_components/adminStore'
+import Dashboard from '../_components/mantenimiento/Dashboard.svelte';
 
 let ready = $state(false);
 
