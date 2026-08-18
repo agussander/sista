@@ -1,9 +1,11 @@
 <script>
+import ImportarTarifario from './ImportarTarifario.svelte';
 import EditPrices from './EditPrices.svelte';
 </script>
 
 <div class="precios-container">
     <h2>Editar Precios</h2>
+    <ImportarTarifario />
     <EditPrices />
 </div>
 
