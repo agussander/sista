@@ -86,11 +86,11 @@
         ).filter((g) => g.canales.length > 0)
     );
 
-    function onImgError(event) {
-        const img = event.currentTarget;
-        img.style.display = 'none';
-        img.parentElement?.classList.add('sin-logo');
-    }
+    // Canales cuyo logo no cargó (404, formato roto): se reemplaza la imagen por
+    // el placeholder. Tiene que ser estado y no `classList.add`, porque Svelte
+    // poda el CSS de las clases que no aparecen en el markup y la regla
+    // `.canal-logo.sin-logo::before` terminaba borrada del bundle.
+    let sinLogo = $state({});
 </script>
 
 <div class="channel-grid" style="--dgo-accent: {accent}">
@@ -177,15 +177,21 @@
             <div class="logos">
                 {#each grupo.canales as canal (canal.nombre)}
                     <div class="canal" title={canal.nombre}>
-                        <div class="canal-logo" class:fondo-blanco={canal.fondoBlanco}>
-                            <img
-                                src={canal.url_logo}
-                                alt={canal.nombre}
-                                class:logo-invertido={canal.logoBlanco}
-                                loading="lazy"
-                                decoding="async"
-                                onerror={onImgError}
-                            />
+                        <div
+                            class="canal-logo"
+                            class:fondo-blanco={canal.fondoBlanco}
+                            class:sin-logo={sinLogo[canal.nombre]}
+                        >
+                            {#if !sinLogo[canal.nombre]}
+                                <img
+                                    src={canal.url_logo}
+                                    alt={canal.nombre}
+                                    class:logo-invertido={canal.logoBlanco}
+                                    loading="lazy"
+                                    decoding="async"
+                                    onerror={() => (sinLogo[canal.nombre] = true)}
+                                />
+                            {/if}
                         </div>
                         <span class="canal-nombre">{canal.nombre}</span>
                     </div>
