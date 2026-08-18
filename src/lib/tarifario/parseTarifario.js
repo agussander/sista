@@ -169,3 +169,47 @@ export function parseLineaVip(libro) {
 
 	return { vigencia: texto(h, 'J2'), planes, aparato, notas };
 }
+
+/**
+ * @typedef {{ destino: string, fijo: number | null, movil: number | null }} DestinoInternacional
+ * @typedef {{ vigencia: string | null, unidad: 'U$S', destinos: DestinoInternacional[] }} Internacional
+ */
+
+/**
+ * Pestaña "Internacional": alimenta /telefonia/internacional.
+ *
+ * La fuente trae una fila por prefijo (3.273) y la pagina muestra una por pais
+ * (346), asi que se agrupa aca y no en el navegador: baja el registro de ~142 KB
+ * a ~15 KB. Se verifico que ningun destino tiene dos precios distintos para el
+ * mismo tipo, asi que agrupar no pierde informacion de precio.
+ *
+ * @param {Map<string, Map<string, any>>} libro
+ * @returns {Internacional}
+ */
+export function parseInternacional(libro) {
+	const h = hoja(libro, HOJA_INTERNACIONAL);
+
+	/** @type {Map<string, DestinoInternacional>} */
+	const porDestino = new Map();
+	/** @type {DestinoInternacional[]} */
+	const destinos = [];
+
+	for (const f of filasConEtiqueta(h, 'B', 5)) {
+		const nombre = texto(h, `C${f}`)?.trim();
+		if (!nombre) continue;
+
+		let entrada = porDestino.get(nombre);
+		if (!entrada) {
+			entrada = { destino: nombre, fijo: null, movil: null };
+			porDestino.set(nombre, entrada);
+			destinos.push(entrada); // el orden de aparicion es el alfabetico del Excel
+		}
+
+		const tipo = texto(h, `D${f}`) ?? '';
+		const precio = numero(h, `E${f}`);
+		if (/fij/i.test(tipo)) entrada.fijo ??= precio;
+		else if (/m[oó]vil/i.test(tipo)) entrada.movil ??= precio;
+	}
+
+	return { vigencia: texto(h, 'E3'), unidad: 'U$S', destinos };
+}

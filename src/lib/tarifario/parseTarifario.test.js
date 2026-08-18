@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { leerLibro } from './xlsx.js';
-import { parseLineaVip, parseTarifasWeb } from './parseTarifario.js';
+import { parseInternacional, parseLineaVip, parseTarifasWeb } from './parseTarifario.js';
 
 const FIXTURE = new URL('./__fixtures__/tarifario-26.081.xlsx', import.meta.url);
 
@@ -86,5 +86,34 @@ describe('parseLineaVip', () => {
 		expect(vip.notas.some((n) => /abonado de fibra/i.test(n))).toBe(true);
 		expect(vip.notas.some((n) => /^Aparato telefonico/i.test(n))).toBe(false);
 		expect(vip.notas.some((n) => /^Copiar rango/i.test(n))).toBe(false);
+	});
+});
+
+describe('parseInternacional', () => {
+	it('agrupa los 3273 prefijos en destinos, con su vigencia propia', () => {
+		const intl = parseInternacional(libro);
+
+		// La pestana Internacional tiene su propia vigencia, distinta de la general.
+		expect(intl.vigencia).toBe('2026-06-01');
+		expect(intl.unidad).toBe('U$S');
+		expect(intl.destinos).toHaveLength(346);
+
+		expect(intl.destinos[0]).toEqual({ destino: 'AFGANISTAN', fijo: 0.5, movil: 0.5 });
+	});
+
+	it('deja en null el tipo que un destino no tiene', () => {
+		const { destinos } = parseInternacional(libro);
+		const econet = destinos.find((d) => d.destino === 'ZIMBABWE ECONET');
+
+		expect(econet.fijo).toBe(0.5);
+		expect(econet.movil).toBe(null);
+	});
+
+	it('respeta el orden de aparicion y no repite destinos', () => {
+		const { destinos } = parseInternacional(libro);
+		const nombres = destinos.map((d) => d.destino);
+
+		expect(new Set(nombres).size).toBe(nombres.length);
+		expect(nombres[1]).toBe('ALASKA');
 	});
 });
