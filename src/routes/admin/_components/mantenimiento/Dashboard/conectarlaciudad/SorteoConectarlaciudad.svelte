@@ -155,7 +155,7 @@ function descargarSorteoJson() {
                     <button type="button" class="btn-header" onclick={descargarSorteoJson}>
                         Descargar sorteo
                     </button>
-                    <a href="/admin?view=conectarlaciudad" class="btn-header btn-link">Volver a Conectar la ciudad</a>
+                    <a href="/admin/conectarlaciudad" class="btn-header btn-link">Volver a Conectar la ciudad</a>
                 </div>
             </header>
             <div class="ganadores-list">

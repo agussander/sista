@@ -5,7 +5,7 @@ import { pb } from '$lib/pocketbase';
 import Spinner from '$lib/components/ui/Spinner.svelte';
 
 function irASorteo() {
-    goto('/admin?view=sorteo-conectarlaciudad');
+    goto('/admin/sorteo-conectarlaciudad');
 }
 
 const COLUMNS = [
