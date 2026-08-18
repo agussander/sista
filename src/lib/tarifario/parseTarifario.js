@@ -97,3 +97,75 @@ export function parseTarifasWeb(libro) {
 
 	return { filas, alicuota: numero(h, 'D42') };
 }
+
+/**
+ * @typedef {{
+ *   nombre: string, clientes: string | null, numeroLocal: string | null,
+ *   cargoInicial: number | string | null, abonoMensual: number | null,
+ *   minutosLocales: number | null, llamadasCelulares: number | null,
+ *   excedenteLocal: number | null, excedenteNacional: number | null
+ * }} PlanVip
+ * @typedef {{ vigencia: string | null, planes: PlanVip[], aparato: string | null, notas: string[] }} LineaVip
+ */
+
+/**
+ * Valor de una celda tal cual: número si es número, texto recortado si no.
+ *
+ * @param {Map<string, any>} h
+ * @param {string} ref
+ * @returns {string | number | null}
+ */
+function crudo(h, ref) {
+	const v = h.get(ref);
+	if (v === undefined || v === null) return null;
+	if (typeof v === 'number') return v;
+	const s = String(v).trim();
+	return s === '' ? null : s;
+}
+
+/**
+ * Pestaña "Linea VIP - Tarifas Web": alimenta /telefonia.
+ *
+ * @param {Map<string, Map<string, any>>} libro
+ * @returns {LineaVip}
+ */
+export function parseLineaVip(libro) {
+	const h = hoja(libro, HOJA_VIP);
+
+	const filas = filasConEtiqueta(h, 'B', 5);
+
+	// H5:H8 y J5:J8 estan combinadas en el Excel: el valor existe solo en la
+	// primera fila y vale para los cuatro planes. Se lee una vez y se replica.
+	const primera = filas[0];
+	const llamadasCelulares = primera ? numero(h, `H${primera}`) : null;
+	const excedenteNacional = primera ? numero(h, `J${primera}`) : null;
+
+	const planes = filas.map((f) => ({
+		nombre: (texto(h, `B${f}`) ?? '').trim(),
+		clientes: /** @type {string | null} */ (crudo(h, `C${f}`)),
+		numeroLocal: /** @type {string | null} */ (crudo(h, `D${f}`)),
+		cargoInicial: crudo(h, `E${f}`), // 800 en Radio, "--" en Fibra
+		abonoMensual: numero(h, `F${f}`),
+		minutosLocales: numero(h, `G${f}`),
+		llamadasCelulares,
+		excedenteLocal: numero(h, `I${f}`),
+		excedenteNacional
+	}));
+
+	// Las notas arrancan despues de los planes y se cortan al llegar a la celda
+	// de instrucciones para Word, que es la unica con contenido en la columna A.
+	/** @type {string[]} */
+	const notas = [];
+	/** @type {string | null} */
+	let aparato = null;
+	const desde = (filas.at(-1) ?? 4) + 1;
+	for (let f = desde; f < desde + 30; f++) {
+		if (texto(h, `A${f}`) !== null) break;
+		const nota = texto(h, `B${f}`)?.trim();
+		if (!nota) continue;
+		if (/^Aparato telef/i.test(nota)) aparato = nota;
+		else notas.push(nota);
+	}
+
+	return { vigencia: texto(h, 'J2'), planes, aparato, notas };
+}

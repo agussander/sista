@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { leerLibro } from './xlsx.js';
-import { parseTarifasWeb } from './parseTarifario.js';
+import { parseLineaVip, parseTarifasWeb } from './parseTarifario.js';
 
 const FIXTURE = new URL('./__fixtures__/tarifario-26.081.xlsx', import.meta.url);
 
@@ -42,5 +42,49 @@ describe('parseTarifasWeb', () => {
 	it('corta en el primer hueco y no llega a las celdas de instrucciones', () => {
 		const { filas } = parseTarifasWeb(libro);
 		expect(filas.some((f) => /^Copiar rango/i.test(f.label))).toBe(false);
+	});
+});
+
+describe('parseLineaVip', () => {
+	it('lee los 4 planes con la vigencia propia de la pestana', () => {
+		const vip = parseLineaVip(libro);
+
+		expect(vip.vigencia).toBe('2026-08-01');
+		expect(vip.planes).toHaveLength(4);
+
+		const r11 = vip.planes[0];
+		expect(r11.nombre).toBe('Linea VIP R11');
+		expect(r11.clientes).toBe('Radio');
+		expect(r11.numeroLocal).toBe('AMBA 011');
+		expect(r11.cargoInicial).toBe(800);
+		expect(r11.minutosLocales).toBe(500);
+		expect(r11.abonoMensual).toBeCloseTo(19501.2550005, 6);
+		expect(r11.excedenteLocal).toBeCloseTo(25.0335499, 6);
+	});
+
+	// H5:H8 y J5:J8 estan combinadas: el valor esta solo en la fila 5.
+	it('replica a los 4 planes las columnas combinadas', () => {
+		const vip = parseLineaVip(libro);
+
+		for (const plan of vip.planes) {
+			expect(plan.llamadasCelulares).toBeCloseTo(140.96084920182668, 9);
+			expect(plan.excedenteNacional).toBeCloseTo(29.2652282079917, 9);
+		}
+
+		const fibra221 = vip.planes.find((p) => p.nombre === 'Linea VIP 221');
+		expect(fibra221.clientes).toBe('Fibra');
+		expect(fibra221.cargoInicial).toBe('--');
+		expect(fibra221.abonoMensual).toBeCloseTo(9971.603398646428, 9);
+	});
+
+	it('separa la nota del aparato del resto y corta en las instrucciones', () => {
+		const vip = parseLineaVip(libro);
+
+		expect(vip.aparato).toMatch(/^Aparato telefonico/i);
+		expect(vip.notas).toContain('Valores en Pesos ($)');
+		expect(vip.notas).toContain('Incluye IVA, del 21 %');
+		expect(vip.notas.some((n) => /abonado de fibra/i.test(n))).toBe(true);
+		expect(vip.notas.some((n) => /^Aparato telefonico/i.test(n))).toBe(false);
+		expect(vip.notas.some((n) => /^Copiar rango/i.test(n))).toBe(false);
 	});
 });
