@@ -1,16 +1,8 @@
 <script>
 import Spinner from '$lib/components/ui/Spinner.svelte';
 import { llamenmeStore } from './llamenmeStore.svelte.js';
-import { paginate, totalPages as totalPagesOf, clampPage, formatExtra } from './llamenmeLogic.js';
+import { paginate, totalPages as totalPagesOf, clampPage, formatExtra, timeAgo } from './llamenmeLogic.js';
 import { computeInCallWindow, isWithinCallHours, isFormVisible } from '$lib/llamenme/visibility.js';
-
-// Agentes disponibles para asignar. El "value" debe coincidir con el valor
-// guardado en el campo select "agente" de PocketBase (en minúscula).
-const agentes = [
-    { value: 'agustin', label: 'Agustín' },
-    { value: 'felipe', label: 'Felipe' },
-    { value: 'gustavo', label: 'Gustavo' }
-];
 
 // El store (arrancado por el Dashboard) es la fuente de verdad.
 const leads = $derived(llamenmeStore.leads);
@@ -35,11 +27,21 @@ const overrideOptions = [
     { value: 'oculto', label: 'Oculto' }
 ];
 
+// Reloj del panel. Sin esto, el "hace X minutos" de cada fila (y el estado de
+// horario de acá abajo) se calculan una sola vez al renderizar y quedan
+// congelados mientras el panel sigue abierto. Tickea cada 30s: alcanza para la
+// granularidad de minutos y es más barato que un timer por fila.
+const TICK_MS = 30_000;
+let nowTick = $state(Date.now());
+$effect(() => {
+    const id = setInterval(() => (nowTick = Date.now()), TICK_MS);
+    return () => clearInterval(id);
+});
+
 // Estado "ahora" del formulario público: si se muestra, y en ese caso si al
 // enviar se llama en el momento (en horario) o se le pide al visitante una
-// preferencia de horario en un modal (fuera de horario). Es informativo: se
-// calcula al renderizar, no se actualiza en vivo.
-const now = new Date();
+// preferencia de horario en un modal (fuera de horario).
+const now = $derived(new Date(nowTick));
 const formVisible = $derived(isFormVisible(override));
 const enHorarioNow = $derived(computeInCallWindow(override, now));
 const reasonNow = $derived(
@@ -69,33 +71,8 @@ $effect(() => {
 });
 
 const load = () => llamenmeStore.load();
-const isAssigned = (l) => !!l.agente;
-const assign = (lead, value) => llamenmeStore.assign(lead, value);
-
-// Devuelve un texto relativo del tipo "hace 3 minutos / 3 horas / 3 días / 1 mes".
-function timeAgo(d) {
-    if (!d) return '';
-    const diffMs = Date.now() - new Date(d).getTime();
-    if (diffMs < 0) return 'recién';
-
-    const sec = Math.floor(diffMs / 1000);
-    if (sec < 60) return 'hace unos segundos';
-
-    const min = Math.floor(sec / 60);
-    if (min < 60) return `hace ${min} ${min === 1 ? 'minuto' : 'minutos'}`;
-
-    const hours = Math.floor(min / 60);
-    if (hours < 24) return `hace ${hours} ${hours === 1 ? 'hora' : 'horas'}`;
-
-    const days = Math.floor(hours / 24);
-    if (days < 30) return `hace ${days} ${days === 1 ? 'día' : 'días'}`;
-
-    const months = Math.floor(days / 30);
-    if (months < 12) return `hace ${months} ${months === 1 ? 'mes' : 'meses'}`;
-
-    const years = Math.floor(months / 12);
-    return `hace ${years} ${years === 1 ? 'año' : 'años'}`;
-}
+const toggleAtendido = (lead, value) => llamenmeStore.setAtendido(lead, value);
+const saveNotas = (lead, value) => llamenmeStore.setNotas(lead, value);
 </script>
 
 <div class="llamenme-admin">
@@ -139,23 +116,19 @@ function timeAgo(d) {
         <div class="table-wrap">
             <table>
                 <thead>
-                    <tr><th>Asignar</th><th>Número</th><th>Prefiere</th><th>Recibido</th></tr>
+                    <tr><th class="check-col">✓</th><th>Número</th><th>Prefiere</th><th>Recibido</th><th>Anotaciones</th></tr>
                 </thead>
                 <tbody>
                     {#each visible as l (l.id)}
-                        <tr class:assigned={isAssigned(l)} class:is-new={newIds.has(l.id)}>
-                            <td class="assign-cell">
-                                <span class="tick" class:visible={isAssigned(l)} aria-hidden="true">✓</span>
-                                <select
-                                    class="assign-select"
-                                    value={l.agente ?? ''}
-                                    onchange={(e) => assign(l, e.target.value)}
-                                >
-                                    <option value="">Sin asignar</option>
-                                    {#each agentes as a}
-                                        <option value={a.value}>{a.label}</option>
-                                    {/each}
-                                </select>
+                        <tr class:done={!!l.atendido} class:is-new={newIds.has(l.id)}>
+                            <td class="check-cell">
+                                <input
+                                    type="checkbox"
+                                    class="check"
+                                    checked={!!l.atendido}
+                                    onchange={(e) => toggleAtendido(l, e.target.checked)}
+                                    aria-label="Marcar como atendido"
+                                />
                             </td>
                             <td>{l.numero}</td>
                             <td class="extra">
@@ -163,7 +136,16 @@ function timeAgo(d) {
                                     {formatExtra(l.extra)}
                                 </span>
                             </td>
-                            <td class="date">{timeAgo(l.created)}</td>
+                            <td class="date">{timeAgo(l.created, nowTick)}</td>
+                            <td class="notas-cell">
+                                <input
+                                    type="text"
+                                    class="notas-input"
+                                    value={l.notas ?? ''}
+                                    placeholder="Anotaciones…"
+                                    onchange={(e) => saveNotas(l, e.target.value)}
+                                />
+                            </td>
                         </tr>
                     {/each}
                 </tbody>
@@ -275,29 +257,28 @@ td.extra {
     font-weight: 400;
     padding-left: 0;
 }
-/* En filas ya asignadas el chip también se apaga. */
-tr.assigned .pref {
+/* En filas ya atendidas el chip también se apaga. */
+tr.done .pref {
     background: #f3f3f3;
     color: #9a9a9a;
 }
-.assign-cell {
-    display: flex;
-    align-items: center;
-    gap: 0.5em;
+.check-col,
+.check-cell {
+    text-align: center;
+    width: 2.5em;
 }
-.tick {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 1.2em;
-    color: #2e9e5b;
-    font-weight: 700;
-    visibility: hidden;
+.check {
+    width: 1.15em;
+    height: 1.15em;
+    accent-color: #2e9e5b;
+    cursor: pointer;
 }
-.tick.visible {
-    visibility: visible;
+.notas-cell {
+    min-width: 12em;
 }
-.assign-select {
+.notas-input {
+    width: 100%;
+    box-sizing: border-box;
     border: 1.5px solid #ddd;
     border-radius: 0.4em;
     padding: 0.35em 0.5em;
@@ -305,9 +286,8 @@ tr.assigned .pref {
     font-family: inherit;
     background: #fff;
     color: #333;
-    cursor: pointer;
 }
-.assign-select:focus {
+.notas-input:focus {
     outline: none;
     border-color: var(--violeta1);
 }
@@ -319,9 +299,14 @@ tr.is-new td {
     0% { background: #fdf3c4; }
     100% { background: transparent; }
 }
-/* Filas ya asignadas: más apagadas / en gris. */
-tr.assigned td {
+/* Filas ya atendidas: más apagadas / en gris. */
+tr.done td {
     color: #9a9a9a;
+}
+tr.done .notas-input {
+    color: #9a9a9a;
+    background: #f6f6f6;
+    border-color: #e6e6e6;
 }
 .pager {
     display: flex;
@@ -352,11 +337,6 @@ tr.assigned td {
 .pager-btn:disabled {
     opacity: 0.4;
     cursor: not-allowed;
-}
-tr.assigned .assign-select {
-    color: #9a9a9a;
-    background: #f6f6f6;
-    border-color: #e6e6e6;
 }
 .override-panel {
     display: flex;

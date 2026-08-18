@@ -6,7 +6,8 @@ import {
 	totalPages,
 	clampPage,
 	paginate,
-	formatExtra
+	formatExtra,
+	timeAgo
 } from './llamenmeLogic.js';
 
 const lead = (id, extra = {}) => ({ id, numero: id, ...extra });
@@ -30,8 +31,8 @@ describe('applyCreate', () => {
 
 describe('applyUpdate', () => {
 	it('reemplaza la fila con el mismo id', () => {
-		const out = applyUpdate([lead('a', { agente: null }), lead('b')], lead('a', { agente: 'felipe' }));
-		expect(out[0].agente).toBe('felipe');
+		const out = applyUpdate([lead('a', { atendido: false }), lead('b')], lead('a', { atendido: true }));
+		expect(out[0].atendido).toBe(true);
 		expect(out[1].id).toBe('b');
 	});
 
@@ -64,6 +65,54 @@ describe('formatExtra', () => {
 
 	it('devuelve el valor crudo si no lo conoce', () => {
 		expect(formatExtra('otra_cosa')).toBe('otra_cosa');
+	});
+});
+
+describe('timeAgo', () => {
+	// "Ahora" fijo para que el texto no dependa del reloj real.
+	const now = new Date('2024-03-10T12:00:00Z');
+	const hace = (ms) => new Date(now.getTime() - ms);
+
+	const SEG = 1000;
+	const MIN = 60 * SEG;
+	const HORA = 60 * MIN;
+	const DIA = 24 * HORA;
+
+	it('devuelve vacío si no hay fecha', () => {
+		expect(timeAgo(null, now)).toBe('');
+		expect(timeAgo(undefined, now)).toBe('');
+	});
+
+	it('una fecha futura es "recién"', () => {
+		expect(timeAgo(new Date(now.getTime() + MIN), now)).toBe('recién');
+	});
+
+	it('menos de un minuto son "unos segundos"', () => {
+		expect(timeAgo(hace(30 * SEG), now)).toBe('hace unos segundos');
+	});
+
+	it('singular y plural en minutos', () => {
+		expect(timeAgo(hace(MIN), now)).toBe('hace 1 minuto');
+		expect(timeAgo(hace(5 * MIN), now)).toBe('hace 5 minutos');
+	});
+
+	it('singular y plural en horas', () => {
+		expect(timeAgo(hace(HORA), now)).toBe('hace 1 hora');
+		expect(timeAgo(hace(3 * HORA), now)).toBe('hace 3 horas');
+	});
+
+	it('singular y plural en días', () => {
+		expect(timeAgo(hace(DIA), now)).toBe('hace 1 día');
+		expect(timeAgo(hace(3 * DIA), now)).toBe('hace 3 días');
+	});
+
+	it('meses y años', () => {
+		expect(timeAgo(hace(30 * DIA), now)).toBe('hace 1 mes');
+		expect(timeAgo(hace(365 * DIA), now)).toBe('hace 1 año');
+	});
+
+	it('acepta la fecha como string ISO (como viene de PocketBase)', () => {
+		expect(timeAgo(hace(5 * MIN).toISOString(), now)).toBe('hace 5 minutos');
 	});
 });
 

@@ -147,17 +147,33 @@ async function setOverride(value) {
 	}
 }
 
-// Asignación optimista de agente, con rollback ante error.
-async function assign(lead, value) {
-	const agente = value || null;
-	const prev = lead.agente;
-	leads = applyUpdate(leads, { ...lead, agente });
+// Tilde de "atendido" optimista, con rollback ante error.
+async function setAtendido(lead, value) {
+	const atendido = !!value;
+	const prev = lead.atendido;
+	leads = applyUpdate(leads, { ...lead, atendido });
 	try {
-		await pb.collection(COLLECTION).update(lead.id, { agente });
+		await pb.collection(COLLECTION).update(lead.id, { atendido });
 	} catch (e) {
 		console.error(e);
-		leads = applyUpdate(leads, { ...lead, agente: prev });
-		error = 'No se pudo asignar el agente.';
+		leads = applyUpdate(leads, { ...lead, atendido: prev });
+		error = 'No se pudo guardar el estado del lead.';
+		setTimeout(() => (error = ''), 3000);
+	}
+}
+
+// Anotaciones del lead, guardado optimista con rollback ante error.
+async function setNotas(lead, value) {
+	const notas = value ?? '';
+	const prev = lead.notas;
+	if (notas === (prev ?? '')) return;
+	leads = applyUpdate(leads, { ...lead, notas });
+	try {
+		await pb.collection(COLLECTION).update(lead.id, { notas });
+	} catch (e) {
+		console.error(e);
+		leads = applyUpdate(leads, { ...lead, notas: prev });
+		error = 'No se pudieron guardar las anotaciones.';
 		setTimeout(() => (error = ''), 3000);
 	}
 }
@@ -187,7 +203,8 @@ export const llamenmeStore = {
 	stop,
 	load,
 	markRead,
-	assign,
+	setAtendido,
+	setNotas,
 	loadOverride,
 	setOverride
 };

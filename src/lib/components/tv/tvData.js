@@ -43,6 +43,18 @@ export const ADDON_CINE = {
 	detail: 'Canales HBO y Universal'
 };
 
+// Categorías de Antina que se cobran aparte (ver `categoryPrices` de la grilla).
+const ANTINA_CATEGORY_PRICES = { 'Adicional CINE': 'antina_cine' };
+
+// Canales que incluye el plan base, derivado de la grilla para que no quede
+// desactualizado cuando se suman señales. Descuenta las categorías que son
+// adicional pago: Antina tiene 92 canales cargados pero se promocionan 79,
+// porque los 13 de "Adicional CINE" no vienen con el plan.
+function contarCanales(channels, categoryPrices = {}) {
+	const aparte = new Set(Object.keys(categoryPrices));
+	return channels.filter((c) => !aparte.has(c.categoria)).length;
+}
+
 export const TV_SERVICES = [
 	{
 		key: 'gigared',
@@ -54,7 +66,7 @@ export const TV_SERVICES = [
 		intro:
 			'La opción más económica para tener TV en casa. Buena variedad de canales.',
 		features: [
-			{ type: 'neutral', text: '77 canales' },
+			{ type: 'neutral', text: `${contarCanales(gigaredplayChannels)} canales` },
 			{ type: 'neg', text: 'No tiene El 13 y TN' },
 			{ type: 'neg', text: 'No tiene HD' },
 			{ type: 'neutral', text: 'Hasta 3 dispositivos' }
@@ -72,7 +84,7 @@ export const TV_SERVICES = [
 		intro:
 			'Más canales y algunos en HD, con contenido en vivo y on demand.',
 		features: [
-			{ type: 'neutral', text: '79 canales' },
+			{ type: 'neutral', text: `${contarCanales(antinaChannels, ANTINA_CATEGORY_PRICES)} canales` },
 			{ type: 'neutral', text: 'Algunos canales HD' },
 			{ type: 'neutral', text: 'Hasta 2 TV + 3 celus o compus' }
 		],
@@ -80,7 +92,7 @@ export const TV_SERVICES = [
 			type: 'channelgrid',
 			channels: antinaChannels,
 			accent: '#52FFB6',
-			categoryPrices: { 'Adicional CINE': 'antina_cine' }
+			categoryPrices: ANTINA_CATEGORY_PRICES
 		},
 		addons: [packFutbolAddon('antina_futbol'), ADDON_CINE]
 	},
@@ -94,7 +106,7 @@ export const TV_SERVICES = [
 		intro:
 			'El servicio de streaming de DirecTV: todo en Full HD y hasta 4 dispositivos.',
 		features: [
-			{ type: 'neutral', text: '123 canales' },
+			{ type: 'neutral', text: `${contarCanales(dgoChannels)} canales` },
 			{ type: 'neutral', text: 'Full HD' },
 			{ type: 'neutral', text: 'Hasta 4 dispositivos' }
 		],
