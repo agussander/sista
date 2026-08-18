@@ -3,9 +3,10 @@ import { onMount } from 'svelte';
 import { MetaTags } from 'svelte-meta-tags';
 import ContactButtons from '$lib/components/ui/ContactButtons.svelte';
 import Spinner from '$lib/components/ui/Spinner.svelte';
-import { fetchInternacionalPrecios } from '$lib/telefonia/fetchInternacional.js';
+import { fetchTarifario } from '$lib/tarifario/fetchTarifario.js';
+import { formatearFecha } from '$lib/tarifario/formato.js';
 
-/** @type {import('$lib/telefonia/parseInternacional.js').InternacionalData | null} */
+/** @type {import('$lib/tarifario/parseTarifario.js').Internacional | null} */
 let data = $state(null);
 let loading = $state(true);
 let error = $state(null);
@@ -13,7 +14,7 @@ let query = $state('');
 
 onMount(async () => {
 	try {
-		data = await fetchInternacionalPrecios();
+		data = (await fetchTarifario()).internacional;
 	} catch (e) {
 		error = e instanceof Error ? e.message : 'Error al cargar las tarifas.';
 		console.error('Tarifas internacionales:', e);
@@ -23,15 +24,18 @@ onMount(async () => {
 });
 
 /**
- * Precio en formato local: punto decimal -> coma. La fuente trae "U$S 0.1".
- * @param {string | null} value
+ * Precio por minuto en dólares, con coma decimal. El símbolo lo pone la página:
+ * el tarifario guarda números, no el "U$S 0.5" que traía el scrapeo del Word.
+ *
+ * @param {number | null} value
  */
 function formatUSD(value) {
-	if (!value) return '—';
-	return value.replace(/\./g, ',');
+	if (typeof value !== 'number' || !Number.isFinite(value)) return '—';
+	return `U$S ${String(value).replace('.', ',')}`;
 }
 
 const destinos = $derived(data?.destinos ?? []);
+const vigencia = $derived(formatearFecha(data?.vigencia));
 
 const filtered = $derived.by(() => {
 	const q = query.trim().toLowerCase();
@@ -50,8 +54,8 @@ const filtered = $derived.by(() => {
 		<a href="/telefonia" class="back">← Telefonía</a>
 		<h1>Llamadas internacionales</h1>
 		<p class="lead">Precio del minuto por país, en dólares (U$S).</p>
-		{#if data?.vigencia}
-			<p class="vigencia">Vigente desde el {data.vigencia}</p>
+		{#if vigencia}
+			<p class="vigencia">Vigente desde el {vigencia}</p>
 		{/if}
 	</header>
 
