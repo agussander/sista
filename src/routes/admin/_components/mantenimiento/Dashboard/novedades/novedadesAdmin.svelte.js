@@ -23,6 +23,14 @@ function mensajeDeError(err) {
 	if (err?.status === 401 || err?.status === 403) {
 		return 'Tu sesión expiró o no tenés permiso. Volvé a iniciar sesión.';
 	}
+	// `slugUnico` solo deduplica contra la lista que tiene cargada el navegador,
+	// asi que si otra persona cargo el mismo titulo mientras tanto, el indice
+	// unico de PocketBase rechaza el alta. El motivo real viene en
+	// `err.data.data.slug`; `err.message` a secas dice "Failed to create
+	// record.", que no le explica a nadie que tiene que cambiar el titulo.
+	if (err?.status === 400 && err?.data?.data?.slug) {
+		return 'Ya existe una novedad con un título muy parecido. Cambiá el título e intentá de nuevo.';
+	}
 	return err?.message || 'No pudimos completar la operación.';
 }
 
@@ -103,8 +111,17 @@ async function actualizar(id, datos) {
 	}
 }
 
-/** @returns {Promise<boolean>} si se borro */
+/**
+ * Borra una novedad.
+ *
+ * Marca `guardando` igual que `crear` y `actualizar` para que la vista pueda
+ * desactivar el boton: sin eso, un doble clic manda dos DELETE, el segundo
+ * vuelve 404 y la persona ve un error aunque el borrado haya salido bien.
+ *
+ * @returns {Promise<boolean>} si se borro
+ */
 async function eliminar(id) {
+	guardando = true;
 	error = '';
 	try {
 		await pb.collection(COLECCION).delete(id);
@@ -114,6 +131,8 @@ async function eliminar(id) {
 		console.error('[novedades] error al eliminar:', err);
 		error = mensajeDeError(err);
 		return false;
+	} finally {
+		guardando = false;
 	}
 }
 
