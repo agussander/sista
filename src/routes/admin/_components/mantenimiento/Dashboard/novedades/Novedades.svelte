@@ -31,32 +31,23 @@ async function eliminar(novedad) {
     if (ok) confirmandoBorrado = null;
 }
 
-// `novedadesAdmin.error` es un string compartido por carga, alta, edicion y
-// borrado. Sin esto, el error de una escritura fallida (por ej. un slug
-// duplicado al guardar) le quedaba pegado a la lista despues de cancelar, y de
-// ahi a cualquier formulario nuevo que se abriera, sin que tuvieran nada que
-// ver con lo que fallo.
-//
-// La excepcion es a proposito: si la lista esta vacia y hay un error, es
-// probablemente el de `cargar()` fallando -el que sostiene el cartel con
-// "Reintentar" de mas abajo- y ese no se toca aca. Si hay filas, cualquier
-// error que quede es de una escritura anterior y no tiene sentido arrastrarlo.
-function limpiarErrorSiCorresponde() {
-    if (novedadesAdmin.novedades.length > 0) novedadesAdmin.limpiarError();
-}
-
+// El error de una escritura fallida no tiene por que seguir a la vista
+// siguiente: sin esto, un slug duplicado al guardar quedaba pegado a la lista
+// despues de cancelar, y de ahi a cualquier formulario nuevo que se abriera.
+// `errorCarga` no se toca: ese describe el estado de la lista y solo lo
+// resuelve volver a cargarla.
 function abrirNueva() {
-    limpiarErrorSiCorresponde();
+    novedadesAdmin.limpiarError();
     editando = 'nueva';
 }
 
 function abrirEditar(novedad) {
-    limpiarErrorSiCorresponde();
+    novedadesAdmin.limpiarError();
     editando = novedad;
 }
 
 function cerrarForm() {
-    limpiarErrorSiCorresponde();
+    novedadesAdmin.limpiarError();
     editando = null;
 }
 </script>
@@ -77,20 +68,24 @@ function cerrarForm() {
             <button class="btn-nueva" onclick={abrirNueva}>Nueva novedad</button>
         </div>
 
-        {#if novedadesAdmin.error && novedadesAdmin.novedades.length > 0}
+        <!-- El error de escritura (borrar una fila, por ejemplo) va arriba de
+             la lista; el de carga va en el lugar de la lista, mas abajo. -->
+        {#if novedadesAdmin.error}
             <p class="error">{novedadesAdmin.error}</p>
         {/if}
 
         {#if novedadesAdmin.cargando}
             <div class="centro"><Spinner label="Cargando novedades..."></Spinner></div>
+        {:else if novedadesAdmin.errorCarga}
+            <!-- No alcanza con "no hay novedades": si la carga fallo, la lista
+                 esta vacia porque no pudimos traerla, no porque no haya nada. -->
+            <div class="vacio">
+                <p>{novedadesAdmin.errorCarga}</p>
+                <button class="reintentar" onclick={() => novedadesAdmin.cargar()}>Reintentar</button>
+            </div>
         {:else if novedadesAdmin.novedades.length === 0}
             <div class="vacio">
-                {#if novedadesAdmin.error}
-                    <p>{novedadesAdmin.error}</p>
-                    <button class="reintentar" onclick={() => novedadesAdmin.cargar()}>Reintentar</button>
-                {:else}
-                    <p>Todavía no cargaste ninguna novedad.</p>
-                {/if}
+                <p>Todavía no cargaste ninguna novedad.</p>
             </div>
         {:else}
             <ul class="lista">

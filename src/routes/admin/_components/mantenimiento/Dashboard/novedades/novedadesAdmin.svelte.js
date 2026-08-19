@@ -16,8 +16,16 @@ const COLECCION = 'novedades';
 
 let novedades = $state([]);
 let cargando = $state(true);
-let error = $state('');
 let guardando = $state(false);
+
+// Dos errores distintos, no uno solo, porque son dos problemas distintos y la
+// vista los muestra en lugares distintos: `errorCarga` es "no pude traer la
+// lista" (va en el lugar de la lista, con un boton para reintentar) y `error`
+// es "no pude guardar lo que me pediste" (va pegado a la accion que fallo).
+// Con un unico string compartido, el error de un alta fallida terminaba
+// disfrazado de lista vacia y la vista necesitaba adivinar cual era cual.
+let errorCarga = $state('');
+let error = $state('');
 
 function mensajeDeError(err) {
 	if (err?.status === 401 || err?.status === 403) {
@@ -36,13 +44,13 @@ function mensajeDeError(err) {
 
 async function cargar() {
 	cargando = true;
-	error = '';
+	errorCarga = '';
 	try {
 		const items = await pb.collection(COLECCION).getFullList();
 		novedades = ordenarNovedades(items);
 	} catch (err) {
 		console.error('[novedades] error al cargar:', err);
-		error = mensajeDeError(err);
+		errorCarga = mensajeDeError(err);
 	} finally {
 		cargando = false;
 	}
@@ -143,12 +151,12 @@ function urlImagen(record, thumb = '300x200') {
 }
 
 /**
- * Borra el error a mano. `cargar`, `crear`, `actualizar` y `eliminar` ya lo
- * limpian al EMPEZAR, pero nada lo limpiaba al salir de un estado con error:
- * `error` es un string compartido por las cuatro operaciones, asi que el
- * error de una escritura fallida le quedaba pegado a cualquier vista que se
- * abriera despues (la lista, un formulario nuevo) hasta la proxima llamada al
- * store. La vista la llama en las transiciones donde eso importa.
+ * Borra el error de escritura a mano.
+ *
+ * Las escrituras lo limpian al EMPEZAR, pero nada lo limpiaba al SALIR de un
+ * estado con error: quedaba pegado a la vista que se abriera despues, sin
+ * tener nada que ver con ella. La vista lo llama al abrir o cerrar el
+ * formulario. No toca `errorCarga`: ese solo lo resuelve volver a cargar.
  */
 function limpiarError() {
 	error = '';
@@ -160,6 +168,9 @@ export const novedadesAdmin = {
 	},
 	get cargando() {
 		return cargando;
+	},
+	get errorCarga() {
+		return errorCarga;
 	},
 	get error() {
 		return error;
