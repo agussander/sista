@@ -5,19 +5,18 @@
 // proposito: el home esta prerenderizado (`prerender = true` en
 // `src/routes/+layout.js`) y tiene que seguir estandolo. Es el mismo patron
 // que `src/routes/precios/+page.svelte`.
-import { onDestroy, onMount } from 'svelte';
+//
+// El scroll es nativo (scroll-snap), no manejado por JS: en mobile se ve una
+// tarjeta entera y un pedacito de la siguiente, y en desktop el snap avanza
+// de a dos (ver `.slide:nth-child(odd)` en el media query).
+import { onMount } from 'svelte';
 import { pb } from '$lib/pocketbase';
 import { ordenarNovedades } from '$lib/novedades.js';
 import NovedadCard from '$lib/components/novedades/NovedadCard.svelte';
 
 const MAX = 5;
-const INTERVALO_MS = 8000;
 
 let novedades = $state([]);
-let count = $state(0);
-let tam = $state(0);
-let interval = null;
-let destruido = false;
 
 onMount(async () => {
     try {
@@ -39,40 +38,20 @@ onMount(async () => {
         console.error('[novedades] no se pudieron cargar en el home:', error);
         novedades = [];
     }
-
-    // Si se fueron del home mientras la consulta estaba en vuelo, `onDestroy`
-    // ya corrio: arrancar el intervalo aca lo dejaria vivo para siempre,
-    // porque nadie lo va a limpiar despues.
-    if (destruido) return;
-
-    // Con una sola novedad no hay nada que rotar.
-    if (novedades.length > 1) {
-        interval = setInterval(
-            () => (count = count < novedades.length - 1 ? count + 1 : 0),
-            INTERVALO_MS
-        );
-    }
-});
-
-onDestroy(() => {
-    destruido = true;
-    clearInterval(interval);
 });
 </script>
 
 {#if novedades.length > 0}
     <section>
         <div class="background2"></div>
+        <h2>Novedades</h2>
         <div class="cont">
-            <h4>Novedades</h4>
-            <div class="inner">
-                <div class="carousel" style="transform: translateX(-{tam * count}px)">
-                    {#each novedades as novedad (novedad.id)}
-                        <div bind:clientWidth={tam} class="slide">
-                            <NovedadCard {novedad} orientacion="horizontal"></NovedadCard>
-                        </div>
-                    {/each}
-                </div>
+            <div class="carousel">
+                {#each novedades as novedad (novedad.id)}
+                    <div class="slide">
+                        <NovedadCard {novedad}></NovedadCard>
+                    </div>
+                {/each}
             </div>
         </div>
         <a class="ver-todas" href="/novedades/">Ver todas las novedades</a>
@@ -80,43 +59,47 @@ onDestroy(() => {
 {/if}
 
 <style>
-h4 {
-    position: absolute;
-    top: 0;
-    left: 50%;
-    background: var(--magenta);
+h2 {
+    position: relative;
     z-index: 10;
-    color: white;
-    border-radius: 0.3em;
-    font-size: 0.8em;
-    transform: translate(-50%, -50%);
-    margin: 0;
-    font-weight: 600;
-    padding: 0.2em 1em;
+    margin: 0 0 1em;
 }
 
 .cont {
-    max-width: 30em;
-    width: 80%;
+    max-width: 80em;
+    width: 92%;
     margin: 0 auto;
     position: relative;
 }
 
-.slide {
-    min-width: 100%;
-}
-
 .carousel {
     display: flex;
-    flex-flow: row nowrap;
-    width: 100%;
-    transition: all ease-in-out 600ms;
+    gap: 1em;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    padding: 0.6em 0 1em;
+    scrollbar-width: none;
 }
 
-.inner {
-    max-width: 100%;
-    overflow-x: hidden;
-    padding: 0.6em 0;
+.carousel::-webkit-scrollbar {
+    display: none;
+}
+
+.slide {
+    flex: 0 0 85%;
+    scroll-snap-align: start;
+}
+
+@media (min-width: 900px) {
+    .slide {
+        flex: 0 0 44%;
+        scroll-snap-align: none;
+    }
+
+    .slide:nth-child(odd) {
+        scroll-snap-align: start;
+    }
 }
 
 section {
