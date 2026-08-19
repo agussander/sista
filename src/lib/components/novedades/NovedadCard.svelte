@@ -1,15 +1,14 @@
 <script>
-// Tarjeta de novedad. La comparten el listado (`vertical`) y el carrusel del
-// home (`horizontal` en pantallas anchas), para que las dos superficies no se
-// despeguen visualmente cuando se toque una.
+// Tarjeta de novedad. La comparten el listado y el carrusel del home, para
+// que las dos superficies no se despeguen visualmente cuando se toque una.
 import { formatFecha, resumenDe } from '$lib/novedades.js';
 
-let { novedad, orientacion = 'vertical' } = $props();
+let { novedad } = $props();
 
 const resumen = $derived(resumenDe(novedad));
 </script>
 
-<a class="card {orientacion}" href="/novedades/{novedad.slug}/">
+<a class="card" href="/novedades/{novedad.slug}/">
     {#if novedad.imagen}
         <!-- Sin imagen no se renderiza el bloque: un hueco gris se ve peor
              que una tarjeta solo de texto.
@@ -37,12 +36,11 @@ const resumen = $derived(resumenDe(novedad));
     text-decoration: none;
     color: inherit;
     height: 100%;
-    transition: transform ease 300ms, box-shadow ease 300ms;
 }
 
 .card:hover {
-    transform: translateY(-0.25em);
-    box-shadow: 0 0.3em 1em rgba(133, 133, 133, 0.55);
+    /* Anula el fade de `a:hover` global: esta tarjeta no quiere efecto de hover. */
+    opacity: 1;
 }
 
 .img {
@@ -79,21 +77,5 @@ p {
     font-size: 0.9em;
     line-height: 1.5;
     color: #444;
-}
-
-@media (min-width: 700px) {
-    .card.horizontal {
-        flex-flow: row nowrap;
-    }
-
-    .card.horizontal .img {
-        width: 55%;
-        height: auto;
-        min-height: 9em;
-    }
-
-    .card.horizontal .texto {
-        justify-content: center;
-    }
 }
 </style>
