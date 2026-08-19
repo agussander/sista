@@ -76,6 +76,28 @@ describe('parseCuerpo', () => {
 		]);
 	});
 
+	it('no rompe una url con parentesis balanceados', () => {
+		expect(
+			parseCuerpo('Ver https://es.wikipedia.org/wiki/PHP_(lenguaje) para mas info')
+		).toEqual([
+			[
+				{ tipo: 'texto', valor: 'Ver ' },
+				{ tipo: 'link', valor: 'https://es.wikipedia.org/wiki/PHP_(lenguaje)' },
+				{ tipo: 'texto', valor: ' para mas info' }
+			]
+		]);
+	});
+
+	it('deja afuera del link un parentesis que es puntuacion de la oracion', () => {
+		expect(parseCuerpo('(mira https://a.com)')).toEqual([
+			[
+				{ tipo: 'texto', valor: '(mira ' },
+				{ tipo: 'link', valor: 'https://a.com' },
+				{ tipo: 'texto', valor: ')' }
+			]
+		]);
+	});
+
 	it('devuelve lista vacia si no hay texto', () => {
 		expect(parseCuerpo('')).toEqual([]);
 		expect(parseCuerpo(null)).toEqual([]);
@@ -93,6 +115,10 @@ describe('resumenDe', () => {
 
 	it('corta en el ultimo espacio y agrega puntos suspensivos', () => {
 		expect(resumenDe({ cuerpo: 'uno dos tres cuatro' }, 12)).toBe('uno dos…');
+	});
+
+	it('si la ventana no tiene ningun espacio, hace un corte duro en la palabra', () => {
+		expect(resumenDe({ cuerpo: 'unapalabrasuperlarguisima' }, 10)).toBe('unapalabra…');
 	});
 
 	it('no corta si entra entero', () => {
@@ -125,6 +151,19 @@ describe('ordenarNovedades', () => {
 		const base = [{ id: 'a', fecha: '2026-01-01' }, { id: 'b', fecha: '2026-08-10' }];
 		ordenarNovedades(base);
 		expect(base.map((n) => n.id)).toEqual(['a', 'b']);
+	});
+
+	it('no rompe con fechas ausentes o invalidas, y deja las validas primero', () => {
+		let out;
+		expect(() => {
+			out = ordenarNovedades([
+				{ id: 'sinFecha', fecha: undefined, destacada: false },
+				{ id: 'nueva', fecha: '2026-08-10', destacada: false },
+				{ id: 'nula', fecha: null, destacada: false },
+				{ id: 'vieja', fecha: '2026-01-01', destacada: false }
+			]);
+		}).not.toThrow();
+		expect(out[0].id).toBe('nueva');
 	});
 });
 

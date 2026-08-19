@@ -40,14 +40,31 @@ export function slugUnico(titulo, slugsExistentes = []) {
 
 const URL_RE = /https?:\/\/[^\s]+/g;
 
+const PUNTUACION_FINAL = /[.,;:!?)\]]/;
+
 /**
  * Separa la puntuacion que cierra la oracion del final de una URL, para que
  * "entra a https://a.com." no linkee el punto.
+ *
+ * Un ")" es un caso especial: si la URL trae tantos "(" como ")" (por ejemplo
+ * ".../PHP_(lenguaje)"), el parentesis es parte de la URL y no se corta. Solo
+ * se corta cuando sobra un ")" sin abrir, que es la puntuacion de la oracion
+ * (como en "(mira https://a.com)").
  */
 function separarPuntuacion(url) {
-	const cola = url.match(/[.,;:!?)\]]+$/);
-	if (!cola) return [url, ''];
-	return [url.slice(0, -cola[0].length), cola[0]];
+	let cortarDesde = url.length;
+
+	while (cortarDesde > 0 && PUNTUACION_FINAL.test(url[cortarDesde - 1])) {
+		if (url[cortarDesde - 1] === ')') {
+			const prefijo = url.slice(0, cortarDesde);
+			const abiertos = (prefijo.match(/\(/g) ?? []).length;
+			const cerrados = (prefijo.match(/\)/g) ?? []).length;
+			if (abiertos >= cerrados) break;
+		}
+		cortarDesde--;
+	}
+
+	return [url.slice(0, cortarDesde), url.slice(cortarDesde)];
 }
 
 /**
@@ -96,7 +113,9 @@ export function parseCuerpo(texto) {
 /**
  * Texto corto para la tarjeta: la bajada si la cargaron, si no un recorte del
  * cuerpo cortado en el ultimo espacio (cortar a la cantidad exacta parte
- * palabras al medio).
+ * palabras al medio). Si en la ventana no hay ningun espacio (una palabra
+ * sola mas larga que `max`), se hace un corte duro ahi mismo: no queda otro
+ * lugar donde cortar.
  */
 export function resumenDe(novedad, max = 140) {
 	const bajada = String(novedad?.bajada ?? '').trim();
@@ -111,14 +130,23 @@ export function resumenDe(novedad, max = 140) {
 	return `${recorte.replace(/[.,;:]$/, '')}…`;
 }
 
-/** Destacadas primero, despues por fecha descendente. No muta la lista. */
+/**
+ * Destacadas primero, despues por fecha descendente. No muta la lista.
+ *
+ * Usa `aDate()` (declarada mas abajo, pero las function declarations se
+ * hoistean) en vez de parsear la fecha inline: una fecha ausente o invalida
+ * da `null`, y ahi cae al centinela epoch 0 para que ordene al final en vez
+ * de devolver NaN. Un comparador que devuelve NaN deja a `Array.sort` en
+ * comportamiento indefinido y la lista sale practicamente desordenada.
+ */
 export function ordenarNovedades(lista) {
 	return [...(lista ?? [])].sort((a, b) => {
 		const da = a.destacada ? 1 : 0;
 		const db = b.destacada ? 1 : 0;
 		if (da !== db) return db - da;
-		return new Date(String(b.fecha ?? '').replace(' ', 'T')) -
-			new Date(String(a.fecha ?? '').replace(' ', 'T'));
+		const fa = aDate(a.fecha)?.getTime() ?? 0;
+		const fb = aDate(b.fecha)?.getTime() ?? 0;
+		return fb - fa;
 	});
 }
 
