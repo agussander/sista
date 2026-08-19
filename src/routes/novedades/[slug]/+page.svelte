@@ -7,7 +7,12 @@ import { formatFecha, resumenDe } from '$lib/novedades.js';
 let { data } = $props();
 
 const novedad = $derived(data.novedad);
-const descripcion = $derived(resumenDe(novedad, 200));
+
+// El fallback no es decorativo: `bajada` y `cuerpo` son opcionales, y con las
+// dos vacias `resumenDe` devuelve '', con lo cual `svelte-meta-tags` no emite
+// NINGUNA etiqueta de descripcion. Una novedad sin descripcion se comparte en
+// WhatsApp sin texto, que es justo lo que esta pagina existe para evitar.
+const descripcion = $derived(resumenDe(novedad, 200) || 'Novedades de Sista');
 </script>
 
 <MetaTags
