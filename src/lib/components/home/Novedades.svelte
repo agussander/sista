@@ -1,65 +1,109 @@
 <script>
-import { onDestroy } from 'svelte';
-import { noticias } from "$lib/stores";
+// Carrusel de novedades del inicio.
+//
+// Los datos se traen desde el NAVEGADOR y no con un `load` de servidor a
+// proposito: el home esta prerenderizado (`prerender = true` en
+// `src/routes/+layout.js`) y tiene que seguir estandolo. Es el mismo patron
+// que `src/routes/precios/+page.svelte`.
+import { onDestroy, onMount } from 'svelte';
+import { pb } from '$lib/pocketbase';
+import { ordenarNovedades } from '$lib/novedades.js';
+import NovedadCard from '$lib/components/novedades/NovedadCard.svelte';
 
-let count = 0;
-let tam;
+const MAX = 5;
+const INTERVALO_MS = 8000;
 
-const interval = setInterval(() => count < $noticias.length - 1 ? count++ : count = 0, 8000);
+let novedades = $state([]);
+let count = $state(0);
+let tam = $state(0);
+let interval = null;
+let destruido = false;
 
-onDestroy(() => clearInterval(interval));
+onMount(async () => {
+    try {
+        const items = await pb.collection('novedades').getFullList({ filter: '(publicada=true)' });
+        novedades = ordenarNovedades(items)
+            .slice(0, MAX)
+            .map((n) => ({
+                id: n.id,
+                slug: n.slug,
+                titulo: n.titulo,
+                fecha: n.fecha,
+                bajada: n.bajada ?? '',
+                cuerpo: n.cuerpo ?? '',
+                imagen: n.imagen ? pb.files.getURL(n, n.imagen, { thumb: '600x400' }) : null
+            }));
+    } catch (error) {
+        // Si PocketBase no responde, la seccion no se muestra y el resto del
+        // home queda intacto.
+        console.error('[novedades] no se pudieron cargar en el home:', error);
+        novedades = [];
+    }
+
+    // Si se fueron del home mientras la consulta estaba en vuelo, `onDestroy`
+    // ya corrio: arrancar el intervalo aca lo dejaria vivo para siempre,
+    // porque nadie lo va a limpiar despues.
+    if (destruido) return;
+
+    // Con una sola novedad no hay nada que rotar.
+    if (novedades.length > 1) {
+        interval = setInterval(
+            () => (count = count < novedades.length - 1 ? count + 1 : 0),
+            INTERVALO_MS
+        );
+    }
+});
+
+onDestroy(() => {
+    destruido = true;
+    clearInterval(interval);
+});
 </script>
 
-<section>
+{#if novedades.length > 0}
+    <section>
         <div class="background2"></div>
         <div class="cont">
             <h4>Novedades</h4>
             <div class="inner">
-                <div class="carousel" style="transform: translateX(-{tam*count}px)">
-                    {#each $noticias as {title,body,img,link}}
-                    <div bind:clientWidth={tam} class="noticia" onclick={()=>{window.open(link)}}>
-                        <div class="img"
-                        style="background-image: url(/images/noticias/{img});"
-                        ></div>
-                        <div class="ncard">
-                            <h5>{title}</h5>
-                            <p>{@html body}</p>
+                <div class="carousel" style="transform: translateX(-{tam * count}px)">
+                    {#each novedades as novedad (novedad.id)}
+                        <div bind:clientWidth={tam} class="slide">
+                            <NovedadCard {novedad} orientacion="horizontal"></NovedadCard>
                         </div>
-                    </div>
                     {/each}
                 </div>
             </div>
         </div>
-</section>
+        <a class="ver-todas" href="/novedades/">Ver todas las novedades</a>
+    </section>
+{/if}
 
 <style>
-h4{
+h4 {
     position: absolute;
-    top:0;
-    left:50%;
-    background:var(--magenta);
-    z-index:10;
-    color:white;
-    border-radius: .3em;
-    font-size: .8em;
-    transform: translate(-50%,-50%);
-    margin:0;
+    top: 0;
+    left: 50%;
+    background: var(--magenta);
+    z-index: 10;
+    color: white;
+    border-radius: 0.3em;
+    font-size: 0.8em;
+    transform: translate(-50%, -50%);
+    margin: 0;
     font-weight: 600;
-    padding: .2em 1em;
+    padding: 0.2em 1em;
 }
+
 .cont {
     max-width: 30em;
     width: 80%;
     margin: 0 auto;
-    box-shadow: 0px 0px .5em rgba(133, 133, 133, .6);
     position: relative;
 }
 
-.noticia {
-    display: flex;
-    flex-flow: column;
+.slide {
     min-width: 100%;
-    cursor: pointer;
 }
 
 .carousel {
@@ -68,61 +112,40 @@ h4{
     width: 100%;
     transition: all ease-in-out 600ms;
 }
-.inner{
+
+.inner {
     max-width: 100%;
     overflow-x: hidden;
+    padding: 0.6em 0;
 }
 
-.img {
-    background-position: center;
-    background-size: cover;
-    background-repeat: no-repeat;
-    height: 8em;
-    width: 100%;
-}
-.ncard {
-    background: white;
-    padding: 1.5em 1em;
-    height: 9em;
-    width: 100%;
-}
-h5 {
-    font-weight: 500;
-    font-size: 1.3em;
-    color: var(--magenta);
-    margin: 0;
-}
-p {
-    margin-bottom: 0;
-    font-size: .9em;
-}
 section {
-    height: 17em;
-    position:relative;
+    position: relative;
+    padding: 2em 0 3em;
 }
+
 .background2 {
     height: 50%;
     width: 100%;
-    position:absolute;
-    bottom:0;
-    background:var(--violeta1);
+    position: absolute;
+    bottom: 0;
+    background: var(--violeta1);
     border-radius: 1em 1em 0 0;
 }
 
-@media (min-width: 700px) {
-    section {
-        height: 9em;
-    }
+.ver-todas {
+    position: relative;
+    z-index: 10;
+    display: block;
+    text-align: center;
+    margin-top: 1.5em;
+    color: white;
+    font-size: 0.9em;
+    font-weight: 600;
+    text-decoration: none;
+}
 
-    .noticia {
-        display: flex;
-        flex-flow: row nowrap;
-        min-width: 30em;
-    }
-
-    .img {
-        width: 60%;
-        height: 9em;
-    }
+.ver-todas:hover {
+    text-decoration: underline;
 }
 </style>
