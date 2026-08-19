@@ -27,13 +27,3 @@ export const priceInfo = readable(
     }))
 );
 
-export const noticias = writable([
-    {
-        id:1,
-        title: "Nueva Tienda Sista",
-        body: "Comprá productos de tecnología en nuestra nueva tienda online<br><i><strong>Ir a la tienda</strong></i>",
-        img:'tienda-sista.png',
-        link:'https://tiendasista.mitiendanube.com/'
-    }
-]);
-
