@@ -59,11 +59,16 @@ En el admin de PocketBase (`https://sista.pockethost.io/_/`), colección `noveda
 | `fecha` | Date | Required |
 | `bajada` | Plain text | — |
 | `cuerpo` | Plain text (long) | — |
-| `imagen` | File | Single, solo imágenes, **thumbs `600x400` y `1200x0`** |
+| `imagen` | File | Single, solo imágenes, **thumbs `300x200`, `600x400` y `1200x0`** |
 | `publicada` | Bool | — |
 | `destacada` | Bool | — |
 
 Si ya hay campos con otros nombres, renombrarlos a estos.
+
+Los tres tamaños de miniatura son los que pide el código: `300x200` para
+la lista del panel, `600x400` para las tarjetas del listado y del inicio,
+y `1200x0` para la foto grande de la novedad y para la vista previa al
+compartir el link.
 
 - [ ] **Step 2: Configurar las reglas de la API**
 
