@@ -8,9 +8,11 @@
 export function slugify(titulo) {
 	return String(titulo ?? '')
 		.normalize('NFD')
-		// Los diacriticos combinantes que deja NFD, escapados a proposito: el
-		// rango escrito con los caracteres literales es invisible al leerlo.
-		.replace(/[̀-ͯ]/g, '')
+		// Los diacriticos combinantes que deja NFD. Se usa el escape \uXXXX
+		// (y no el caracter literal) porque un combinante pegado en el
+		// codigo fuente es invisible al leerlo y fragil ante herramientas
+		// que normalizan texto.
+		.replace(/[\u0300-\u036f]/g, '')
 		.toLowerCase()
 		.replace(/[^a-z0-9]+/g, '-')
 		.replace(/^-+|-+$/g, '');
