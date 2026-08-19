@@ -93,7 +93,7 @@ h2 {
 
 @media (min-width: 900px) {
     .slide {
-        flex: 0 0 44%;
+        flex: 0 0 30%;
         scroll-snap-align: none;
     }
 

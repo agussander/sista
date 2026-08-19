@@ -70,6 +70,9 @@ h3 {
     font-weight: 600;
     color: var(--magenta);
     line-height: 1.3;
+    /* El h3 global fuerza mayusculas; el titulo de la novedad tiene que
+       mostrarse tal cual se cargo. */
+    text-transform: none;
 }
 
 p {
