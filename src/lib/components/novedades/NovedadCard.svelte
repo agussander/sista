@@ -12,8 +12,12 @@ const resumen = $derived(resumenDe(novedad));
 <a class="card {orientacion}" href="/novedades/{novedad.slug}/">
     {#if novedad.imagen}
         <!-- Sin imagen no se renderiza el bloque: un hueco gris se ve peor
-             que una tarjeta solo de texto. -->
-        <div class="img" style="background-image: url({novedad.imagen});"></div>
+             que una tarjeta solo de texto.
+
+             La url va entre comillas (como en el resto del repo): sin ellas,
+             un parentesis en el nombre del archivo corta el token `url()` y el
+             navegador descarta la regla entera, sin imagen ni error visible. -->
+        <div class="img" style="background-image: url('{novedad.imagen}');"></div>
     {/if}
     <div class="texto">
         <time datetime={novedad.fecha}>{formatFecha(novedad.fecha)}</time>
