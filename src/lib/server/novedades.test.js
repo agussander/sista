@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { listarPublicadas, traerPorSlug, urlArchivo, aNovedadPublica } from './novedades.js';
 
 const BASE = 'https://sista.pockethost.io';
@@ -58,6 +58,34 @@ describe('listarPublicadas', () => {
 		};
 		expect(await listarPublicadas(BASE, { fetchImpl: rompe })).toEqual([]);
 	});
+
+	it('devuelve lista vacia si se corta por timeout', async () => {
+		const corta = async () => {
+			throw new DOMException('The operation was aborted due to timeout', 'TimeoutError');
+		};
+		expect(await listarPublicadas(BASE, { fetchImpl: corta })).toEqual([]);
+	});
+
+	it('devuelve lista vacia si items no es un array', async () => {
+		const mal = { ok: true, status: 200, json: async () => ({ items: 'oops' }) };
+		const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+		expect(await listarPublicadas(BASE, { fetchImpl: fakeFetch(mal) })).toEqual([]);
+		expect(spy).toHaveBeenCalled();
+		spy.mockRestore();
+	});
+
+	it('loguea cuando el listado viene truncado', async () => {
+		const truncado = {
+			ok: true,
+			status: 200,
+			json: async () => ({ items: [registro()], totalItems: 250 })
+		};
+		const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+		const out = await listarPublicadas(BASE, { fetchImpl: fakeFetch(truncado) });
+		expect(out).toHaveLength(1);
+		expect(spy).toHaveBeenCalledWith(expect.stringContaining('truncad'));
+		spy.mockRestore();
+	});
 });
 
 describe('traerPorSlug', () => {
@@ -98,6 +126,21 @@ describe('traerPorSlug', () => {
 
 	it('devuelve null sin slug', async () => {
 		expect(await traerPorSlug(BASE, '', { fetchImpl: fakeFetch(respuesta([])) })).toBe(null);
+	});
+
+	it('devuelve null si se corta por timeout', async () => {
+		const corta = async () => {
+			throw new DOMException('The operation was aborted due to timeout', 'TimeoutError');
+		};
+		expect(await traerPorSlug(BASE, 'nueva-tienda', { fetchImpl: corta })).toBe(null);
+	});
+
+	it('devuelve null si items no es un array', async () => {
+		const mal = { ok: true, status: 200, json: async () => ({ items: 'oops' }) };
+		const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+		expect(await traerPorSlug(BASE, 'nueva-tienda', { fetchImpl: fakeFetch(mal) })).toBe(null);
+		expect(spy).toHaveBeenCalled();
+		spy.mockRestore();
 	});
 });
 

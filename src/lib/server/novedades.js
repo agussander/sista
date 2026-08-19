@@ -36,9 +36,18 @@ export async function listarPublicadas(baseUrl, { fetchImpl = fetch } = {}) {
 			return [];
 		}
 		const body = await res.json();
-		return ordenarNovedades(body.items ?? []);
+		if (!Array.isArray(body.items)) {
+			console.error('[novedades] respuesta inesperada al listar: "items" no es un array', body);
+			return [];
+		}
+		if (typeof body.totalItems === 'number' && body.totalItems > body.items.length) {
+			console.error(
+				`[novedades] listado truncado: hay ${body.totalItems} novedades publicadas y solo se pidieron ${body.items.length}`
+			);
+		}
+		return ordenarNovedades(body.items);
 	} catch (error) {
-		console.error('[novedades] error de red al listar:', error);
+		console.error('[novedades] error al listar novedades:', error);
 		return [];
 	}
 }
@@ -67,9 +76,16 @@ export async function traerPorSlug(baseUrl, slug, { fetchImpl = fetch } = {}) {
 			return null;
 		}
 		const body = await res.json();
-		return body.items?.[0] ?? null;
+		if (!Array.isArray(body.items)) {
+			console.error(
+				`[novedades] respuesta inesperada de PocketBase para "${slug}": "items" no es un array`,
+				body
+			);
+			return null;
+		}
+		return body.items[0] ?? null;
 	} catch (error) {
-		console.error('[novedades] error de red al traer por slug:', error);
+		console.error('[novedades] error al traer la novedad:', error);
 		return null;
 	}
 }
