@@ -68,7 +68,17 @@ Si ya hay campos con otros nombres, renombrarlos a estos.
 Los tres tamaños de miniatura son los que pide el código: `300x200` para
 la lista del panel, `600x400` para las tarjetas del listado y del inicio,
 y `1200x0` para la foto grande de la novedad y para la vista previa al
-compartir el link.
+compartir el link. El `0` en `1200x0` no es un error: significa "1200 de
+ancho, alto proporcional", que es lo que corresponde para la foto de una
+noticia — un alto fijo la recortaría.
+
+**Cargar los tres no es opcional, y saltearlo no rompe nada a la vista.**
+Verificado contra la instancia real: PocketBase ignora en silencio cualquier
+`?thumb=` que no esté configurado en el campo y devuelve el archivo original
+(hasta `?thumb=cualquiercosa` responde 200 con el original). O sea que si
+faltan, las imágenes se ven igual, pero cada tarjeta del listado y cada fila
+del panel se baja la foto entera. Con diez novedades de 2 MB, eso son 20 MB
+por visita.
 
 - [ ] **Step 2: Configurar las reglas de la API**
 
@@ -82,6 +92,19 @@ curl -s -o /dev/null -w "%{http_code}\n" "https://sista.pockethost.io/api/collec
 ```
 
 Esperado: `200`. Si devuelve `403`, la List rule quedó vacía y nada del resto del plan va a funcionar.
+
+- [ ] **Step 4: Verificar que los thumbs quedaron configurados**
+
+Con una novedad ya cargada con imagen, comparar el peso del original contra el
+de la miniatura:
+
+```bash
+curl -s "https://sista.pockethost.io/api/collections/novedades/records?perPage=1" | python3 -c "import sys,json;d=json.load(sys.stdin)['items'][0];print(f\"https://sista.pockethost.io/api/files/{d['collectionId']}/{d['id']}/{d['imagen']}\")"
+```
+
+Pedir esa URL con y sin `?thumb=600x400` y comparar los bytes. Si pesan lo
+mismo, los thumbs NO están configurados: PocketBase está devolviendo el
+original y hay que volver al Step 1.
 
 ---
 
