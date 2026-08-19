@@ -17,6 +17,7 @@ let novedades = $state([]);
 let count = $state(0);
 let tam = $state(0);
 let interval = null;
+let destruido = false;
 
 onMount(async () => {
     try {
@@ -39,6 +40,11 @@ onMount(async () => {
         novedades = [];
     }
 
+    // Si se fueron del home mientras la consulta estaba en vuelo, `onDestroy`
+    // ya corrio: arrancar el intervalo aca lo dejaria vivo para siempre,
+    // porque nadie lo va a limpiar despues.
+    if (destruido) return;
+
     // Con una sola novedad no hay nada que rotar.
     if (novedades.length > 1) {
         interval = setInterval(
@@ -48,7 +54,10 @@ onMount(async () => {
     }
 });
 
-onDestroy(() => clearInterval(interval));
+onDestroy(() => {
+    destruido = true;
+    clearInterval(interval);
+});
 </script>
 
 {#if novedades.length > 0}
