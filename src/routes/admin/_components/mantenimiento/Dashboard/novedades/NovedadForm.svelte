@@ -44,11 +44,33 @@ let errorLocal = $state('');
 // Vista previa: la imagen recien elegida si hay una, si no la que ya tenia.
 let previewNueva = $state(null);
 const preview = $derived(previewNueva ?? inicial.imagenActual);
+let arrastrando = $state(false);
 
-function elegirImagen(event) {
-    const file = event.currentTarget.files?.[0] ?? null;
+function aplicarImagen(file) {
     imagen = file;
     previewNueva = file ? URL.createObjectURL(file) : null;
+}
+
+function elegirImagen(event) {
+    aplicarImagen(event.currentTarget.files?.[0] ?? null);
+}
+
+function onDragOver(event) {
+    event.preventDefault();
+    arrastrando = true;
+}
+
+function onDragLeave() {
+    arrastrando = false;
+}
+
+function onDrop(event) {
+    event.preventDefault();
+    arrastrando = false;
+    const file = event.dataTransfer?.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+        aplicarImagen(file);
+    }
 }
 
 function enviar(event) {
@@ -97,10 +119,18 @@ function enviar(event) {
         <textarea bind:value={cuerpo} rows="10"></textarea>
     </label>
 
-    <label>
-        Imagen
-        <input type="file" accept="image/*" onchange={elegirImagen}>
-    </label>
+    <div
+        class="dropzone"
+        class:arrastrando
+        ondragover={onDragOver}
+        ondragleave={onDragLeave}
+        ondrop={onDrop}
+    >
+        <label>
+            Imagen <span class="ayuda">Arrastrá una imagen acá, o hacé clic para elegirla</span>
+            <input type="file" accept="image/*" onchange={elegirImagen}>
+        </label>
+    </div>
 
     {#if preview}
         <img class="preview" src={preview} alt="Vista previa">
@@ -179,6 +209,22 @@ textarea:focus {
 textarea {
     resize: vertical;
     line-height: 1.6;
+}
+
+.dropzone {
+    border: 2px dashed #ced4da;
+    border-radius: 0.6em;
+    padding: 0.6em 0.9em;
+    transition: border-color 0.15s, background-color 0.15s;
+}
+
+.dropzone.arrastrando {
+    border-color: var(--violeta2);
+    background: #f5f3ff;
+}
+
+.dropzone label {
+    gap: 0.3em;
 }
 
 .preview {
