@@ -10,12 +10,18 @@
  * filtro por `publicada` que se manda aca es deliberadamente redundante, para
  * que aflojar la regla en PocketBase no publique borradores de golpe.
  */
-import { ordenarNovedades } from '../novedades.js';
+import { ordenarNovedades, SLUG_MAX } from '../novedades.js';
 
 const COLECCION = 'novedades';
 
-/** Los slugs que genera `slugify`: minusculas, numeros y guiones. */
-const SLUG_VALIDO = /^[a-z0-9-]{1,120}$/;
+/**
+ * Los slugs que genera `slugify`: minusculas, numeros y guiones.
+ *
+ * El largo sale de `SLUG_MAX`, el mismo que respeta `slugUnico` al generarlos.
+ * Escrito a mano de los dos lados, un numero distinto en cada uno haria que el
+ * admin guardara novedades cuya pagina publica da 404.
+ */
+const SLUG_VALIDO = new RegExp(`^[a-z0-9-]{1,${SLUG_MAX}}$`);
 
 const sinBarra = (baseUrl) => String(baseUrl ?? '').replace(/\/+$/, '');
 

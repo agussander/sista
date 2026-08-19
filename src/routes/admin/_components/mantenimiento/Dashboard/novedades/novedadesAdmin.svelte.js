@@ -31,13 +31,19 @@ function mensajeDeError(err) {
 	if (err?.status === 401 || err?.status === 403) {
 		return 'Tu sesión expiró o no tenés permiso. Volvé a iniciar sesión.';
 	}
-	// `slugUnico` solo deduplica contra la lista que tiene cargada el navegador,
-	// asi que si otra persona cargo el mismo titulo mientras tanto, el indice
-	// unico de PocketBase rechaza el alta. El motivo real viene en
-	// `err.data.data.slug`; `err.message` a secas dice "Failed to create
-	// record.", que no le explica a nadie que tiene que cambiar el titulo.
-	if (err?.status === 400 && err?.data?.data?.slug) {
+	// El motivo real de un rechazo de validacion viene en `err.data.data`;
+	// `err.message` a secas dice "Failed to create record.", que no le explica a
+	// nadie que tiene que cambiar el titulo.
+	//
+	// Se mira el `code` y no solo la presencia del campo: la direccion tambien
+	// puede fallar por estar vacia, y anunciar "ya existe" en ese caso manda a
+	// buscar un duplicado que no existe.
+	const fallaSlug = err?.status === 400 ? err?.data?.data?.slug : null;
+	if (fallaSlug?.code === 'validation_not_unique') {
 		return 'Ya existe una novedad con un título muy parecido. Cambiá el título e intentá de nuevo.';
+	}
+	if (fallaSlug) {
+		return 'No pudimos armar la dirección de la novedad a partir del título. Probá con otro título.';
 	}
 	return err?.message || 'No pudimos completar la operación.';
 }

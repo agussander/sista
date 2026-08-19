@@ -3,7 +3,7 @@
 // valida y se los pasa al que lo invoca (`Novedades.svelte`), que es quien
 // llama al store.
 import { untrack } from 'svelte';
-import { fechaParaInput } from '$lib/novedades.js';
+import { fechaParaInput, slugify } from '$lib/novedades.js';
 import { novedadesAdmin } from './novedadesAdmin.svelte.js';
 
 let { novedad = null, onGuardar, onCancelar } = $props();
@@ -59,6 +59,14 @@ function enviar(event) {
     }
     if (!fecha) {
         errorLocal = 'La novedad necesita una fecha.';
+        return;
+    }
+    // La direccion de la novedad se arma con el titulo. Un titulo sin ninguna
+    // letra ni numero -solo emojis o solo signos- no deja nada para armarla, y
+    // PocketBase rechaza el alta con un error que no explica por que. Al
+    // editar no se valida: la direccion ya esta hecha y no se toca.
+    if (!esEdicion && !slugify(titulo)) {
+        errorLocal = 'El título necesita al menos una letra o un número, porque con él se arma la dirección de la novedad.';
         return;
     }
     errorLocal = '';

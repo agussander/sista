@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
 	slugify,
 	slugUnico,
+	SLUG_MAX,
 	parseCuerpo,
 	resumenDe,
 	ordenarNovedades,
@@ -39,6 +40,32 @@ describe('slugUnico', () => {
 
 	it('sigue subiendo el numero si -2 tambien esta tomado', () => {
 		expect(slugUnico('Nueva Tienda', ['nueva-tienda', 'nueva-tienda-2'])).toBe('nueva-tienda-3');
+	});
+
+	// El lector publico rechaza los slugs de mas de SLUG_MAX: si el sufijo de
+	// colision empujara el largo por encima del limite, la novedad se guardaria
+	// bien y su pagina daria 404.
+	it('no se pasa del largo maximo al desambiguar', () => {
+		const largo = 'a'.repeat(SLUG_MAX);
+		const out = slugUnico(largo, [largo]);
+
+		expect(out.length).toBeLessThanOrEqual(SLUG_MAX);
+		expect(out.endsWith('-2')).toBe(true);
+	});
+
+	it('recorta el slug al largo maximo', () => {
+		expect(slugUnico('a'.repeat(SLUG_MAX + 30), []).length).toBe(SLUG_MAX);
+	});
+
+	it('no deja un guion colgando al recortar', () => {
+		// El corte cae justo en el espacio, que slugify convierte en guion.
+		const titulo = `${'a'.repeat(SLUG_MAX - 1)} bbb`;
+		expect(slugUnico(titulo, []).endsWith('-')).toBe(false);
+	});
+
+	it('devuelve vacio si el titulo no tiene letras ni numeros', () => {
+		expect(slugUnico('🎉🎉🎉', [])).toBe('');
+		expect(slugUnico('¿¡!?', [])).toBe('');
 	});
 });
 

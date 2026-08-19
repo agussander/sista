@@ -19,23 +19,49 @@ export function slugify(titulo) {
 }
 
 /**
+ * Largo maximo de un slug.
+ *
+ * Lo exporta este modulo, y no lo repite cada lado, porque el lector publico
+ * (`src/lib/server/novedades.js`) valida el slug que viene de la URL contra
+ * este mismo limite. Si los dos numeros se separan, el admin puede guardar una
+ * novedad cuyo slug el lector despues rechaza: se ve en el listado y su pagina
+ * da 404, sin que nada avise.
+ */
+export const SLUG_MAX = 120;
+
+/** Saca los guiones que quedan colgando despues de recortar. */
+const sinGuionesAlFinal = (s) => s.replace(/-+$/, '');
+
+/**
  * Slug libre para un titulo nuevo. El campo `slug` tiene indice unico en
  * PocketBase: sin esto, cargar dos novedades con el mismo titulo falla con un
  * error del SDK que no le dice nada a quien esta cargando.
+ *
+ * El resultado nunca pasa de `SLUG_MAX`, sufijo incluido: ante una colision se
+ * recorta la base para hacerle lugar al `-2`. Concatenar sin recortar hacia
+ * que un titulo largo repetido diera un slug de 122 caracteres, que el lector
+ * publico rechaza.
+ *
+ * Devuelve '' si el titulo no tiene ninguna letra ni numero (por ejemplo, solo
+ * emojis): quien llama tiene que tratar eso como titulo invalido, porque
+ * PocketBase pide el campo.
  *
  * @param {string} titulo
  * @param {string[]} slugsExistentes Los slugs ya cargados.
  */
 export function slugUnico(titulo, slugsExistentes = []) {
-	const base = slugify(titulo);
+	const base = sinGuionesAlFinal(slugify(titulo).slice(0, SLUG_MAX));
 	if (!base) return '';
 
 	const usados = new Set(slugsExistentes);
 	if (!usados.has(base)) return base;
 
-	let n = 2;
-	while (usados.has(`${base}-${n}`)) n++;
-	return `${base}-${n}`;
+	// Termina siempre: `usados` es finito y cada `n` da un candidato distinto.
+	for (let n = 2; ; n++) {
+		const sufijo = `-${n}`;
+		const candidato = sinGuionesAlFinal(base.slice(0, SLUG_MAX - sufijo.length)) + sufijo;
+		if (!usados.has(candidato)) return candidato;
+	}
 }
 
 const URL_RE = /https?:\/\/[^\s]+/g;
