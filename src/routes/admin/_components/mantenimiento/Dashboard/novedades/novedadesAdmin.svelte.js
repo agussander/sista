@@ -142,6 +142,18 @@ function urlImagen(record, thumb = '300x200') {
 	return pb.files.getURL(record, record.imagen, { thumb });
 }
 
+/**
+ * Borra el error a mano. `cargar`, `crear`, `actualizar` y `eliminar` ya lo
+ * limpian al EMPEZAR, pero nada lo limpiaba al salir de un estado con error:
+ * `error` es un string compartido por las cuatro operaciones, asi que el
+ * error de una escritura fallida le quedaba pegado a cualquier vista que se
+ * abriera despues (la lista, un formulario nuevo) hasta la proxima llamada al
+ * store. La vista la llama en las transiciones donde eso importa.
+ */
+function limpiarError() {
+	error = '';
+}
+
 export const novedadesAdmin = {
 	get novedades() {
 		return novedades;
@@ -159,5 +171,6 @@ export const novedadesAdmin = {
 	crear,
 	actualizar,
 	eliminar,
-	urlImagen
+	urlImagen,
+	limpiarError
 };

@@ -30,6 +30,35 @@ async function eliminar(novedad) {
     const ok = await novedadesAdmin.eliminar(novedad.id);
     if (ok) confirmandoBorrado = null;
 }
+
+// `novedadesAdmin.error` es un string compartido por carga, alta, edicion y
+// borrado. Sin esto, el error de una escritura fallida (por ej. un slug
+// duplicado al guardar) le quedaba pegado a la lista despues de cancelar, y de
+// ahi a cualquier formulario nuevo que se abriera, sin que tuvieran nada que
+// ver con lo que fallo.
+//
+// La excepcion es a proposito: si la lista esta vacia y hay un error, es
+// probablemente el de `cargar()` fallando -el que sostiene el cartel con
+// "Reintentar" de mas abajo- y ese no se toca aca. Si hay filas, cualquier
+// error que quede es de una escritura anterior y no tiene sentido arrastrarlo.
+function limpiarErrorSiCorresponde() {
+    if (novedadesAdmin.novedades.length > 0) novedadesAdmin.limpiarError();
+}
+
+function abrirNueva() {
+    limpiarErrorSiCorresponde();
+    editando = 'nueva';
+}
+
+function abrirEditar(novedad) {
+    limpiarErrorSiCorresponde();
+    editando = novedad;
+}
+
+function cerrarForm() {
+    limpiarErrorSiCorresponde();
+    editando = null;
+}
 </script>
 
 <div class="cont">
@@ -37,7 +66,7 @@ async function eliminar(novedad) {
         <NovedadForm
             novedad={editando === 'nueva' ? null : editando}
             onGuardar={guardar}
-            onCancelar={() => (editando = null)}
+            onCancelar={cerrarForm}
         ></NovedadForm>
     {:else}
         <div class="header">
@@ -45,17 +74,24 @@ async function eliminar(novedad) {
                 <h1>Novedades</h1>
                 <p>Las novedades que se ven en el sitio y en el inicio</p>
             </div>
-            <button class="btn-nueva" onclick={() => (editando = 'nueva')}>Nueva novedad</button>
+            <button class="btn-nueva" onclick={abrirNueva}>Nueva novedad</button>
         </div>
 
-        {#if novedadesAdmin.error}
+        {#if novedadesAdmin.error && novedadesAdmin.novedades.length > 0}
             <p class="error">{novedadesAdmin.error}</p>
         {/if}
 
         {#if novedadesAdmin.cargando}
             <div class="centro"><Spinner label="Cargando novedades..."></Spinner></div>
         {:else if novedadesAdmin.novedades.length === 0}
-            <p class="vacio">Todavía no cargaste ninguna novedad.</p>
+            <div class="vacio">
+                {#if novedadesAdmin.error}
+                    <p>{novedadesAdmin.error}</p>
+                    <button class="reintentar" onclick={() => novedadesAdmin.cargar()}>Reintentar</button>
+                {:else}
+                    <p>Todavía no cargaste ninguna novedad.</p>
+                {/if}
+            </div>
         {:else}
             <ul class="lista">
                 {#each novedadesAdmin.novedades as novedad (novedad.id)}
@@ -87,7 +123,7 @@ async function eliminar(novedad) {
                                 </button>
                                 <button class="btn-sec" onclick={() => (confirmandoBorrado = null)} disabled={novedadesAdmin.guardando}>No</button>
                             {:else}
-                                <button class="btn-sec" onclick={() => (editando = novedad)}>Editar</button>
+                                <button class="btn-sec" onclick={() => abrirEditar(novedad)}>Editar</button>
                                 <button class="btn-borrar" onclick={() => (confirmandoBorrado = novedad.id)}>
                                     Eliminar
                                 </button>
@@ -148,6 +184,26 @@ h1 {
 
 .vacio {
     color: #6b7280;
+    padding: 2em 0;
+    display: flex;
+    flex-flow: column;
+    align-items: flex-start;
+    gap: 0.8em;
+}
+
+.vacio p {
+    margin: 0;
+}
+
+.reintentar {
+    background: white;
+    border: 1.5px solid #e0e0e0;
+    color: var(--violeta2);
+    border-radius: 2em;
+    padding: 0.5em 1.2em;
+    font-size: 0.92em;
+    font-weight: 600;
+    cursor: pointer;
 }
 
 .error {
