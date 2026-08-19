@@ -2,26 +2,48 @@
 // Alta y edicion de una novedad. No habla con PocketBase: junta los datos, los
 // valida y se los pasa al que lo invoca (`Novedades.svelte`), que es quien
 // llama al store.
+import { untrack } from 'svelte';
 import { fechaParaInput } from '$lib/novedades.js';
 import { novedadesAdmin } from './novedadesAdmin.svelte.js';
 
 let { novedad = null, onGuardar, onCancelar } = $props();
 
-const esEdicion = !!novedad;
+// Los campos se siembran UNA sola vez con lo que trae `novedad` y despues
+// viven por su cuenta: mientras la persona escribe, el formulario manda, no la
+// prop. `untrack` deja eso escrito en el codigo, en vez de que Svelte avise
+// (`state_referenced_locally`) que la lectura no es reactiva y parezca un
+// descuido.
+//
+// Que alcance con sembrarlos una vez depende de `Novedades.svelte`: para pasar
+// de editar una novedad a editar otra hay que volver a la lista, y ahi el
+// `{#if editando}` desmonta este componente. Nunca se reusa la misma instancia
+// con otra novedad.
+const inicial = untrack(() => ({
+    esEdicion: !!novedad,
+    titulo: novedad?.titulo ?? '',
+    fecha: fechaParaInput(novedad?.fecha) || new Date().toISOString().slice(0, 10),
+    bajada: novedad?.bajada ?? '',
+    cuerpo: novedad?.cuerpo ?? '',
+    publicada: novedad?.publicada ?? false,
+    destacada: novedad?.destacada ?? false,
+    // La foto que ya tenia cargada, para mostrarla mientras no elijan otra.
+    imagenActual: novedad ? novedadesAdmin.urlImagen(novedad, '600x400') : null
+}));
 
-let titulo = $state(novedad?.titulo ?? '');
-let fecha = $state(fechaParaInput(novedad?.fecha) || new Date().toISOString().slice(0, 10));
-let bajada = $state(novedad?.bajada ?? '');
-let cuerpo = $state(novedad?.cuerpo ?? '');
-let publicada = $state(novedad?.publicada ?? false);
-let destacada = $state(novedad?.destacada ?? false);
+const esEdicion = inicial.esEdicion;
+
+let titulo = $state(inicial.titulo);
+let fecha = $state(inicial.fecha);
+let bajada = $state(inicial.bajada);
+let cuerpo = $state(inicial.cuerpo);
+let publicada = $state(inicial.publicada);
+let destacada = $state(inicial.destacada);
 let imagen = $state(null);
 let errorLocal = $state('');
 
 // Vista previa: la imagen recien elegida si hay una, si no la que ya tenia.
 let previewNueva = $state(null);
-const previewActual = esEdicion ? novedadesAdmin.urlImagen(novedad, '600x400') : null;
-const preview = $derived(previewNueva ?? previewActual);
+const preview = $derived(previewNueva ?? inicial.imagenActual);
 
 function elegirImagen(event) {
     const file = event.currentTarget.files?.[0] ?? null;
