@@ -131,7 +131,7 @@ export function alertasDe(cliente, hoy, config, recordatorios = [], promos = [])
 	const instalacion = partesFecha(cliente?.fecha_instalacion);
 	const perfil = cliente?.perfil_pago === 'tarjeta' ? 'tarjeta' : 'ventanilla';
 
-	// --- Seguimiento a los 2 meses -----------------------------------------
+	// --- Seguimiento al mes -------------------------------------------------
 	if (instalacion) {
 		const vence = sumarMeses(instalacion, MESES_SEGUIMIENTO);
 		const contacto = partesFecha(cliente?.ultimo_contacto);
