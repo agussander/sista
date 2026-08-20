@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { normalizarCliente, perfilDe, resumenTickets, resumenAltaNap } from './normalizar.js';
+import {
+	normalizarCliente,
+	perfilDe,
+	resumenTickets,
+	resumenAltaNap,
+	categoriaInstalacionDe
+} from './normalizar.js';
 
 describe('normalizarCliente', () => {
 	const crudo = {
@@ -404,6 +410,41 @@ describe('resumenTickets', () => {
 	});
 });
 
+describe('categoriaInstalacionDe', () => {
+	it('sin conexiones Sprint Banda, usa la categoria de NAP (69)', () => {
+		expect(
+			categoriaInstalacionDe([{ plan_nombre: 'Servicio de internet basico HOME f20' }])
+		).toBe(69);
+	});
+
+	it('sin conexiones, usa la categoria de NAP (69)', () => {
+		expect(categoriaInstalacionDe([])).toBe(69);
+	});
+
+	it('con una conexion Sprint Banda, usa la categoria de radio (50)', () => {
+		expect(categoriaInstalacionDe([{ plan_nombre: 'SPRINT BANDA 94' }])).toBe(50);
+	});
+
+	it('reconoce Sprint Banda sin importar mayusculas ni el espaciado', () => {
+		expect(
+			categoriaInstalacionDe([{ plan_nombre: 'Servicio de internet Sprint  Banda 76-10M' }])
+		).toBe(50);
+	});
+
+	it('las dos variantes de fibra se quedan en la categoria de NAP', () => {
+		expect(categoriaInstalacionDe([{ plan_nombre: 'SPRINT BANDA F101-(EMPRESA)' }])).toBe(69);
+		expect(categoriaInstalacionDe([{ plan_nombre: 'SPRINT BANDA F104' }])).toBe(69);
+	});
+
+	it('con varias conexiones, alcanza con que una sea Sprint Banda', () => {
+		const connections = [
+			{ plan_nombre: 'Servicio de internet basico HOME f20' },
+			{ plan_nombre: 'SPRINT BANDA 74' }
+		];
+		expect(categoriaInstalacionDe(connections)).toBe(50);
+	});
+});
+
 describe('resumenAltaNap', () => {
 	const ticket = (over = {}) => ({
 		id: 1,
@@ -480,5 +521,21 @@ describe('resumenAltaNap', () => {
 		});
 		const r = resumenAltaNap([corrupto, valido], { estadosCerrados: [3] });
 		expect(r).toEqual({ existe: true, cerrado: true, anulado: false, closed_date: '2026-08-05' });
+	});
+
+	it('con categoria explicita (radio), un ticket de esa categoria cuenta', () => {
+		const r = resumenAltaNap([ticket({ ticket_category_id: 50, ticket_status_id: 3 })], {
+			estadosCerrados: [3],
+			categoria: 50
+		});
+		expect(r).toEqual({ existe: true, cerrado: true, anulado: false, closed_date: '2026-08-05' });
+	});
+
+	it('con categoria explicita (radio), un ticket de NAP (69) no cuenta', () => {
+		const r = resumenAltaNap([ticket({ ticket_category_id: 69, ticket_status_id: 3 })], {
+			estadosCerrados: [3],
+			categoria: 50
+		});
+		expect(r.existe).toBe(false);
 	});
 });

@@ -16,7 +16,12 @@ import { json } from '@sveltejs/kit';
 import { getCustomerByCode, getTickets, getCobranzas, getPlanCatalog } from '$lib/server/ispcube.js';
 import { ispcubeConfig, pocketbaseUrl } from '$lib/server/ispcubeDeps.js';
 import { verificarPermiso } from '$lib/server/adminAuth.js';
-import { normalizarCliente, resumenTickets, resumenAltaNap } from '$lib/cartera/normalizar.js';
+import {
+	normalizarCliente,
+	resumenTickets,
+	resumenAltaNap,
+	categoriaInstalacionDe
+} from '$lib/cartera/normalizar.js';
 import { pagosDeCobranzas } from '$lib/cartera/pagos.js';
 import { idsFinitos } from '$lib/cartera/ids.js';
 
@@ -117,18 +122,26 @@ async function snapshotDe(code, cfg, { areasSoporte, estadosCerrados, nombrePorI
 		if (!cliente.ok) return { code, ok: false, reason: cliente.reason };
 
 		const [tickets, cobranzas] = await Promise.all([getTickets(code, cfg), getCobranzas(code, cfg)]);
+		const datosCliente = normalizarCliente(cliente.customer.crudo ?? cliente.customer, nombrePorId);
 
 		return {
 			code,
 			ok: true,
 			datos: {
-				...normalizarCliente(cliente.customer.crudo ?? cliente.customer, nombrePorId),
+				...datosCliente,
 				tickets: tickets.ok
 					? resumenTickets(tickets.tickets, { areasSoporte, estadosCerrados })
 					: null,
 				// Mismos tickets crudos que ya trajo `getTickets` arriba: no es un
-				// request extra a IspCube.
-				alta_nap: tickets.ok ? resumenAltaNap(tickets.tickets, { estadosCerrados }) : null,
+				// request extra a IspCube. La categoria depende del tipo de
+				// conexion -radio (Sprint Banda) sigue un proceso de instalacion
+				// distinto al de fibra-, ver `categoriaInstalacionDe`.
+				alta_nap: tickets.ok
+					? resumenAltaNap(tickets.tickets, {
+							estadosCerrados,
+							categoria: categoriaInstalacionDe(datosCliente.connections)
+						})
+					: null,
 				pagos: cobranzas.ok ? pagosDeCobranzas(cobranzas.cobranzas) : null
 			}
 		};

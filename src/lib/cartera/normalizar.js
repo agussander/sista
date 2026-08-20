@@ -196,6 +196,39 @@ export function resumenTickets(tickets, { areasSoporte, estadosCerrados }) {
 const CATEGORIA_ALTA_NAP = 69;
 
 /**
+ * Categoria del ticket de instalacion por radio en IspCube: "INSTALACION DE
+ * RADIO". Sondeado en vivo el 2026-08-20 contra
+ * `GET /api/tickets/category_list`.
+ */
+const CATEGORIA_INSTALACION_RADIO = 50;
+
+const RE_SPRINT_BANDA = /sprint\s*banda/i;
+
+/**
+ * Variantes de "Sprint Banda" que el catalogo de IspCube marca como FIBRA, no
+ * radio -sondeado el 2026-08-20 contra `GET /api/plans/plans_list`-. Siguen
+ * chequeando la categoria de NAP, no la de radio.
+ */
+const SPRINT_BANDA_FIBRA = ['SPRINT BANDA F101-(EMPRESA)', 'SPRINT BANDA F104'];
+
+/**
+ * Que categoria de ticket de instalacion hay que chequear para este cliente:
+ * RADIO si alguna conexion viva es un plan "Sprint Banda" (salvo las
+ * variantes de fibra de `SPRINT_BANDA_FIBRA`), NAP en cualquier otro caso.
+ *
+ * @param {{plan_nombre?: string}[]} connections
+ * @returns {number}
+ */
+export function categoriaInstalacionDe(connections) {
+	const esRadio = (Array.isArray(connections) ? connections : []).some((c) => {
+		const nombre = typeof c?.plan_nombre === 'string' ? c.plan_nombre : '';
+		if (!RE_SPRINT_BANDA.test(nombre)) return false;
+		return !SPRINT_BANDA_FIBRA.some((f) => f.toUpperCase() === nombre.toUpperCase());
+	});
+	return esRadio ? CATEGORIA_INSTALACION_RADIO : CATEGORIA_ALTA_NAP;
+}
+
+/**
  * Estado "ANULADO" de un ticket en IspCube. Sondeado el 2026-08-06 contra
  * `GET /api/tickets/status_list`. Distinto de `estados_cerrados`
  * (`cartera_config`): un ticket anulado no es lo mismo que uno cerrado, y la
@@ -211,10 +244,13 @@ const ESTADO_ANULADO = 8;
  * de instalacion derivado (`estadoInstalacionDe` en `instalacion.js`).
  *
  * @param {unknown} tickets Respuesta cruda de `getTickets`
- * @param {{estadosCerrados: unknown[]}} opciones Misma lista que usa `resumenTickets`
+ * @param {{estadosCerrados: unknown[], categoria?: number}} opciones Misma
+ *   lista que usa `resumenTickets`, mas la categoria de ticket a chequear
+ *   (NAP por defecto; RADIO para conexiones Sprint Banda, ver
+ *   `categoriaInstalacionDe`)
  * @returns {{existe: boolean, cerrado: boolean, anulado: boolean, closed_date: string}}
  */
-export function resumenAltaNap(tickets, { estadosCerrados }) {
+export function resumenAltaNap(tickets, { estadosCerrados, categoria = CATEGORIA_ALTA_NAP }) {
 	if (!Array.isArray(tickets)) {
 		return { existe: false, cerrado: false, anulado: false, closed_date: '' };
 	}
@@ -225,7 +261,7 @@ export function resumenAltaNap(tickets, { estadosCerrados }) {
 	let masReciente = null;
 	for (const t of tickets) {
 		if (!t || t.deleted_at) continue;
-		if (t.ticket_category_id !== CATEGORIA_ALTA_NAP) continue;
+		if (t.ticket_category_id !== categoria) continue;
 
 		const fecha = partesFechaHora(t.created_at);
 		// Mismo criterio que `resumenTickets`: un ticket sin fecha legible no
