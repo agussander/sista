@@ -51,4 +51,55 @@ describe('GET /api/cartera/cliente/[code] - alta_nap', () => {
 		const body = await r.json();
 		expect(body.alta_nap).toEqual({ existe: true, cerrado: false, anulado: true, closed_date: '' });
 	});
+
+	it('con una conexion Sprint Banda, chequea la categoria de radio (50) en vez de NAP (69)', async () => {
+		vi.mocked(getCustomerByCode).mockResolvedValue({
+			ok: true,
+			customer: {
+				code: '003566',
+				name: 'CLIENTE',
+				status: 'enabled',
+				crudo: {
+					code: '003566',
+					name: 'CLIENTE',
+					status: 'enabled',
+					connections: [{ id: 1, plan: { name: 'SPRINT BANDA 94' } }]
+				}
+			}
+		});
+		vi.mocked(getTickets).mockResolvedValue({
+			ok: true,
+			tickets: [
+				// Categoria de NAP: no deberia contar para un cliente Sprint Banda.
+				{
+					id: 1,
+					ticket_category_id: 69,
+					ticket_status_id: 3,
+					created_at: '2026-08-01T10:00:00.000000Z',
+					closed_date: '2026-08-05 15:22:00'
+				},
+				// Categoria de radio: es la que tiene que contar.
+				{
+					id: 2,
+					ticket_category_id: 50,
+					ticket_status_id: 3,
+					created_at: '2026-08-02T10:00:00.000000Z',
+					closed_date: '2026-08-06 15:22:00'
+				}
+			]
+		});
+		vi.mocked(getCobranzas).mockResolvedValue({ ok: true, cobranzas: [] });
+		vi.mocked(getPlanCatalog).mockResolvedValue({ ok: true, porId: new Map() });
+
+		const r = await get('?cerrados=3');
+
+		expect(r.status).toBe(200);
+		const body = await r.json();
+		expect(body.alta_nap).toEqual({
+			existe: true,
+			cerrado: true,
+			anulado: false,
+			closed_date: '2026-08-06'
+		});
+	});
 });

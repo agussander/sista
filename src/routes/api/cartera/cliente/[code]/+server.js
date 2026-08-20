@@ -13,7 +13,12 @@ import { json } from '@sveltejs/kit';
 import { getCustomerByCode, getTickets, getCobranzas, getPlanCatalog } from '$lib/server/ispcube.js';
 import { ispcubeConfig, pocketbaseUrl } from '$lib/server/ispcubeDeps.js';
 import { verificarPermiso } from '$lib/server/adminAuth.js';
-import { normalizarCliente, resumenTickets, resumenAltaNap } from '$lib/cartera/normalizar.js';
+import {
+	normalizarCliente,
+	resumenTickets,
+	resumenAltaNap,
+	categoriaInstalacionDe
+} from '$lib/cartera/normalizar.js';
 import { pagosDeCobranzas } from '$lib/cartera/pagos.js';
 import { parseIds } from '$lib/cartera/ids.js';
 
@@ -54,11 +59,16 @@ export async function GET({ request, params, url }) {
 		getPlanCatalog(cfg)
 	]);
 
+	// Sin catalogo (`planes.ok === false`) `normalizarCliente` sigue
+	// funcionando igual que antes de que existiera: solo se pierde el
+	// respaldo de nombre para conexiones sin `plan` anidado.
+	const datosCliente = normalizarCliente(
+		cliente.customer.crudo ?? cliente.customer,
+		planes.ok ? planes.porId : undefined
+	);
+
 	return json({
-		// Sin catalogo (`planes.ok === false`) `normalizarCliente` sigue
-		// funcionando igual que antes de que existiera: solo se pierde el
-		// respaldo de nombre para conexiones sin `plan` anidado.
-		cliente: normalizarCliente(cliente.customer.crudo ?? cliente.customer, planes.ok ? planes.porId : undefined),
+		cliente: datosCliente,
 		// Solo el resumen: el payload crudo de tickets trae el texto completo de
 		// cada comentario y no lo lee nadie. Devolverlo entero terminaba
 		// guardado en PocketBase por `agregar()` en el store, sin cota de tamano
@@ -67,7 +77,15 @@ export async function GET({ request, params, url }) {
 		tickets: tickets.ok
 			? resumenTickets(tickets.tickets, { areasSoporte, estadosCerrados })
 			: { error: tickets.reason },
-		alta_nap: tickets.ok ? resumenAltaNap(tickets.tickets, { estadosCerrados }) : null,
+		// La categoria depende del tipo de conexion -radio (Sprint Banda) sigue
+		// un proceso de instalacion distinto al de fibra-, ver
+		// `categoriaInstalacionDe`. Mismo criterio que `sync/+server.js`.
+		alta_nap: tickets.ok
+			? resumenAltaNap(tickets.tickets, {
+					estadosCerrados,
+					categoria: categoriaInstalacionDe(datosCliente.connections)
+				})
+			: null,
 		pagos: cobranzas.ok ? pagosDeCobranzas(cobranzas.cobranzas) : { error: cobranzas.reason }
 	});
 }
