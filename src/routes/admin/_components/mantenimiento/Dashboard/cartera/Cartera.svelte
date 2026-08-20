@@ -352,7 +352,9 @@ function chipsDe(cliente, alertas, activas, proximo, estadoInstalacion) {
     if (estadoInstalacion !== 'instalado') {
         chips.push({
             tipo: 'estado_instalacion',
-            mod: '',
+            // `instalacion_pendiente` ya no es una alerta ambar: pesa menos que
+            // una mora o un ticket sin cerrar. `pendiente_pago` se queda igual.
+            mod: estadoInstalacion === 'instalacion_pendiente' ? 'instalacion_pendiente' : '',
             texto: ETIQUETA_ESTADO_INSTALACION[estadoInstalacion],
             titulo: null,
             sr: ''
@@ -846,9 +848,15 @@ li + li .fila { border-top: 1px solid #f3f4f6; }
 /* Mismo amber que mora_1/tickets: anomalia de proceso, no un vencimiento,
    pero tampoco algo para ignorar. */
 .chip.nap_faltante, .chip.nap_anulado { background: #fef3c7; color: #92400e; }
-/* Mismo amber: instalacion_pendiente/pendiente_pago tampoco es un vencimiento,
-   pero el asesor tiene que verlo igual de rapido que el resto de la columna. */
+/* Mismo amber: pendiente_pago tampoco es un vencimiento, pero el asesor
+   tiene que verlo igual de rapido que el resto de la columna. */
 .chip.estado_instalacion { background: #fef3c7; color: #92400e; }
+/* instalacion_pendiente (la otra variante de este mismo tipo) ya no compite
+   como alerta: texto gris, sin pastilla ni fondo. */
+.chip.estado_instalacion.instalacion_pendiente {
+    background: none; padding: 0; border-radius: 0;
+    font-weight: 400; color: #6b7280;
+}
 /* Mas corto que en la version de tarjetas (era 14em): en una tabla de nueve
    columnas un recordatorio largo envolvia a tres lineas y estiraba la fila.
    El texto completo sigue en el `title`. */
