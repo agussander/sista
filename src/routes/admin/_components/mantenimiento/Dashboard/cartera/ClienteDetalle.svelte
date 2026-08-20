@@ -57,7 +57,7 @@ const alertas = $derived(carteraStore.alertasDeCliente(actual).filter((a) => a.t
 const cuenta = $derived(actual.debt ?? 0);
 
 const ETIQUETA_ALERTA = {
-    seguimiento: 'Contactar: pasaron 2 meses de la instalación',
+    seguimiento: 'Contactar: pasó 1 mes de la instalación',
     mora_1: 'No registró pago este mes',
     mora_2: 'Mora: pasó el segundo vencimiento',
     tickets: 'Tiene tickets de soporte nuevos',

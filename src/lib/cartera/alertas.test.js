@@ -31,10 +31,10 @@ describe('diaCorteDe', () => {
 	});
 });
 
-describe('alerta de seguimiento a los 2 meses', () => {
-	it('no salta antes de los dos meses', () => {
+describe('alerta de seguimiento al mes', () => {
+	it('no salta antes de un mes', () => {
 		const r = alertasDe(
-			{ ...base, fecha_instalacion: '2026-06-10' },
+			{ ...base, fecha_instalacion: '2026-07-01' },
 			{ anio: 2026, mes: 7, dia: 15 },
 			CONFIG
 		);
@@ -42,9 +42,9 @@ describe('alerta de seguimiento a los 2 meses', () => {
 		expect(tipos(r)).not.toContain('seguimiento');
 	});
 
-	it('salta cumplidos los dos meses sin contacto', () => {
+	it('salta cumplido el mes sin contacto', () => {
 		const r = alertasDe(
-			{ ...base, fecha_instalacion: '2026-05-10' },
+			{ ...base, fecha_instalacion: '2026-06-10' },
 			{ anio: 2026, mes: 7, dia: 15 },
 			CONFIG
 		);
@@ -52,9 +52,9 @@ describe('alerta de seguimiento a los 2 meses', () => {
 		expect(tipos(r)).toContain('seguimiento');
 	});
 
-	it('salta el dia exacto en que se cumplen los dos meses', () => {
+	it('salta el dia exacto en que se cumple el mes', () => {
 		const r = alertasDe(
-			{ ...base, fecha_instalacion: '2026-05-15' },
+			{ ...base, fecha_instalacion: '2026-06-15' },
 			{ anio: 2026, mes: 7, dia: 15 },
 			CONFIG
 		);
@@ -64,7 +64,7 @@ describe('alerta de seguimiento a los 2 meses', () => {
 
 	it('un contacto posterior a la instalacion la apaga', () => {
 		const r = alertasDe(
-			{ ...base, fecha_instalacion: '2026-05-10', ultimo_contacto: '2026-07-01' },
+			{ ...base, fecha_instalacion: '2026-06-10', ultimo_contacto: '2026-07-01' },
 			{ anio: 2026, mes: 7, dia: 15 },
 			CONFIG
 		);
@@ -74,7 +74,7 @@ describe('alerta de seguimiento a los 2 meses', () => {
 
 	it('un contacto anterior a la instalacion no cuenta', () => {
 		const r = alertasDe(
-			{ ...base, fecha_instalacion: '2026-05-10', ultimo_contacto: '2026-04-01' },
+			{ ...base, fecha_instalacion: '2026-06-10', ultimo_contacto: '2026-04-01' },
 			{ anio: 2026, mes: 7, dia: 15 },
 			CONFIG
 		);
@@ -87,7 +87,7 @@ describe('alerta de seguimiento a los 2 meses', () => {
 		// el asesor apretando el boton. Mientras nadie lo apriete, la alerta
 		// sigue encendida por mas anotaciones que haya en la bitacora.
 		const r = alertasDe(
-			{ ...base, fecha_instalacion: '2026-05-10', ultimo_contacto: '' },
+			{ ...base, fecha_instalacion: '2026-06-10', ultimo_contacto: '' },
 			{ anio: 2026, mes: 7, dia: 15 },
 			CONFIG
 		);

@@ -24,7 +24,7 @@ import { primerMesFacturable } from './pagos.js';
 import { estadoInstalacionDe } from './instalacion.js';
 
 /** Meses desde la instalacion hasta el llamado de seguimiento. */
-const MESES_SEGUIMIENTO = 2;
+const MESES_SEGUIMIENTO = 1;
 
 /** Dias de aviso antes del vencimiento de una promo. */
 const DIAS_AVISO_PROMO = 15;

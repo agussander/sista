@@ -136,7 +136,7 @@ const conAlertas = $derived.by(() => {
 const FILTROS = [
     { value: 'todos', label: 'Todos' },
     { value: 'alerta', label: 'Con alerta' },
-    { value: 'seguimiento', label: 'Seguimiento 2 meses' },
+    { value: 'seguimiento', label: 'Seguimiento 1 mes' },
     { value: 'mora', label: 'En mora' },
     { value: 'tickets', label: 'Tickets nuevos' },
     { value: 'nap_faltante', label: 'Sin reserva de NAP' },
@@ -226,7 +226,7 @@ function abrir(cliente) {
 }
 
 const ETIQUETAS = {
-    seguimiento: 'Contactar (2 meses)',
+    seguimiento: 'Contactar (1 mes)',
     mora_1: 'No pagó',
     mora_2: 'Mora vencida',
     // Singular: la alerta nace de comparar `tickets.ultimo` contra
