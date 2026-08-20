@@ -29,6 +29,9 @@ const resumen = $derived(resumenDe(novedad));
 .card {
     display: flex;
     flex-flow: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 0;
     background: white;
     border-radius: 0.6em;
     overflow: hidden;
