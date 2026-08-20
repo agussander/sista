@@ -339,8 +339,9 @@ function tituloTicket(cliente) {
  * Los chips de una fila, ya ordenados.
  *
  * Cada chip es `{tipo, mod, texto, titulo, sr}`: `tipo` da la clase base y la
- * posicion en `ORDEN_CHIP`, `mod` es una clase extra (solo la usa el semaforo
- * del recordatorio) y `sr` es el texto que solo oye un lector de pantalla.
+ * posicion en `ORDEN_CHIP`, `mod` es una clase extra (la usa el semaforo del
+ * recordatorio, y la variante `instalacion_pendiente` de `estado_instalacion`)
+ * y `sr` es el texto que solo oye un lector de pantalla.
  */
 function chipsDe(cliente, alertas, activas, proximo, estadoInstalacion) {
     const chips = [];
