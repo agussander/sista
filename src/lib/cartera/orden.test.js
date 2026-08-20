@@ -244,11 +244,15 @@ describe('ordenar — por columna', () => {
 
 	it('por conexiones, sin plan de internet residencial queda al fondo del desempate', () => {
 		const conConexion = (code, connections) => fila({ cliente: { code, nombre: code, connections } });
+		// codes elegidos a proposito para que el orden alfabetico (el desempate
+		// viejo, por compararEstable) diga LO CONTRARIO que el rango: si esta
+		// prueba pasara con el comparador viejo, seria por casualidad, no porque
+		// el desempate por plan funcione de verdad.
 		const filas = [
-			conConexion('sprint', [{ plan_nombre: 'SPRINT BANDA 94' }]),
-			conConexion('home', [{ plan_nombre: 'Servicio de internet basico HOME f20' }])
+			conConexion('zzzHome', [{ plan_nombre: 'Servicio de internet basico HOME f20' }]),
+			conConexion('aaaSprint', [{ plan_nombre: 'SPRINT BANDA 94' }])
 		];
-		expect(codes(ordenar(filas, 'conexiones', 'desc'))).toEqual(['home', 'sprint']);
+		expect(codes(ordenar(filas, 'conexiones', 'desc'))).toEqual(['zzzHome', 'aaaSprint']);
 	});
 
 	it('por contacto, "nunca" cuenta como el mas viejo y no queda al final', () => {
