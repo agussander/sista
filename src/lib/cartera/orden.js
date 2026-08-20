@@ -21,6 +21,8 @@
  * precalcularlos y arrastrar dos campos mas en la fila.
  */
 
+import { rangoInternetDe } from './planes.js';
+
 /**
  * @typedef {object} Fila
  * @property {{code: string, nombre: string, connections?: unknown[]}} cliente
@@ -100,6 +102,16 @@ const cmpTexto = (a, b) => a.localeCompare(b, 'es-AR');
 /** @param {number} a @param {number} b */
 const cmpNumero = (a, b) => a - b;
 
+/** @param {{plan_nombre?: string}[]} connections */
+function rangoMaximoInternet(connections) {
+	let max = -1;
+	for (const c of connections ?? []) {
+		const r = rangoInternetDe(c?.plan_nombre);
+		if (r > max) max = r;
+	}
+	return max;
+}
+
 /**
  * Definicion de cada columna ordenable.
  *
@@ -125,8 +137,11 @@ const COLUMNAS = {
 	ciudad: { dir: 'asc', valor: (f) => f.ciudad || null, comparar: cmpTexto },
 	conexiones: {
 		dir: 'desc',
-		valor: (f) => (Array.isArray(f.cliente.connections) ? f.cliente.connections.length : 0),
-		comparar: cmpNumero
+		valor: (f) => {
+			const connections = Array.isArray(f.cliente.connections) ? f.cliente.connections : [];
+			return { cantidad: connections.length, rango: rangoMaximoInternet(connections) };
+		},
+		comparar: (a, b) => a.cantidad - b.cantidad || a.rango - b.rango
 	},
 	contacto: { dir: 'asc', valor: (f) => f.ultimoContacto, comparar: cmpTexto },
 	pagos: {

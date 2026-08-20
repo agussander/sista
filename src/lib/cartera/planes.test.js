@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { describirConexion } from './planes.js';
+import { describirConexion, rangoInternetDe } from './planes.js';
 
 describe('describirConexion — internet', () => {
 	it('plan HOME con numero de f de dos digitos', () => {
@@ -93,5 +93,31 @@ describe('describirConexion — otros', () => {
 	it('nombreCompleto vacio o null no revienta', () => {
 		expect(describirConexion('')).toEqual({ etiqueta: '', categoria: 'otro' });
 		expect(describirConexion(null)).toEqual({ etiqueta: '', categoria: 'otro' });
+	});
+});
+
+describe('rangoInternetDe', () => {
+	it.each([
+		['HOME', 0],
+		['FAST', 1],
+		['POWER', 2],
+		['GAMER', 3],
+		['WORKER', 4],
+		['MAX', 5]
+	])('%s tiene rango %i', (plan, rango) => {
+		expect(rangoInternetDe(`Servicio de internet basico ${plan} f20`)).toBe(rango);
+	});
+
+	it('un plan que no es de internet da -1', () => {
+		expect(rangoInternetDe('Servicio de telefonia basica')).toBe(-1);
+	});
+
+	it('un plan de internet no reconocido (Sprint Banda) da -1', () => {
+		expect(rangoInternetDe('SPRINT BANDA 94')).toBe(-1);
+	});
+
+	it('nombreCompleto vacio o null da -1', () => {
+		expect(rangoInternetDe('')).toBe(-1);
+		expect(rangoInternetDe(null)).toBe(-1);
 	});
 });

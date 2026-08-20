@@ -9,6 +9,9 @@
 
 const PLANES_INTERNET = ['HOME', 'FAST', 'POWER', 'GAMER', 'WORKER', 'MAX'];
 
+/** Posicion de cada plan en la jerarquia, para desempatar el orden por conexiones. */
+const RANGO_INTERNET = Object.fromEntries(PLANES_INTERNET.map((p, i) => [p, i]));
+
 const RE_INTERNET = new RegExp(
 	`servicio de internet b[aá]sico\\s+(${PLANES_INTERNET.join('|')})\\b`,
 	'i'
@@ -49,4 +52,17 @@ export function describirConexion(nombreCompleto) {
 	if (RE_TELEFONIA.test(n)) return { etiqueta: 'Telefonía', categoria: 'telefonia' };
 
 	return { etiqueta: n, categoria: 'otro' };
+}
+
+/**
+ * Posicion de un plan de internet residencial en la jerarquia HOME..MAX. La
+ * usa `orden.js` para desempatar el orden por cantidad de conexiones.
+ *
+ * @param {string|null|undefined} nombreCompleto nombre crudo que devuelve IspCube
+ * @returns {number} -1 si no es un plan de internet residencial (TV, telefonia, Sprint Banda, etc.)
+ */
+export function rangoInternetDe(nombreCompleto) {
+	const { etiqueta, categoria } = describirConexion(nombreCompleto);
+	if (categoria !== 'internet') return -1;
+	return RANGO_INTERNET[etiqueta.toUpperCase()] ?? -1;
 }

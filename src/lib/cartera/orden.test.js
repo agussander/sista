@@ -213,6 +213,44 @@ describe('ordenar — por columna', () => {
 		expect(codes(ordenar(filas, 'conexiones', 'desc'))).toEqual(['tres', 'dos', 'una']);
 	});
 
+	it('por conexiones, a igual cantidad desempata por el plan mas alto', () => {
+		const conPlan = (code, planNombre) =>
+			fila({
+				cliente: {
+					code,
+					nombre: code,
+					connections: [{ plan_nombre: `Servicio de internet basico ${planNombre} f20` }]
+				}
+			});
+		const filas = [conPlan('home', 'HOME'), conPlan('max', 'MAX'), conPlan('gamer', 'GAMER')];
+		expect(codes(ordenar(filas, 'conexiones', 'desc'))).toEqual(['max', 'gamer', 'home']);
+		expect(codes(ordenar(filas, 'conexiones', 'asc'))).toEqual(['home', 'gamer', 'max']);
+	});
+
+	it('por conexiones, la cantidad manda antes que el plan', () => {
+		const conCantidadYPlan = (code, n, planNombre) =>
+			fila({
+				cliente: {
+					code,
+					nombre: code,
+					connections: Array.from({ length: n }, () => ({
+						plan_nombre: `Servicio de internet basico ${planNombre} f20`
+					}))
+				}
+			});
+		const filas = [conCantidadYPlan('unaMax', 1, 'MAX'), conCantidadYPlan('dosHome', 2, 'HOME')];
+		expect(codes(ordenar(filas, 'conexiones', 'desc'))).toEqual(['dosHome', 'unaMax']);
+	});
+
+	it('por conexiones, sin plan de internet residencial queda al fondo del desempate', () => {
+		const conConexion = (code, connections) => fila({ cliente: { code, nombre: code, connections } });
+		const filas = [
+			conConexion('sprint', [{ plan_nombre: 'SPRINT BANDA 94' }]),
+			conConexion('home', [{ plan_nombre: 'Servicio de internet basico HOME f20' }])
+		];
+		expect(codes(ordenar(filas, 'conexiones', 'desc'))).toEqual(['home', 'sprint']);
+	});
+
 	it('por contacto, "nunca" cuenta como el mas viejo y no queda al final', () => {
 		const conContacto = (code, ultimoContacto) =>
 			fila({ cliente: { code, nombre: code, connections: [] }, ultimoContacto });
