@@ -5,6 +5,7 @@
 		PROMO,
 		summaryItems,
 		computeTotal,
+		computeTotalSinImpuestos,
 		hasConsultar,
 		formatPrice,
 		computeListTotal
@@ -18,6 +19,7 @@
 	let parcial = $derived(hasConsultar(wizard));
 	// La promo aplica un descuento real (TV gratis): mostrar precio de lista y con promo.
 	let showPromoTotals = $derived(wizard.promo && listTotal > total && total > 0);
+	let totalSinImpuestos = $derived(computeTotalSinImpuestos(wizard));
 
 	function itemPrice(it) {
 		return it.value > 0 ? formatPrice(it.value) : 'Consultar';
@@ -68,6 +70,10 @@
 			<span>Total mensual</span>
 			<strong>{total > 0 ? formatPrice(total) : 'Consultar'}{parcial && total > 0 ? '*' : ''}</strong>
 		</div>
+	{/if}
+
+	{#if totalSinImpuestos > 0}
+		<p class="sin-impuestos-note">Sin impuestos nacionales: {formatPrice(totalSinImpuestos)}</p>
 	{/if}
 
 	{#if parcial}
@@ -196,6 +202,12 @@
 		font-style: normal;
 		color: #9a9a9a;
 		margin-left: 0.1rem;
+	}
+	.sin-impuestos-note {
+		margin: 0.4rem 0 0;
+		font-size: 0.75rem;
+		color: #9a9a9a;
+		font-weight: 300;
 	}
 	.consultar-note {
 		margin: 0.4rem 0 0;
