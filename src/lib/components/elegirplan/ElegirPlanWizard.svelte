@@ -5,6 +5,8 @@
 	import { goto } from '$app/navigation';
 	import { browser } from '$app/environment';
 	import { pb } from '$lib/pocketbase';
+	import { fetchTarifario } from '$lib/tarifario/fetchTarifario.js';
+	import { sinImpuestosPorCampo } from '$lib/tarifario/mapeoPrecios.js';
 
 	import ProgressBar from './ProgressBar.svelte';
 	import Step1Tipo from './steps/Step1Tipo.svelte';
@@ -42,6 +44,15 @@
 			wizard.loading = false;
 		}
 		mounted = true;
+
+		// Decorativo: si falla, el wizard sigue andando sin las líneas de
+		// "sin impuestos nacionales" (no bloquea wizard.loading).
+		try {
+			const { tarifasWeb } = await fetchTarifario();
+			wizard.sinImpuestos = sinImpuestosPorCampo(tarifasWeb.filas);
+		} catch (e) {
+			console.error('Error cargando el tarifario desde PocketBase:', e);
+		}
 	});
 
 	// URL → estado: cubre paste, Back y Forward. Guard: si la URL ya coincide con

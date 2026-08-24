@@ -24,6 +24,7 @@ export const wizard = $state({
 
 	// datos / carga
 	precios: {},
+	sinImpuestos: {},
 	loading: true,
 	error: false,
 
