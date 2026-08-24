@@ -13,6 +13,7 @@
 		subtitle = '',
 		subtitleStrong = false,
 		price = '',
+		subPrice = '',
 		tag = '',
 		logo = '',
 		icon = '',
@@ -107,6 +108,7 @@
 					<span class="price-consultar">Consultar</span>
 				{:else}
 					<strong>{price}</strong><span class="per">/mes</span>
+					{#if subPrice}<span class="sub-price">{subPrice}</span>{/if}
 				{/if}
 			</div>
 		{/if}
@@ -345,6 +347,11 @@
 		font-weight: 700;
 	}
 	.price .per {
+		display: block;
+		font-size: 0.7rem;
+		color: #9a9a9a;
+	}
+	.sub-price {
 		display: block;
 		font-size: 0.7rem;
 		color: #9a9a9a;
