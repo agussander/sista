@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { calcularPrecios } from './mapeoPrecios.js';
+import { calcularPrecios, sinImpuestosPorCampo } from './mapeoPrecios.js';
 
 /** @param {Array<[string, number | null]>} filas */
 const mostrador = (filas) =>
@@ -82,5 +82,54 @@ describe('calcularPrecios', () => {
 
 		expect(sinCampo).toContain('SPRINT Banda 94');
 		expect(sinCampo).not.toContain('HOME F111');
+	});
+});
+
+describe('sinImpuestosPorCampo', () => {
+	const FILAS = [
+		{ label: 'HOME F111', sinImpuestos: 20787.04 },
+		{ label: 'FAST F121', sinImpuestos: 25667.82 },
+		{ label: 'ANTINA PLAY +', sinImpuestos: 16438.02 },
+		{ label: 'LINEA VIP 56-221', sinImpuestos: 8240.99 }
+	];
+
+	it('mapea las etiquetas a los campos y redondea', () => {
+		const valores = sinImpuestosPorCampo(FILAS);
+
+		expect(valores.home).toBe(20787);
+		expect(valores.fast).toBe(25668);
+		expect(valores.antina).toBe(16438);
+		expect(valores.telefono).toBe(8241);
+	});
+
+	it('normaliza espacios de mas y mayusculas al buscar la etiqueta', () => {
+		const valores = sinImpuestosPorCampo([
+			{ label: 'max   f161   (NUEVO)', sinImpuestos: 45197.42 }
+		]);
+		expect(valores.max).toBe(45197);
+	});
+
+	it('no incluye una etiqueta que no esta en las filas', () => {
+		const valores = sinImpuestosPorCampo([{ label: 'HOME F111', sinImpuestos: 20787.04 }]);
+
+		expect('home' in valores).toBe(true);
+		expect('gamer' in valores).toBe(false);
+	});
+
+	it('descarta valores no numericos o no positivos', () => {
+		const valores = sinImpuestosPorCampo([
+			{ label: 'HOME F111', sinImpuestos: 0 },
+			{ label: 'FAST F121', sinImpuestos: null },
+			{ label: 'POWER F131', sinImpuestos: -5 }
+		]);
+
+		expect('home' in valores).toBe(false);
+		expect('fast' in valores).toBe(false);
+		expect('power' in valores).toBe(false);
+	});
+
+	it('sin filas, devuelve un objeto vacio', () => {
+		expect(sinImpuestosPorCampo([])).toEqual({});
+		expect(sinImpuestosPorCampo(undefined)).toEqual({});
 	});
 });

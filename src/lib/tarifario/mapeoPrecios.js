@@ -141,3 +141,33 @@ export function calcularPrecios(mostrador) {
 
 	return { valores, avisos, sinCampo };
 }
+
+/**
+ * Precio sin impuestos nacionales por campo de `precios`, a partir de las
+ * filas de la pestaña "Tarifas Web" (mismo dato que ya publica /tarifas).
+ *
+ * A diferencia de `calcularPrecios`, es un dato decorativo que no se escribe
+ * en PocketBase: sin avisos ni `sinCampo`, una etiqueta que falta simplemente
+ * no aparece en el resultado, y quien lo consume no muestra esa línea.
+ *
+ * @param {{ label?: unknown, sinImpuestos?: unknown }[] | undefined} filas
+ * @returns {Record<string, number>}
+ */
+export function sinImpuestosPorCampo(filas) {
+	/** @type {Map<string, { label?: unknown, sinImpuestos?: unknown }>} */
+	const porEtiqueta = new Map();
+	for (const fila of Array.isArray(filas) ? filas : []) {
+		const clave = normalizar(fila?.label);
+		if (clave && !porEtiqueta.has(clave)) porEtiqueta.set(clave, fila);
+	}
+
+	/** @type {Record<string, number>} */
+	const valores = {};
+	for (const [etiqueta, campo] of Object.entries(CAMPOS_POR_ETIQUETA)) {
+		const fila = porEtiqueta.get(normalizar(etiqueta));
+		if (fila && positivo(fila.sinImpuestos)) {
+			valores[campo] = Math.round(/** @type {number} */ (fila.sinImpuestos));
+		}
+	}
+	return valores;
+}

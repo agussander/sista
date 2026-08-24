@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { leerLibro } from './xlsx.js';
-import { calcularPrecios } from './mapeoPrecios.js';
+import { calcularPrecios, sinImpuestosPorCampo } from './mapeoPrecios.js';
 import {
 	parseInternacional,
 	parseLineaVip,
@@ -194,6 +194,28 @@ describe('mapeo contra el Excel real', () => {
 			telefono: 9972,
 			instalacion: 20000,
 			antina_cine: 26060 // 45950 - 19890
+		});
+	});
+
+	it('calcula el precio sin impuestos para los 15 campos de Tarifas Web', () => {
+		const valores = sinImpuestosPorCampo(parseTarifario(libro).tarifasWeb.filas);
+
+		expect(valores).toMatchObject({
+			home: 20787,
+			fast: 25668,
+			power: 26616,
+			gamer: 34695,
+			worker: 37850,
+			max: 45197,
+			antina: 16438,
+			antina_futbol: 24380,
+			dgo_full: 28967,
+			dgo_futbol: 21165,
+			dgo_paramount: 7550,
+			dgo_universal: 12496,
+			gigared: 10826,
+			gigared_futbol: 21165,
+			telefono: 8241
 		});
 	});
 });
