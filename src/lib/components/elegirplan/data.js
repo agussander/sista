@@ -182,6 +182,7 @@ export function recommendPlans(usos = [], personas) {
 // Ítems seleccionados (para resumen y WhatsApp). value=0 → "Consultar".
 export function summaryItems(w) {
 	const p = w.precios || {};
+	const si = w.sinImpuestos || {};
 	const items = [];
 
 	if (w.internetPlan) {
@@ -190,7 +191,8 @@ export function summaryItems(w) {
 			items.push({
 				step: 'internet',
 				label: `Internet ${plan.label} ${speedLabel(plan.mb)}`,
-				value: Number(p[plan.key]) || 0
+				value: Number(p[plan.key]) || 0,
+				sinImpuestos: Number(si[plan.key]) || 0
 			});
 		}
 	}
@@ -205,7 +207,8 @@ export function summaryItems(w) {
 				label: `TV · ${tv.label}`,
 				value: free ? 0 : listValue,
 				listValue,
-				free
+				free,
+				sinImpuestos: Number(si[tv.field]) || 0
 			});
 		}
 	}
@@ -218,7 +221,8 @@ export function summaryItems(w) {
 				step: addon.tvAddon ? 'tv' : 'adicionales',
 				label: addon.label,
 				value,
-				listValue: value
+				listValue: value,
+				sinImpuestos: field ? Number(si[field]) || 0 : 0
 			});
 		}
 	}
@@ -234,6 +238,12 @@ export function computeTotal(w) {
 // Total a precio de lista (incluye lo "gratis" a su precio sin promo)
 export function computeListTotal(w) {
 	return summaryItems(w).reduce((sum, it) => sum + (it.listValue ?? it.value), 0);
+}
+
+// Total mensual sin impuestos nacionales (mismo criterio que computeTotal:
+// excluye lo "gratis" de la promo)
+export function computeTotalSinImpuestos(w) {
+	return summaryItems(w).reduce((sum, it) => sum + (it.free ? 0 : it.sinImpuestos || 0), 0);
 }
 
 // ¿Algún ítem seleccionado está "a consultar" (precio 0)? → el total es parcial
