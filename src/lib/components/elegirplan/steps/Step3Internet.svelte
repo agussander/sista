@@ -37,6 +37,7 @@
 				subtitleStrong={true}
 				tag={plan.tag}
 				price={formatPrice(wizard.precios[plan.key])}
+				subPrice={wizard.sinImpuestos[plan.key] ? `Sin impuestos nacionales: ${formatPrice(wizard.sinImpuestos[plan.key])}` : ''}
 				details={plan.features}
 				showCheck={false}
 				onSymmetricInfo={isSymmetric(plan) ? () => (showSimetrico = true) : null}
