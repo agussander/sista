@@ -9,6 +9,7 @@
 	let {
 		service,
 		precios = {},
+		sinImpuestos = {},
 		onGrilla,
 		onclose,
 		onConfirm,
@@ -23,6 +24,8 @@
 		// null = contexto standalone (sin internet seleccionado).
 		internetPrice = null,
 		internetLabel = 'Internet',
+		// Idem internetPrice, pero el valor sin impuestos (null si no aplica).
+		internetSinImpuestos = null,
 		// Contexto promo (Step2Promo): meses gratis del servicio. > 0 muestra el
 		// precio de lista + un chip "Gratis N meses" y una nota en el resumen.
 		promoMonths = 0
@@ -40,6 +43,7 @@
 
 	let price = $derived(formatPrice(precios[service.priceField]));
 	let consultar = $derived(price === 'Consultar');
+	let serviceSinImpuestos = $derived(Number(sinImpuestos[service.priceField]) || 0);
 
 	function onKey(e) {
 		// Si está abierto el chequeo de instalación, que él maneje su propio Escape.
@@ -68,18 +72,23 @@
 
 	// Ítems del resumen (servicio + adicionales elegidos) con su valor numérico.
 	let tvItems = $derived([
-		{ label: service.label, value: Number(precios[service.priceField]) || 0 },
-		...chosenAddons.map((a) => ({ label: a.label, value: Number(precios[a.field]) || 0 }))
+		{ label: service.label, value: Number(precios[service.priceField]) || 0, sinImpuestos: serviceSinImpuestos },
+		...chosenAddons.map((a) => ({
+			label: a.label,
+			value: Number(precios[a.field]) || 0,
+			sinImpuestos: Number(sinImpuestos[a.field]) || 0
+		}))
 	]);
 	// En contexto de wizard, antepone la línea de internet para mostrar el total combinado.
 	let items = $derived(
 		hasInternetContext
-			? [{ label: internetLabel, value: internetPrice ?? 0 }, ...tvItems]
+			? [{ label: internetLabel, value: internetPrice ?? 0, sinImpuestos: internetSinImpuestos ?? 0 }, ...tvItems]
 			: tvItems
 	);
 	let total = $derived(items.reduce((s, it) => s + it.value, 0));
 	// ¿Algún ítem sin precio cargado (0)? → el total es parcial / a confirmar.
 	let hasConsultar = $derived(items.some((it) => it.value <= 0));
+	let totalSinImpuestos = $derived(items.reduce((s, it) => s + (it.sinImpuestos || 0), 0));
 
 	// Con contexto de internet muestra precio absoluto; sin él muestra el delta con "+".
 	function itemLabel(value) {
@@ -112,6 +121,9 @@
 						<strong>{price}</strong><span class="per">/mes</span>
 					{/if}
 				</div>
+				{#if !consultar && serviceSinImpuestos > 0}
+					<p class="sub-price">Sin impuestos nacionales: {formatPrice(serviceSinImpuestos)}</p>
+				{/if}
 				{#if promoMonths > 0}
 					<span class="promo-chip">Gratis {promoMonths} meses</span>
 				{/if}
@@ -173,6 +185,7 @@
 				<h4>Sumale adicionales</h4>
 				{#each service.addons as a}
 					{@const addonPrice = formatPrice(precios[a.field])}
+					{@const addonSinImpuestos = Number(sinImpuestos[a.field]) || 0}
 					<button
 						class="addon"
 						class:on={selected[a.key]}
@@ -196,6 +209,9 @@
 						</span>
 						<span class="addon-price" class:consultar={addonPrice === 'Consultar'}>
 							{addonPrice === 'Consultar' ? 'Consultar' : `+${addonPrice}/mes`}
+							{#if addonPrice !== 'Consultar' && addonSinImpuestos > 0}
+								<span class="addon-sin-impuestos">Sin imp.: +{formatPrice(addonSinImpuestos)}</span>
+							{/if}
 						</span>
 					</button>
 				{/each}
@@ -224,6 +240,9 @@
 					{/if}
 				</strong>
 			</div>
+			{#if totalSinImpuestos > 0}
+				<p class="summary-sin-impuestos">Sin impuestos nacionales: {formatPrice(totalSinImpuestos)}</p>
+			{/if}
 			{#if promoMonths > 0}
 				<p class="summary-promo">{service.label} gratis los primeros {promoMonths} meses. Después, a precio de lista.</p>
 			{/if}
@@ -320,6 +339,12 @@
 		font-weight: 600;
 		font-style: italic;
 		font-size: 0.95rem;
+	}
+	.sub-price {
+		margin: 0.1rem 0 0;
+		font-size: 0.68rem;
+		font-weight: 400;
+		color: #9a9a9a;
 	}
 	.promo-chip {
 		display: inline-block;
@@ -536,10 +561,19 @@
 	}
 	.addon-price {
 		flex-shrink: 0;
+		max-width: 40%;
+		text-align: right;
 		font-size: 0.8rem;
 		font-weight: 700;
 		color: var(--magenta);
 		white-space: nowrap;
+	}
+	.addon-sin-impuestos {
+		display: block;
+		white-space: normal;
+		font-size: 0.65rem;
+		font-weight: 400;
+		color: #9a9a9a;
 	}
 	.addon-price.consultar {
 		color: #9a6cb0;
@@ -613,6 +647,13 @@
 		color: #8a8a8a;
 		font-weight: 300;
 		line-height: 1.35;
+	}
+	.summary-sin-impuestos {
+		margin: -0.5rem 0 0;
+		font-size: 0.75rem;
+		color: #9a9a9a;
+		font-weight: 300;
+		text-align: right;
 	}
 	.summary-promo {
 		margin: 0.85rem 0 0;
