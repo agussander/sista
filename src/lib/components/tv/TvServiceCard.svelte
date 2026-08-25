@@ -7,6 +7,7 @@
 	let {
 		service,
 		precios = {},
+		sinImpuestos = {},
 		selected = false,
 		futbolOn = false,
 		onOpen,
@@ -19,6 +20,10 @@
 	let futbolPrice = $derived(futbolAddon ? Number(precios[futbolAddon.field]) || 0 : 0);
 	let consultar = $derived(basePrice <= 0);
 	let price = $derived(formatPrice(basePrice + (futbolOn ? futbolPrice : 0)));
+
+	let baseSinImpuestos = $derived(Number(sinImpuestos[service.priceField]) || 0);
+	let futbolSinImpuestos = $derived(futbolAddon ? Number(sinImpuestos[futbolAddon.field]) || 0 : 0);
+	let sinImpuestosTotal = $derived(baseSinImpuestos + (futbolOn ? futbolSinImpuestos : 0));
 
 	function handleKey(e) {
 		if (e.key === 'Enter' || e.key === ' ') {
@@ -67,6 +72,9 @@
 			<strong>{price}</strong><span class="per">/mes</span>
 		{/if}
 	</div>
+	{#if !consultar && sinImpuestosTotal > 0}
+		<p class="sub-price">Sin impuestos nacionales: {formatPrice(sinImpuestosTotal)}</p>
+	{/if}
 
 	{#if futbolAddon}
 		<label class="futbol-switch" onclick={stop} onkeydown={stop}>
@@ -209,6 +217,13 @@
 		font-weight: 600;
 		font-style: italic;
 		font-size: 1.05rem;
+	}
+	.sub-price {
+		margin: -0.4rem 0 0;
+		text-align: center;
+		font-size: 0.72rem;
+		font-weight: 400;
+		color: #9a9a9a;
 	}
 
 	.futbol-switch {
