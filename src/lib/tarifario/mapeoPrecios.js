@@ -169,5 +169,17 @@ export function sinImpuestosPorCampo(filas) {
 			valores[campo] = Math.round(/** @type {number} */ (fila.sinImpuestos));
 		}
 	}
+
+	// Mismo criterio que calcularPrecios: antina_cine no es una fila propia del
+	// Excel, se deriva restando el básico del total publicado "Básico + Cine".
+	// Sin esto, antina_cine queda ausente y el total sin impuestos de un combo
+	// con Cine da un número por debajo del real en vez de directamente ocultarse.
+	const total = porEtiqueta.get(normalizar(ETIQUETA_ANTINA_TOTAL_CINE));
+	const basico = porEtiqueta.get(normalizar(ETIQUETA_ANTINA_BASICO));
+	if (total && basico && positivo(total.sinImpuestos) && positivo(basico.sinImpuestos)) {
+		const adicional = /** @type {number} */ (total.sinImpuestos) - /** @type {number} */ (basico.sinImpuestos);
+		if (adicional > 0) valores.antina_cine = Math.round(adicional);
+	}
+
 	return valores;
 }

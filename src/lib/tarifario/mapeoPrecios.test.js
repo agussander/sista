@@ -132,4 +132,21 @@ describe('sinImpuestosPorCampo', () => {
 		expect(sinImpuestosPorCampo([])).toEqual({});
 		expect(sinImpuestosPorCampo(undefined)).toEqual({});
 	});
+
+	// antina_cine no es una fila propia del Excel: se deriva restando el
+	// básico del total publicado "Básico + Cine", igual que calcularPrecios.
+	it('deriva antina_cine restando el basico del total', () => {
+		const valores = sinImpuestosPorCampo([
+			{ label: 'ANTINA PLAY +', sinImpuestos: 16438.02 },
+			{ label: 'Básico + Cine', sinImpuestos: 37975.21 }
+		]);
+
+		expect(valores.antina_cine).toBe(21537); // 37975.21 - 16438.02
+	});
+
+	it('no deriva antina_cine si falta alguna de las dos filas', () => {
+		const valores = sinImpuestosPorCampo([{ label: 'ANTINA PLAY +', sinImpuestos: 16438.02 }]);
+
+		expect('antina_cine' in valores).toBe(false);
+	});
 });

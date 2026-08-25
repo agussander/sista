@@ -197,7 +197,7 @@ describe('mapeo contra el Excel real', () => {
 		});
 	});
 
-	it('calcula el precio sin impuestos para los 15 campos de Tarifas Web', () => {
+	it('calcula el precio sin impuestos para los 16 campos de Tarifas Web', () => {
 		const valores = sinImpuestosPorCampo(parseTarifario(libro).tarifasWeb.filas);
 
 		expect(valores).toMatchObject({
@@ -215,7 +215,8 @@ describe('mapeo contra el Excel real', () => {
 			dgo_universal: 12496,
 			gigared: 10826,
 			gigared_futbol: 21165,
-			telefono: 8241
+			telefono: 8241,
+			antina_cine: 21537 // 37975.21 - 16438.02 (mismo criterio que antina_cine en `precios`)
 		});
 	});
 });
