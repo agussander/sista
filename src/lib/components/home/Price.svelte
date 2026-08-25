@@ -216,10 +216,10 @@ function onKey(e) {
                     <span class="speed">{i.mb}<span class="unit">mb</span></span>
                     <span class="precio">{priceLabel(i.plan)}{#if !loading && precios[i.plan]}<span class="per">/mes</span>{/if}</span>
                 </span>
+                <span class="desc">{i.desc}</span>
                 {#if sinImpuestos[i.plan]}
                     <span class="sin-impuestos">Sin impuestos nacionales: ${formatNumber(sinImpuestos[i.plan])}</span>
                 {/if}
-                <span class="desc">{i.desc}</span>
             </button>
 
             {#if openIndex === idx && !isDesktop}
