@@ -3,10 +3,13 @@ import { onMount, tick } from "svelte";
 import { slide } from "svelte/transition";
 import { pb } from '$lib/pocketbase';
 import { priceInfo } from "$lib/stores";
+import { fetchTarifario } from '$lib/tarifario/fetchTarifario.js';
+import { sinImpuestosPorCampo } from '$lib/tarifario/mapeoPrecios.js';
 import PlanDetails from "./PlanDetails.svelte";
 import SimetricoModal from "$lib/components/elegirplan/SimetricoModal.svelte";
 
 let precios = $state({});
+let sinImpuestos = $state({});
 let loading = $state(true);
 
 let openIndex = $state(null);
@@ -74,6 +77,17 @@ onMount(async () => {
         precios = {};
     } finally {
         loading = false;
+    }
+});
+
+onMount(async () => {
+    // Decorativo: si falla, las tarjetas siguen mostrando el precio final
+    // igual que hoy, solo sin la línea de "sin impuestos nacionales".
+    try {
+        const { tarifasWeb } = await fetchTarifario();
+        sinImpuestos = sinImpuestosPorCampo(tarifasWeb.filas);
+    } catch (error) {
+        console.error('Error cargando el tarifario desde PocketBase:', error);
     }
 });
 
@@ -202,6 +216,9 @@ function onKey(e) {
                     <span class="speed">{i.mb}<span class="unit">mb</span></span>
                     <span class="precio">{priceLabel(i.plan)}{#if !loading && precios[i.plan]}<span class="per">/mes</span>{/if}</span>
                 </span>
+                {#if sinImpuestos[i.plan]}
+                    <span class="sin-impuestos">Sin impuestos nacionales: ${formatNumber(sinImpuestos[i.plan])}</span>
+                {/if}
                 <span class="desc">{i.desc}</span>
             </button>
 
@@ -235,6 +252,9 @@ function onKey(e) {
                             <span class="panel-speed">{$priceInfo[openIndex].mb}<span class="unit">mb</span></span>
                             <span class="panel-price">{priceLabel($priceInfo[openIndex].plan)}{#if !loading && precios[$priceInfo[openIndex].plan]}<span class="per">/mes</span>{/if}</span>
                         </span>
+                        {#if sinImpuestos[$priceInfo[openIndex].plan]}
+                            <span class="sin-impuestos">Sin impuestos nacionales: ${formatNumber(sinImpuestos[$priceInfo[openIndex].plan])}</span>
+                        {/if}
                     </div>
                     <PlanDetails plan={$priceInfo[openIndex]} onSimetrico={openSimetrico} />
                 </div>
@@ -264,7 +284,10 @@ function onKey(e) {
     </a>
 </div>
 
-<a href="/elegirplan" class="calcula-link">Calculá tu plan →</a>
+<div class="calcula-links">
+    <a href="/elegirplan" class="calcula-link">Calculá tu plan →</a>
+    <a href="/tarifas" class="calcula-link calcula-link--secundario">Ver precios sin impuestos nacionales</a>
+</div>
 
 {#if showSimetrico}
     <SimetricoModal onclose={closeSimetrico} />
@@ -311,10 +334,16 @@ function onKey(e) {
     font-weight: 700;
 }
 
+.calcula-links {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+    margin: 1rem auto 0;
+    width: fit-content;
+}
 .calcula-link {
     display: block;
-    width: fit-content;
-    margin: 1rem auto 0;
     color: var(--violeta1);
     font-size: 0.95rem;
     font-weight: 600;
@@ -323,6 +352,14 @@ function onKey(e) {
 }
 .calcula-link:hover {
     color: var(--magenta);
+}
+.calcula-link--secundario {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #9a9a9a;
+}
+.calcula-link--secundario:hover {
+    color: var(--violeta1);
 }
 
 /* ── Contenedor ── */
@@ -422,6 +459,14 @@ function onKey(e) {
     white-space: nowrap;
 }
 .per {
+    font-size: 0.72rem;
+    font-weight: 400;
+    color: #9a9a9a;
+}
+
+.sin-impuestos {
+    display: block;
+    text-align: left;
     font-size: 0.72rem;
     font-weight: 400;
     color: #9a9a9a;
