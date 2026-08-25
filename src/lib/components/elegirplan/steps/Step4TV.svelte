@@ -14,6 +14,7 @@
 	let internetPlan = $derived(planByKey(wizard.internetPlan));
 	let internetLabel = $derived(internetPlan ? `Internet ${internetPlan.label} ${speedLabel(internetPlan.mb)}` : 'Internet');
 	let internetPrice = $derived(wizard.internetPlan ? Number(wizard.precios?.[wizard.internetPlan]) || 0 : null);
+	let internetSinImpuestos = $derived(wizard.internetPlan ? Number(wizard.sinImpuestos?.[wizard.internetPlan]) || 0 : null);
 
 	let openKey = $state(null); // servicio con modal abierto
 	let grillaKey = $state(null); // servicio con grilla abierta
@@ -53,6 +54,7 @@
 <div class="ayuda">
 	<AyudameElegirTv
 		precios={wizard.precios}
+		sinImpuestos={wizard.sinImpuestos}
 		onPick={(key) => (openKey = key)}
 		onGrilla={(key) => (grillaKey = key)}
 	/>
@@ -63,6 +65,7 @@
 		<TvServiceCard
 			{service}
 			precios={wizard.precios}
+			sinImpuestos={wizard.sinImpuestos}
 			selected={wizard.tvPlatform === service.key}
 			futbolOn={isFutbolOn(service.key)}
 			onToggleFutbol={() => toggleFutbol(service.key)}
@@ -80,6 +83,7 @@
 	<TvServiceModal
 		service={openService}
 		precios={wizard.precios}
+		sinImpuestos={wizard.sinImpuestos}
 		{initialSelected}
 		onToggle={(key, value) => {
 			if (key === 'pack_futbol' && openKey) futbolOn[openKey] = value;
@@ -88,6 +92,7 @@
 		ctaClass="btn-primary"
 		{internetLabel}
 		{internetPrice}
+		{internetSinImpuestos}
 		onGrilla={() => (grillaKey = openService.key)}
 		onConfirm={confirmTv}
 		onclose={() => (openKey = null)}

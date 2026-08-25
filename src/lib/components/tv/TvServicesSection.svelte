@@ -20,7 +20,7 @@
 	import TvCompatInfo from './TvCompatInfo.svelte';
 	import AyudameElegirTv from './AyudameElegirTv.svelte';
 
-	let { precios = {}, loading = false, cardsId = 'cards' } = $props();
+	let { precios = {}, sinImpuestos = {}, loading = false, cardsId = 'cards' } = $props();
 
 	let grillaKey = $state(null); // servicio con grilla abierta (efímero, no en URL)
 
@@ -82,6 +82,7 @@
 	<div class="ayuda">
 		<AyudameElegirTv
 			{precios}
+			{sinImpuestos}
 			onPick={(key) => openModal(key)}
 			onGrilla={(key) => (grillaKey = key)}
 		/>
@@ -92,6 +93,7 @@
 			<TvServiceCard
 				{service}
 				{precios}
+				{sinImpuestos}
 				futbolOn={!!futbolOn[service.key]}
 				onToggleFutbol={() => toggleFutbol(service.key)}
 				onOpen={() => openModal(service.key)}
@@ -105,6 +107,7 @@
 	<TvServiceModal
 		service={openService}
 		{precios}
+		{sinImpuestos}
 		initialSelected={{ pack_futbol: !!futbolOn[openService.key] }}
 		onToggle={(key, value) => {
 			if (key === 'pack_futbol') futbolOn[openService.key] = value;
