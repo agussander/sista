@@ -11,7 +11,7 @@
 
 	// `onGrilla(key)` abre la grilla completa de un servicio; lo usa el aviso de
 	// "no encontramos ese canal".
-	let { precios = {}, onPick = () => {}, onGrilla = () => {} } = $props();
+	let { precios = {}, sinImpuestos = {}, onPick = () => {}, onGrilla = () => {} } = $props();
 
 	let expanded = $state(false);
 	let a = $state({ tv: null, tn13: null, fullhd: null });
@@ -30,6 +30,11 @@
 	function priceFor(service) {
 		const v = precios?.[service.priceField];
 		return v ? `$${Number(v).toLocaleString('es-AR')}` : 'Consultar';
+	}
+
+	function sinImpuestosFor(service) {
+		const v = Number(sinImpuestos?.[service.priceField]) || 0;
+		return v > 0 ? `$${v.toLocaleString('es-AR')}` : '';
 	}
 
 	function reset() {
@@ -91,6 +96,9 @@
 					</div>
 					<span class="reco-price">{priceFor(recoService)}<small>/mes</small></span>
 				</div>
+				{#if sinImpuestosFor(recoService)}
+					<p class="reco-sin-impuestos">Sin impuestos nacionales: {sinImpuestosFor(recoService)}</p>
+				{/if}
 				<p class="reco-reason">{reco.motivo}</p>
 				<p class="reco-devices">{recoService.devices.label} en simultáneo</p>
 				<button class="btn-primary btn-sm btn-full" onclick={() => onPick(recoService.key)}>
@@ -289,6 +297,13 @@
 		font-size: 0.7rem;
 		color: #9a9a9a;
 		font-weight: 400;
+	}
+	.reco-sin-impuestos {
+		margin: -0.2rem 0 0;
+		font-size: 0.72rem;
+		color: #9a9a9a;
+		font-weight: 400;
+		text-align: right;
 	}
 	.reco-reason {
 		margin: 0;
