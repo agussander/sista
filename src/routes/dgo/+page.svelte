@@ -3,6 +3,8 @@
     import { onMount } from 'svelte';
     import { MetaTags } from 'svelte-meta-tags';
     import { pb } from '$lib/pocketbase';
+    import { fetchTarifario } from '$lib/tarifario/fetchTarifario.js';
+    import { sinImpuestosPorCampo } from '$lib/tarifario/mapeoPrecios.js';
     import ChannelGrid from '$lib/components/features/ChannelGrid.svelte';
     import { serviceByKey } from '$lib/components/tv/tvData.js';
     import TvPriceSummary from '$lib/components/tv/TvPriceSummary.svelte';
@@ -11,6 +13,7 @@
     const service = serviceByKey('dgo');
 
     let precios = $state({});
+    let sinImpuestos = $state({});
     let loading = $state(true);
 
     onMount(async () => {
@@ -21,6 +24,15 @@
             console.error('Error cargando precios desde PocketBase:', e);
         } finally {
             loading = false;
+        }
+    });
+
+    onMount(async () => {
+        try {
+            const { tarifasWeb } = await fetchTarifario();
+            sinImpuestos = sinImpuestosPorCampo(tarifasWeb.filas);
+        } catch (error) {
+            console.error('Error cargando el tarifario desde PocketBase:', error);
         }
     });
 </script>
@@ -58,7 +70,7 @@
 <section>
     <img class="logo" src="/images/logo-dgo.svg" alt="Logo de DGO">
 
-    <TvPriceSummary {service} {precios} />
+    <TvPriceSummary {service} {precios} {sinImpuestos} />
 
     <ChannelGrid />
 
@@ -81,7 +93,7 @@
 
     <div class="otras-opciones">
         <h2>Ver otras opciones</h2>
-        <TvServicesSection {precios} {loading} cardsId="otras-cards" />
+        <TvServicesSection {precios} {sinImpuestos} {loading} cardsId="otras-cards" />
     </div>
 </section>
 

@@ -3,10 +3,13 @@
 	import { onMount } from 'svelte';
 	import { MetaTags } from 'svelte-meta-tags';
 	import { pb } from '$lib/pocketbase';
+	import { fetchTarifario } from '$lib/tarifario/fetchTarifario.js';
+	import { sinImpuestosPorCampo } from '$lib/tarifario/mapeoPrecios.js';
 
 	import TvServicesSection from '$lib/components/tv/TvServicesSection.svelte';
 
 	let precios = $state({});
+	let sinImpuestos = $state({});
 	let loading = $state(true);
 
 	onMount(async () => {
@@ -17,6 +20,17 @@
 			console.error('Error cargando precios desde PocketBase:', e);
 		} finally {
 			loading = false;
+		}
+	});
+
+	onMount(async () => {
+		// Decorativo: si falla, la página sigue mostrando el precio final igual
+		// que hoy, solo sin la línea de "sin impuestos nacionales".
+		try {
+			const { tarifasWeb } = await fetchTarifario();
+			sinImpuestos = sinImpuestosPorCampo(tarifasWeb.filas);
+		} catch (error) {
+			console.error('Error cargando el tarifario desde PocketBase:', error);
 		}
 	});
 </script>
@@ -49,7 +63,7 @@
 		<p>Tenemos 3 servicios de TV. Tocá cada uno para ver cómo funciona, qué canales trae y sumarle adicionales.</p>
 	</header>
 
-	<TvServicesSection {precios} {loading} />
+	<TvServicesSection {precios} {sinImpuestos} {loading} />
 </main>
 
 <style>

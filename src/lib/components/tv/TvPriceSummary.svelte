@@ -4,10 +4,11 @@
 	// página, así que acá sólo mostramos el precio y los dispositivos simultáneos.
 	import { formatPrice } from '$lib/components/elegirplan/data.js';
 
-	let { service, precios = {} } = $props();
+	let { service, precios = {}, sinImpuestos = {} } = $props();
 
 	let price = $derived(formatPrice(precios[service.priceField]));
 	let consultar = $derived(price === 'Consultar');
+	let servicioSinImpuestos = $derived(Number(sinImpuestos[service.priceField]) || 0);
 </script>
 
 <div class="summary">
@@ -18,6 +19,9 @@
 			<strong>{price}</strong><span class="per">/mes</span>
 		{/if}
 	</div>
+	{#if !consultar && servicioSinImpuestos > 0}
+		<p class="sub-price">Sin impuestos nacionales: {formatPrice(servicioSinImpuestos)}</p>
+	{/if}
 
 	{#if service.devices?.label}
 		<p class="tvs">{service.devices.label}</p>
@@ -53,6 +57,12 @@
 		font-weight: 600;
 		font-style: italic;
 		font-size: 1.2rem;
+	}
+	.sub-price {
+		margin: -0.15rem 0 0;
+		font-size: 0.78rem;
+		font-weight: 400;
+		color: #9a9a9a;
 	}
 	.tvs {
 		margin: 0;
