@@ -338,6 +338,7 @@
 
 	.price {
 		flex-shrink: 0;
+		max-width: 40%;
 		text-align: right;
 		white-space: nowrap;
 	}
@@ -353,6 +354,7 @@
 	}
 	.sub-price {
 		display: block;
+		white-space: normal;
 		font-size: 0.7rem;
 		color: #9a9a9a;
 	}
