@@ -82,6 +82,7 @@ let recordId = $state(null);
 let preciosCompletosFile = $state(null);
 let currentImageUrl = $state(null);
 let uploadingImage = $state(false);
+let isDragOver = $state(false);
 
 // Función para formatear números con puntos
 const formatNumber = (value) => {
@@ -129,6 +130,29 @@ const handleFileChange = async (e) => {
         // Subir automáticamente
         await uploadImage();
     }
+};
+
+const handleDragOver = (e) => {
+    e.preventDefault();
+    isDragOver = true;
+};
+
+const handleDragLeave = () => {
+    isDragOver = false;
+};
+
+const handleDrop = async (e) => {
+    e.preventDefault();
+    isDragOver = false;
+    const file = e.dataTransfer?.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+        message = 'El archivo debe ser una imagen';
+        setTimeout(() => { message = ''; }, 3000);
+        return;
+    }
+    preciosCompletosFile = file;
+    await uploadImage();
 };
 
 const uploadImage = async () => {
@@ -225,13 +249,17 @@ onMount(async() => {
                 </fieldset>
             {/each}
 
-                <div 
-                    class="image-dropzone" 
+                <div
+                    class="image-dropzone"
                     class:has-image={currentImageUrl}
+                    class:drag-over={isDragOver}
                     role="button"
                     tabindex="0"
                     onclick={() => document.getElementById('file-input').click()}
                     onkeydown={(e) => e.key === 'Enter' && document.getElementById('file-input').click()}
+                    ondragover={handleDragOver}
+                    ondragleave={handleDragLeave}
+                    ondrop={handleDrop}
                 >
                     {#if uploadingImage}
                         <div class="upload-progress">
@@ -254,7 +282,7 @@ onMount(async() => {
                                 <circle cx="8.5" cy="8.5" r="1.5"></circle>
                                 <polyline points="21 15 16 10 5 21"></polyline>
                             </svg>
-                            <p>Click para subir imagen</p>
+                            <p>Arrastrá una imagen aquí o hacé click para subir</p>
                             <span>PNG, JPG hasta 10MB</span>
                         </div>
                     {/if}
@@ -435,6 +463,11 @@ input:focus {
 
 .image-dropzone.has-image:hover {
     border-color: var(--violeta2);
+}
+
+.image-dropzone.drag-over {
+    border-color: var(--violeta2);
+    background: #f9f9ff;
 }
 
 .empty-state {

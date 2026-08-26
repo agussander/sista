@@ -7,7 +7,8 @@ import {
 	parseLineaVip,
 	parseMostrador,
 	parseTarifario,
-	parseTarifasWeb
+	parseTarifasWeb,
+	sinAmazon
 } from './parseTarifario.js';
 
 const FIXTURE = new URL('./__fixtures__/tarifario-26.081.xlsx', import.meta.url);
@@ -49,6 +50,26 @@ describe('parseTarifasWeb', () => {
 	it('corta en el primer hueco y no llega a las celdas de instrucciones', () => {
 		const { filas } = parseTarifasWeb(libro);
 		expect(filas.some((f) => /^Copiar rango/i.test(f.label))).toBe(false);
+	});
+});
+
+describe('sinAmazon', () => {
+	it('saca "Amazon" del medio de un combo, con su + y el espacio de mas', () => {
+		expect(sinAmazon('DGo Fútbol total (Full + Dsports + Amazon + Fútbol) NUEVO')).toBe(
+			'DGo Fútbol total (Full + Dsports + Fútbol) NUEVO'
+		);
+	});
+
+	it('saca "Amazon" cuando es el primer item del combo', () => {
+		expect(sinAmazon('Amazon + Full + Dsports')).toBe('Full + Dsports');
+	});
+
+	it('saca "Amazon" cuando es el ultimo item del combo', () => {
+		expect(sinAmazon('Full + Dsports + Amazon')).toBe('Full + Dsports');
+	});
+
+	it('no toca una etiqueta que no menciona Amazon', () => {
+		expect(sinAmazon('Pack Fútbol (DGo)')).toBe('Pack Fútbol (DGo)');
 	});
 });
 

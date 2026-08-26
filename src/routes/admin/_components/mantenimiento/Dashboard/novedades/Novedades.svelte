@@ -10,7 +10,6 @@ import NovedadForm from './NovedadForm.svelte';
 
 // null = viendo la lista | 'nueva' = alta | un record = edicion
 let editando = $state(null);
-let confirmandoBorrado = $state(null);
 
 onMount(() => {
     novedadesAdmin.cargar();
@@ -26,9 +25,9 @@ async function guardar(datos) {
     if (ok) editando = null;
 }
 
-async function eliminar(novedad) {
-    const ok = await novedadesAdmin.eliminar(novedad.id);
-    if (ok) confirmandoBorrado = null;
+async function eliminar() {
+    const ok = await novedadesAdmin.eliminar(editando.id);
+    if (ok) editando = null;
 }
 
 // El error de una escritura fallida no tiene por que seguir a la vista
@@ -57,19 +56,17 @@ function cerrarForm() {
         <NovedadForm
             novedad={editando === 'nueva' ? null : editando}
             onGuardar={guardar}
+            onEliminar={eliminar}
             onCancelar={cerrarForm}
         ></NovedadForm>
     {:else}
         <div class="header">
-            <div>
-                <h1>Novedades</h1>
-                <p>Las novedades que se ven en el sitio y en el inicio</p>
-            </div>
-            <button class="btn-nueva" onclick={abrirNueva}>Nueva novedad</button>
+            <h1>Novedades</h1>
+            <p>Las novedades que se ven en el sitio y en el inicio</p>
         </div>
 
         <!-- El error de escritura (borrar una fila, por ejemplo) va arriba de
-             la lista; el de carga va en el lugar de la lista, mas abajo. -->
+             la grilla; el de carga va en el lugar de la grilla, mas abajo. -->
         {#if novedadesAdmin.error}
             <p class="error">{novedadesAdmin.error}</p>
         {/if}
@@ -83,50 +80,40 @@ function cerrarForm() {
                 <p>{novedadesAdmin.errorCarga}</p>
                 <button class="reintentar" onclick={() => novedadesAdmin.cargar()}>Reintentar</button>
             </div>
-        {:else if novedadesAdmin.novedades.length === 0}
-            <div class="vacio">
-                <p>Todavía no cargaste ninguna novedad.</p>
-            </div>
         {:else}
-            <ul class="lista">
+            <div class="grilla">
+                <button class="tarjeta tarjeta-nueva" onclick={abrirNueva}>
+                    <span class="mas" aria-hidden="true">+</span>
+                    <span>Nueva novedad</span>
+                </button>
+
                 {#each novedadesAdmin.novedades as novedad (novedad.id)}
-                    <li class="fila">
-                        {#if novedadesAdmin.urlImagen(novedad)}
-                            <img src={novedadesAdmin.urlImagen(novedad)} alt="">
+                    <div class="tarjeta">
+                        {#if novedadesAdmin.urlImagen(novedad, '600x400')}
+                            <img class="img" src={novedadesAdmin.urlImagen(novedad, '600x400')} alt="">
                         {:else}
-                            <div class="sin-img">Sin foto</div>
+                            <div class="img sin-img">Sin foto</div>
                         {/if}
 
-                        <div class="datos">
-                            <strong>{novedad.titulo}</strong>
-                            <span class="fecha">{formatFecha(novedad.fecha)}</span>
-                            <div class="chips">
-                                {#if novedad.publicada}
-                                    <span class="chip publicada">Publicada</span>
-                                {:else}
-                                    <span class="chip borrador">Borrador</span>
-                                {/if}
-                                {#if novedad.destacada}<span class="chip destacada">Destacada</span>{/if}
-                            </div>
-                        </div>
-
-                        <div class="acciones">
-                            {#if confirmandoBorrado === novedad.id}
-                                <span class="confirmar">¿Seguro?</span>
-                                <button class="btn-borrar" onclick={() => eliminar(novedad)} disabled={novedadesAdmin.guardando}>
-                                    {novedadesAdmin.guardando ? 'Borrando…' : 'Sí, borrar'}
-                                </button>
-                                <button class="btn-sec" onclick={() => (confirmandoBorrado = null)} disabled={novedadesAdmin.guardando}>No</button>
-                            {:else}
-                                <button class="btn-sec" onclick={() => abrirEditar(novedad)}>Editar</button>
-                                <button class="btn-borrar" onclick={() => (confirmandoBorrado = novedad.id)}>
-                                    Eliminar
-                                </button>
+                        <div class="cuerpo">
+                            {#if !novedad.publicada || novedad.destacada}
+                                <div class="chips">
+                                    {#if !novedad.publicada}<span class="chip borrador">Borrador</span>{/if}
+                                    {#if novedad.destacada}<span class="chip destacada">Destacada</span>{/if}
+                                </div>
                             {/if}
+                            <span class="fecha">{formatFecha(novedad.fecha)}</span>
+                            <strong class="titulo">{novedad.titulo}</strong>
+                            {#if novedad.bajada}<p class="bajada">{novedad.bajada}</p>{/if}
+                            <button class="btn-editar" onclick={() => abrirEditar(novedad)}>Editar</button>
                         </div>
-                    </li>
+                    </div>
                 {/each}
-            </ul>
+            </div>
+
+            {#if novedadesAdmin.novedades.length === 0}
+                <p class="sin-novedades">Todavía no cargaste ninguna novedad.</p>
+            {/if}
         {/if}
     {/if}
 </div>
@@ -137,11 +124,6 @@ function cerrarForm() {
 }
 
 .header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 1em;
-    flex-wrap: wrap;
     margin-bottom: 2em;
 }
 
@@ -154,21 +136,6 @@ h1 {
 .header p {
     color: #666;
     margin: 0;
-}
-
-.btn-nueva {
-    background: var(--violeta1);
-    color: white;
-    border: none;
-    padding: 0.8em 1.5em;
-    border-radius: 0.4em;
-    font-size: 0.95em;
-    font-weight: 600;
-    cursor: pointer;
-}
-
-.btn-nueva:hover {
-    background: var(--violeta2);
 }
 
 .centro {
@@ -209,58 +176,61 @@ h1 {
     padding: 0.8em 1em;
 }
 
-.lista {
-    list-style: none;
-    padding: 0;
-    margin: 0;
+.sin-novedades {
+    color: #6b7280;
+    margin: 1.5em 0 0;
+}
+
+.grilla {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5em;
+}
+
+@media (min-width: 40em) {
+    .grilla {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 62em) {
+    .grilla {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+.tarjeta {
     display: flex;
     flex-flow: column;
-    gap: 0.8em;
-}
-
-.fila {
-    display: flex;
-    align-items: center;
-    gap: 1.2em;
     background: white;
-    border: 1px solid #e5e7eb;
     border-radius: 0.6em;
-    padding: 1em;
-    flex-wrap: wrap;
+    overflow: hidden;
+    box-shadow: 0 0 0.5em rgba(133, 133, 133, 0.4);
+    height: 100%;
 }
 
-.fila img,
+.img,
 .sin-img {
-    width: 7em;
-    height: 4.6em;
-    border-radius: 0.4em;
-    object-fit: cover;
+    height: 11em;
+    width: 100%;
     flex-shrink: 0;
+    object-fit: cover;
 }
 
 .sin-img {
     background: #f3f4f6;
     color: #9ca3af;
-    font-size: 0.75em;
+    font-size: 0.85em;
     display: grid;
     place-items: center;
 }
 
-.datos {
+.cuerpo {
+    padding: 1.2em 1.1em;
     display: flex;
     flex-flow: column;
-    gap: 0.35em;
+    gap: 0.4em;
     flex: 1;
-    min-width: 12em;
-}
-
-.datos strong {
-    color: var(--violeta1);
-}
-
-.fecha {
-    font-size: 0.85em;
-    color: #6b7280;
 }
 
 .chips {
@@ -276,11 +246,6 @@ h1 {
     border-radius: 1em;
 }
 
-.publicada {
-    background: #dcfce7;
-    color: #166534;
-}
-
 .borrador {
     background: #f3f4f6;
     color: #4b5563;
@@ -291,39 +256,64 @@ h1 {
     color: #92400e;
 }
 
-.acciones {
-    display: flex;
-    gap: 0.5em;
-    align-items: center;
+.fecha {
+    font-size: 0.8em;
+    color: #6b7280;
 }
 
-.confirmar {
-    font-size: 0.85em;
-    color: #b91c1c;
-    font-weight: 600;
+.titulo {
+    color: var(--violeta1);
+    font-size: 1.05em;
+    line-height: 1.3;
 }
 
-.acciones button {
-    padding: 0.5em 1em;
+.bajada {
+    margin: 0;
+    font-size: 0.9em;
+    line-height: 1.5;
+    color: #444;
+    flex: 1;
+}
+
+.btn-editar {
+    align-self: flex-start;
+    margin-top: 0.4em;
+    background: #e5e7eb;
+    color: #374151;
     border: none;
+    padding: 0.5em 1.2em;
     border-radius: 0.4em;
     font-size: 0.85em;
     font-weight: 600;
     cursor: pointer;
 }
 
-.acciones button:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
+.btn-editar:hover {
+    background: #d1d5db;
 }
 
-.btn-sec {
-    background: #e5e7eb;
-    color: #374151;
+.tarjeta-nueva {
+    align-items: center;
+    justify-content: center;
+    gap: 0.5em;
+    background: #faf9ff;
+    border: 2px dashed #c4b5fd;
+    color: var(--violeta1);
+    cursor: pointer;
+    padding: 2em 1em;
+    font-size: 1em;
+    font-weight: 600;
+    min-height: 12em;
 }
 
-.btn-borrar {
-    background: #dc2626;
-    color: white;
+.tarjeta-nueva:hover {
+    background: #f3f0ff;
+    border-color: var(--violeta2);
+}
+
+.mas {
+    font-size: 2.2em;
+    line-height: 1;
+    font-weight: 400;
 }
 </style>

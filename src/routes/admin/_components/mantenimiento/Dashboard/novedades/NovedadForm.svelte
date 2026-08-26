@@ -6,7 +6,7 @@ import { untrack } from 'svelte';
 import { fechaParaInput, slugify } from '$lib/novedades.js';
 import { novedadesAdmin } from './novedadesAdmin.svelte.js';
 
-let { novedad = null, onGuardar, onCancelar } = $props();
+let { novedad = null, onGuardar, onEliminar, onCancelar } = $props();
 
 // Los campos se siembran UNA sola vez con lo que trae `novedad` y despues
 // viven por su cuenta: mientras la persona escribe, el formulario manda, no la
@@ -40,6 +40,7 @@ let publicada = $state(inicial.publicada);
 let destacada = $state(inicial.destacada);
 let imagen = $state(null);
 let errorLocal = $state('');
+let confirmandoBorrado = $state(false);
 
 // Vista previa: la imagen recien elegida si hay una, si no la que ya tenia.
 let previewNueva = $state(null);
@@ -138,8 +139,11 @@ function enviar(event) {
 
     <div class="checks">
         <label class="check">
-            <input type="checkbox" bind:checked={publicada}>
-            Publicada <span class="ayuda">Si está destildada, no la ve nadie desde afuera</span>
+            <span class="switch">
+                <input type="checkbox" checked={!publicada} onchange={(e) => (publicada = !e.currentTarget.checked)}>
+                <span class="slider" aria-hidden="true"></span>
+            </span>
+            Borrador <span class="ayuda">Si está activado, no se ve desde afuera</span>
         </label>
         <label class="check">
             <input type="checkbox" bind:checked={destacada}>
@@ -151,12 +155,31 @@ function enviar(event) {
     {#if novedadesAdmin.error}<p class="error">{novedadesAdmin.error}</p>{/if}
 
     <div class="acciones">
-        <button type="button" class="btn-cancelar" onclick={onCancelar} disabled={novedadesAdmin.guardando}>
-            Cancelar
-        </button>
-        <button type="submit" class="btn-guardar" disabled={novedadesAdmin.guardando}>
-            {novedadesAdmin.guardando ? 'Guardando…' : 'Guardar'}
-        </button>
+        {#if esEdicion}
+            <div class="acciones-borrar">
+                {#if confirmandoBorrado}
+                    <span class="confirmar">¿Seguro?</span>
+                    <button type="button" class="btn-borrar" onclick={onEliminar} disabled={novedadesAdmin.guardando}>
+                        {novedadesAdmin.guardando ? 'Borrando…' : 'Sí, borrar'}
+                    </button>
+                    <button type="button" class="btn-sec" onclick={() => (confirmandoBorrado = false)} disabled={novedadesAdmin.guardando}>
+                        No
+                    </button>
+                {:else}
+                    <button type="button" class="btn-borrar" onclick={() => (confirmandoBorrado = true)} disabled={novedadesAdmin.guardando}>
+                        Eliminar
+                    </button>
+                {/if}
+            </div>
+        {/if}
+        <div class="acciones-principales">
+            <button type="button" class="btn-cancelar" onclick={onCancelar} disabled={novedadesAdmin.guardando}>
+                Cancelar
+            </button>
+            <button type="submit" class="btn-guardar" disabled={novedadesAdmin.guardando}>
+                {novedadesAdmin.guardando ? 'Guardando…' : 'Guardar'}
+            </button>
+        </div>
     </div>
 </form>
 
@@ -245,6 +268,50 @@ textarea {
     gap: 0.5em;
 }
 
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 2.6em;
+    height: 1.5em;
+    flex-shrink: 0;
+}
+
+.switch input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    margin: 0;
+    cursor: pointer;
+}
+
+.slider {
+    position: absolute;
+    inset: 0;
+    background: #d1d5db;
+    border-radius: 999px;
+    transition: background-color 0.15s;
+}
+
+.slider::before {
+    content: '';
+    position: absolute;
+    height: 1.1em;
+    width: 1.1em;
+    left: 0.2em;
+    top: 0.2em;
+    background: white;
+    border-radius: 50%;
+    transition: transform 0.15s;
+}
+
+.switch input:checked + .slider {
+    background: var(--violeta1);
+}
+
+.switch input:checked + .slider::before {
+    transform: translateX(1.1em);
+}
+
 .error {
     color: #b91c1c;
     background: #fef2f2;
@@ -256,7 +323,27 @@ textarea {
 
 .acciones {
     display: flex;
+    align-items: center;
+    flex-wrap: wrap;
     gap: 0.8em;
+}
+
+.acciones-principales {
+    display: flex;
+    gap: 0.8em;
+    margin-left: auto;
+}
+
+.acciones-borrar {
+    display: flex;
+    align-items: center;
+    gap: 0.6em;
+}
+
+.confirmar {
+    font-size: 0.9em;
+    color: #b91c1c;
+    font-weight: 600;
 }
 
 .acciones button {
@@ -280,6 +367,16 @@ textarea {
 .btn-cancelar {
     background: #e5e7eb;
     color: #374151;
+}
+
+.btn-sec {
+    background: #e5e7eb;
+    color: #374151;
+}
+
+.btn-borrar {
+    background: #dc2626;
+    color: white;
 }
 
 .acciones button:disabled {

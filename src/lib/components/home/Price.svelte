@@ -21,11 +21,16 @@ let isDesktop = $state(false);
 let flip = $state({ t: 0, l: 0, w: 0, h: 0, ot: 0, ol: 0, ow: 0, oh: 0 });
 let animating = $state(false);
 
-let contEl;
+let plansWrapEl;
 let overlayEl = $state();
 let closeEl = $state();
 let cardEls = $state([]);
 let lastFocused = null;
+
+// División fija de los 6 planes en dos grupos de 3 (ver plans.js: primeros 3
+// = básicos asimétricos, últimos 3 = premium/simétricos y de mayor velocidad).
+let basico = $derived($priceInfo.slice(0, 3));
+let premium = $derived($priceInfo.slice(3, 6));
 
 const formatNumber = (value) => {
     if (!value) return '';
@@ -148,10 +153,10 @@ async function open(idx, { instant = false } = {}) {
         return;
     }
 
-    // Desktop: medir en viewport la caja de la tarjeta (inicio) y la del
-    // contenedor de las 6 tarjetas (destino). El overlay es position:fixed.
+    // Desktop: medir en viewport la caja de la tarjeta (inicio) y la de los
+    // dos grupos de planes juntos (destino). El overlay es position:fixed.
     // `instant` (al abrir desde la URL) arranca ya en el destino, sin crecer.
-    const c = contEl.getBoundingClientRect();
+    const c = plansWrapEl.getBoundingClientRect();
     const r = instant ? c : cardEls[idx].getBoundingClientRect();
     flip = {
         t: r.top, l: r.left, w: r.width, h: r.height,
@@ -198,74 +203,129 @@ function onKey(e) {
 <h2 id='planes'>Planes a tu medida</h2>
 
 <div class="cont-outer">
-    <div class="cont" class:has-open={openIndex !== null && isDesktop} bind:this={contEl}>
-        {#each $priceInfo as i, idx}
-        <div class="row">
-            <button
-                class="card"
-                type="button"
-                bind:this={cardEls[idx]}
-                onclick={() => open(idx)}
-                aria-expanded={openIndex === idx}
-            >
-                <span class="eyebrow">
-                    <span class="plan-name">{i.plan}</span>
-                    {#if i.symmetric}<span class="chip">Simétrico</span>{/if}
-                </span>
-                <span class="figures">
-                    <span class="speed">{i.mb}<span class="unit">mb</span></span>
-                    <span class="precio">{priceLabel(i.plan)}{#if !loading && precios[i.plan]}<span class="per">/mes</span>{/if}</span>
-                </span>
-                <span class="desc">{i.desc}</span>
-                {#if sinImpuestos[i.plan]}
-                    <span class="sin-impuestos">Sin impuestos nacionales: ${formatNumber(sinImpuestos[i.plan])}</span>
-                {/if}
-            </button>
-
-            {#if openIndex === idx && !isDesktop}
-                <div class="inline-details" transition:slide={{ duration: 250 }}>
-                    <PlanDetails plan={i} onSimetrico={openSimetrico} />
-                </div>
-            {/if}
-        </div>
-        {/each}
-
-        {#if openIndex !== null && isDesktop}
-            <div class="backdrop" class:open={animating} onclick={close} role="presentation"></div>
-            <div
-                class="overlay"
-                class:open={animating}
-                bind:this={overlayEl}
-                style="--t:{flip.t}px;--l:{flip.l}px;--w:{flip.w}px;--h:{flip.h}px;--ot:{flip.ot}px;--ol:{flip.ol}px;--ow:{flip.ow}px;--oh:{flip.oh}px;"
-                role="dialog"
-                aria-modal="true"
-                aria-label="Detalle del plan {$priceInfo[openIndex].plan}"
-            >
-                <button class="close" type="button" onclick={close} bind:this={closeEl} aria-label="Cerrar">✕</button>
-                <div class="panel-body">
-                    <div class="panel-head">
+    <div class="plans-wrap" bind:this={plansWrapEl}>
+        <div class="plan-group">
+            <h3 class="group-title">
+                <img src="/images/SVG/wifi-violeta.svg" alt="" class="group-icon">
+                Internet Básico
+            </h3>
+            <div class="cont" class:has-open={openIndex !== null && isDesktop}>
+                {#each basico as i, idx}
+                <div class="row">
+                    <button
+                        class="card"
+                        type="button"
+                        bind:this={cardEls[idx]}
+                        onclick={() => open(idx)}
+                        aria-expanded={openIndex === idx}
+                    >
                         <span class="eyebrow">
-                            <span class="plan-name">{$priceInfo[openIndex].plan}</span>
-                            {#if $priceInfo[openIndex].symmetric}<span class="chip">Simétrico</span>{/if}
+                            <span class="plan-name">{i.plan}</span>
+                            {#if i.symmetric}<span class="chip">Simétrico</span>{/if}
                         </span>
-                        <span class="panel-figures">
-                            <span class="panel-speed">{$priceInfo[openIndex].mb}<span class="unit">mb</span></span>
-                            <span class="panel-price">{priceLabel($priceInfo[openIndex].plan)}{#if !loading && precios[$priceInfo[openIndex].plan]}<span class="per">/mes</span>{/if}</span>
+                        <span class="figures">
+                            <span class="speed">{i.mb}<span class="unit">mb</span></span>
+                            <span class="precio">{priceLabel(i.plan)}{#if !loading && precios[i.plan]}<span class="per">/mes</span>{/if}</span>
                         </span>
-                        {#if sinImpuestos[$priceInfo[openIndex].plan]}
-                            <span class="sin-impuestos">Sin impuestos nacionales: ${formatNumber(sinImpuestos[$priceInfo[openIndex].plan])}</span>
+                        <span class="desc">{i.desc}</span>
+                        {#if sinImpuestos[i.plan]}
+                            <span class="sin-impuestos">Sin impuestos nacionales: ${formatNumber(sinImpuestos[i.plan])}</span>
                         {/if}
-                    </div>
-                    <PlanDetails plan={$priceInfo[openIndex]} onSimetrico={openSimetrico} />
+                    </button>
+
+                    {#if openIndex === idx && !isDesktop}
+                        <div class="inline-details" transition:slide={{ duration: 250 }}>
+                            <PlanDetails plan={i} onSimetrico={openSimetrico} />
+                        </div>
+                    {/if}
                 </div>
+                {/each}
             </div>
-        {/if}
+        </div>
+
+        <div class="plan-group">
+            <h3 class="group-title">
+                <img src="/images/SVG/wifi-violeta.svg" alt="" class="group-icon">
+                Internet Premium
+            </h3>
+            <div class="cont" class:has-open={openIndex !== null && isDesktop}>
+                {#each premium as i, j}
+                {@const idx = j + 3}
+                <div class="row">
+                    <button
+                        class="card"
+                        type="button"
+                        bind:this={cardEls[idx]}
+                        onclick={() => open(idx)}
+                        aria-expanded={openIndex === idx}
+                    >
+                        <span class="eyebrow">
+                            <span class="plan-name">{i.plan}</span>
+                            {#if i.symmetric}<span class="chip">Simétrico</span>{/if}
+                        </span>
+                        <span class="figures">
+                            <span class="speed">{i.mb}<span class="unit">mb</span></span>
+                            <span class="precio">{priceLabel(i.plan)}{#if !loading && precios[i.plan]}<span class="per">/mes</span>{/if}</span>
+                        </span>
+                        <span class="desc">{i.desc}</span>
+                        {#if sinImpuestos[i.plan]}
+                            <span class="sin-impuestos">Sin impuestos nacionales: ${formatNumber(sinImpuestos[i.plan])}</span>
+                        {/if}
+                    </button>
+
+                    {#if openIndex === idx && !isDesktop}
+                        <div class="inline-details" transition:slide={{ duration: 250 }}>
+                            <PlanDetails plan={i} onSimetrico={openSimetrico} />
+                        </div>
+                    {/if}
+                </div>
+                {/each}
+            </div>
+        </div>
     </div>
+
+    {#if openIndex !== null && isDesktop}
+        <div class="backdrop" class:open={animating} onclick={close} role="presentation"></div>
+        <div
+            class="overlay"
+            class:open={animating}
+            bind:this={overlayEl}
+            style="--t:{flip.t}px;--l:{flip.l}px;--w:{flip.w}px;--h:{flip.h}px;--ot:{flip.ot}px;--ol:{flip.ol}px;--ow:{flip.ow}px;--oh:{flip.oh}px;"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Detalle del plan {$priceInfo[openIndex].plan}"
+        >
+            <button class="close" type="button" onclick={close} bind:this={closeEl} aria-label="Cerrar">✕</button>
+            <div class="panel-body">
+                <div class="panel-head">
+                    <span class="eyebrow">
+                        <span class="plan-name">{$priceInfo[openIndex].plan}</span>
+                        {#if $priceInfo[openIndex].symmetric}<span class="chip">Simétrico</span>{/if}
+                    </span>
+                    <span class="panel-figures">
+                        <span class="panel-speed">{$priceInfo[openIndex].mb}<span class="unit">mb</span></span>
+                        <span class="panel-price">{priceLabel($priceInfo[openIndex].plan)}{#if !loading && precios[$priceInfo[openIndex].plan]}<span class="per">/mes</span>{/if}</span>
+                    </span>
+                    {#if sinImpuestos[$priceInfo[openIndex].plan]}
+                        <span class="sin-impuestos">Sin impuestos nacionales: ${formatNumber(sinImpuestos[$priceInfo[openIndex].plan])}</span>
+                    {/if}
+                </div>
+                <PlanDetails plan={$priceInfo[openIndex]} onSimetrico={openSimetrico} />
+            </div>
+        </div>
+    {/if}
 </div>
 
 <a href="/elegirplan?paso=promo&tipo=tv" class="ayuda-card">
+    <span class="ayuda-icons" aria-hidden="true">
+        <img src="/images/SVG/wifi-violeta.svg" alt="" class="ayuda-icon">
+        <img src="/images/SVG/tv-violeta.svg" alt="" class="ayuda-icon">
+    </span>
     <span class="ayuda-text">
         <strong>Internet + TV</strong>
+        {#if !loading && precios.power}
+            <span class="ayuda-promo">Promo: ${precios.power} por 6 meses</span>
+        {/if}
     </span>
     <span class="ayuda-arrow" aria-hidden="true">→</span>
 </a>
@@ -294,6 +354,17 @@ function onKey(e) {
 {/if}
 
 <style>
+/* El nav es `position: fixed` y flota sobre el contenido. Al entrar por
+   /#planes (link del menú desde otra página, o la URL pegada directo) tanto el
+   salto nativo del navegador como el `scrollIntoView` de SvelteKit dejan el
+   título pegado al borde superior, o sea tapado por el nav. `scroll-margin-top`
+   le reserva ese alto + aire. El nav mide ~81px hasta su borde inferior en
+   desktop y en mobile (top 1em + alto), así que 7rem deja ~30px de respiro.
+   Va en rem y no en em porque el h2 mide 2.5rem: 7em serían 280px. */
+h2#planes {
+    scroll-margin-top: 7rem;
+}
+
 /* ── Ayuda card ── */
 .ayuda-card {
     display: flex;
@@ -317,6 +388,17 @@ function onKey(e) {
     transform: translateY(-2px);
     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.13);
 }
+
+/* En touch (sin hover real) el tap deja los <span>/<a> "pegados" en :hover,
+   lo que dispara la regla global a:hover,span:hover{opacity:.7} de
+   global.css y se ven más claros al tocarlos. Sin mouse no debería pasar. */
+@media (hover: none) {
+    .ayuda-card:hover,
+    .ayuda-card :is(span, a):hover,
+    .card :is(span, a):hover {
+        opacity: 1;
+    }
+}
 .ayuda-text {
     flex: 1;
     display: flex;
@@ -326,6 +408,21 @@ function onKey(e) {
 .ayuda-text strong {
     color: var(--violeta1);
     font-size: 1.05rem;
+}
+.ayuda-promo {
+    color: var(--magenta);
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+.ayuda-icons {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex-shrink: 0;
+}
+.ayuda-icon {
+    width: 2.1rem;
+    height: 2.1rem;
 }
 .ayuda-arrow {
     flex-shrink: 0;
@@ -367,6 +464,39 @@ function onKey(e) {
     display: flex;
     justify-content: center;
     width: 100%;
+}
+
+/* Envuelve ambos grupos: además de agruparlos visualmente, es la caja
+   destino del FLIP (ver comentario en el script), por eso cubre siempre
+   los dos grupos aunque el overlay se haya abierto desde uno solo. */
+.plans-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem;
+    width: 100%;
+}
+
+/* ── Grupo de planes (Básico / Premium) ── */
+.plan-group {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+.group-title {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin: 0 0 0.85rem;
+    font-weight: 600; /* nexa xbold */
+    color: var(--violeta1);
+    font-size: 1.1rem;
+}
+.group-icon {
+    width: 1.6rem;
+    height: 1.6rem;
+    flex-shrink: 0;
 }
 
 /* Mobile: una sola tarjeta, planes separados por líneas finas */
@@ -512,11 +642,26 @@ function onKey(e) {
 
 /* ── Desktop: 3 columnas (tarjetas individuales) ── */
 @media (min-width: 1024px) {
+    .ayuda-card {
+        max-width: 59rem;
+    }
+
+    /* Alineado con el borde izquierdo de las tarjetas de abajo (mismo padding que .cont). */
+    .group-title {
+        justify-content: flex-start;
+        padding-left: 1.5rem;
+    }
+
+    .plans-wrap {
+        max-width: 62rem;
+    }
+
     .cont {
         position: relative;
         display: grid;
         grid-template-columns: repeat(3, 1fr);
         gap: 1rem;
+        width: 100%;
         max-width: 62rem;
         padding: 0 1.5rem;
         background: none;

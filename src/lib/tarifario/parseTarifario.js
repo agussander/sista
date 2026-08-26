@@ -75,6 +75,25 @@ export function filasConEtiqueta(h, columna, desde, tope = 10000) {
  */
 
 /**
+ * Saca una mencion de "Amazon" pegada a un "+" de una etiqueta del tarifario,
+ * junto con el espacio y el "+" que la unian al resto del combo.
+ *
+ * El Word describe los packs como "A + B + Amazon + C"; cuando un producto
+ * como Amazon Prime Video deja de estar incluido, alguien tiene que acordarse
+ * de editar esa celda a mano. Se limpia aca para no depender de eso.
+ *
+ * @param {string} label
+ * @returns {string}
+ */
+export function sinAmazon(label) {
+	return label
+		.replace(/\s*\+\s*amazon\b/gi, '')
+		.replace(/\bamazon\s*\+\s*/gi, '')
+		.replace(/\s{2,}/g, ' ')
+		.trim();
+}
+
+/**
  * Pestaña "Tarifas Web": lo que se publica en /tarifas.
  *
  * @param {Map<string, Map<string, any>>} libro
@@ -88,7 +107,7 @@ export function parseTarifasWeb(libro) {
 		return {
 			// La sangria del Excel es lo unico que distingue un pack de su
 			// servicio padre; se guarda como `nivel` y la etiqueta va limpia.
-			label: crudo.trim(),
+			label: sinAmazon(crudo.trim()),
 			nivel: /^\s/.test(crudo) ? 1 : 0,
 			sinImpuestos: numero(h, `C${f}`),
 			precioFinal: numero(h, `D${f}`)
