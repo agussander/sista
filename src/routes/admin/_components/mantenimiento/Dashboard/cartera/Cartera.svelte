@@ -120,6 +120,7 @@ const conAlertas = $derived.by(() => {
             cliente: c,
             alertas,
             urgencia: urgenciaDe(alertas),
+            estadoInstalacion,
             chips: chipsDe(c, alertas, activas, proximo, estadoInstalacion),
             edad: estimarEdad(c.doc_number, hoy.anio),
             ciudad: c.ciudad ? toTitleCase(c.ciudad) : '',
@@ -141,6 +142,7 @@ const FILTROS = [
     { value: 'tickets', label: 'Tickets nuevos' },
     { value: 'nap_faltante', label: 'Sin reserva de NAP' },
     { value: 'nap_anulado', label: 'NAP anulado' },
+    { value: 'pendiente_pago', label: 'Inst. pendiente de pago' },
     { value: 'recordatorio', label: 'Recordatorios' },
     { value: 'promo_venciendo', label: 'Promos por vencer' }
 ];
@@ -160,13 +162,16 @@ const COLUMNAS = [
 ];
 
 const visibles = $derived(
-    conAlertas.filter(({ cliente, alertas }) => {
+    conAlertas.filter(({ cliente, alertas, estadoInstalacion }) => {
         const q = busqueda.trim().toLowerCase();
         if (q && !cliente.nombre.toLowerCase().includes(q) && !cliente.code.includes(q)) return false;
 
         if (filtro === 'todos') return true;
         if (filtro === 'alerta') return alertas.length > 0;
         if (filtro === 'mora') return alertas.some((a) => a.tipo.startsWith('mora'));
+        // No es una alerta: el estado de instalacion se deriva aparte
+        // (`estadoInstalacionDe`), asi que se compara contra su propio campo.
+        if (filtro === 'pendiente_pago') return estadoInstalacion === 'pendiente_pago';
         return alertas.some((a) => a.tipo === filtro);
     })
 );

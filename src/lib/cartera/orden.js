@@ -28,6 +28,7 @@ import { rangoInternetDe } from './planes.js';
  * @property {{code: string, nombre: string, connections?: unknown[]}} cliente
  * @property {{tipo: string, desde: string | null}[]} alertas
  * @property {'alta' | 'media' | 'baja' | null} urgencia
+ * @property {'pendiente_pago' | 'instalacion_pendiente' | 'instalado'} [estadoInstalacion]
  * @property {number | null} edad
  * @property {string} ciudad
  * @property {{estado: string}[]} puntos
@@ -185,6 +186,34 @@ function compararEstable(a, b) {
 }
 
 /**
+ * `pendiente_pago` -el estado de instalacion de un cliente sin conexion activa,
+ * la instalacion frenada esperando que se acredite el primer pago- no es una
+ * alerta de `alertasDe` (vive en `instalacion.js`, separado a proposito). Pero
+ * para "que atiendo hoy" pesa, asi que entra al orden por defecto como si fuera
+ * una alerta: se lo cuenta en el grupo "tiene algo" y compite con urgencia
+ * 'media', para caer entre las alertas reales y por encima de un `seguimiento`
+ * suelto ('baja'). El otro estado, `instalacion_pendiente`, NO entra: sigue con
+ * los clientes sin alerta.
+ *
+ * @param {Fila} fila
+ */
+function esPendientePago(fila) {
+	return fila.estadoInstalacion === 'pendiente_pago';
+}
+
+/**
+ * Rango de urgencia con el que la fila compite en el orden por defecto: el de
+ * sus alertas, o 'media' si `pendiente_pago` lo empuja hacia arriba (sus
+ * alertas pesan menos, o no tiene ninguna).
+ *
+ * @param {Fila} fila
+ */
+function rangoUrgencia(fila) {
+	const propio = RANGO_URGENCIA[fila.urgencia] ?? 3;
+	return esPendientePago(fila) ? Math.min(propio, RANGO_URGENCIA.media) : propio;
+}
+
+/**
  * El orden por defecto: primero lo que tiene alerta, de mas urgente a menos, y
  * dentro de cada nivel lo que hace mas tiempo que espera. Solo se usa cuando la
  * columna es `'alertas'`; el desempate de un orden por columna es
@@ -194,13 +223,13 @@ function compararEstable(a, b) {
  * @param {Fila} b
  */
 function compararDefecto(a, b) {
-	const grupoA = a.alertas.length > 0 ? 0 : 1;
-	const grupoB = b.alertas.length > 0 ? 0 : 1;
+	const grupoA = a.alertas.length > 0 || esPendientePago(a) ? 0 : 1;
+	const grupoB = b.alertas.length > 0 || esPendientePago(b) ? 0 : 1;
 	if (grupoA !== grupoB) return grupoA - grupoB;
 
 	if (grupoA === 0) {
-		const urgenciaA = RANGO_URGENCIA[a.urgencia] ?? 3;
-		const urgenciaB = RANGO_URGENCIA[b.urgencia] ?? 3;
+		const urgenciaA = rangoUrgencia(a);
+		const urgenciaB = rangoUrgencia(b);
 		if (urgenciaA !== urgenciaB) return urgenciaA - urgenciaB;
 
 		const fechaA = fechaDeAlerta(a.alertas);

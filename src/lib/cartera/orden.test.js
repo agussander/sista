@@ -170,6 +170,65 @@ describe('ordenar — orden por defecto', () => {
 		ordenar(filas, 'alertas', 'desc');
 		expect(codes(filas)).toEqual(['z', 'a']);
 	});
+
+	it('pendiente_pago cuenta como alerta aunque no tenga ninguna', () => {
+		const filas = [
+			fila({ cliente: { code: 'sin', nombre: 'a', connections: [] }, alta: '2026-08-01' }),
+			fila({
+				cliente: { code: 'pago', nombre: 'b', connections: [] },
+				estadoInstalacion: 'pendiente_pago',
+				alta: '2020-01-01'
+			})
+		];
+		expect(codes(ordenar(filas, 'alertas', 'desc'))).toEqual(['pago', 'sin']);
+	});
+
+	it('pendiente_pago ordena arriba de un seguimiento suelto (baja)', () => {
+		const filas = [
+			fila({
+				cliente: { code: 'seguimiento', nombre: 'a', connections: [] },
+				alertas: [{ tipo: 'seguimiento', desde: '2026-06' }],
+				urgencia: 'baja'
+			}),
+			fila({
+				cliente: { code: 'pago', nombre: 'b', connections: [] },
+				estadoInstalacion: 'pendiente_pago'
+			})
+		];
+		expect(codes(ordenar(filas, 'alertas', 'desc'))).toEqual(['pago', 'seguimiento']);
+	});
+
+	it('pendiente_pago compite como media, no le gana a una alerta roja', () => {
+		const filas = [
+			fila({
+				cliente: { code: 'pago', nombre: 'a', connections: [] },
+				estadoInstalacion: 'pendiente_pago'
+			}),
+			fila({
+				cliente: { code: 'mora', nombre: 'b', connections: [] },
+				alertas: [{ tipo: 'mora_2', desde: '2026-08' }],
+				urgencia: 'alta'
+			})
+		];
+		expect(codes(ordenar(filas, 'alertas', 'desc'))).toEqual(['mora', 'pago']);
+	});
+
+	it('instalacion_pendiente no cuenta como alerta: queda con los sin alerta', () => {
+		const filas = [
+			fila({
+				cliente: { code: 'instalando', nombre: 'a', connections: [{}] },
+				estadoInstalacion: 'instalacion_pendiente',
+				alta: '2020-01-01'
+			}),
+			fila({
+				cliente: { code: 'conAlerta', nombre: 'b', connections: [{}] },
+				alertas: [{ tipo: 'seguimiento', desde: '2026-06' }],
+				urgencia: 'baja',
+				alta: '2019-01-01'
+			})
+		];
+		expect(codes(ordenar(filas, 'alertas', 'desc'))).toEqual(['conAlerta', 'instalando']);
+	});
 });
 
 describe('ordenar — por columna', () => {
