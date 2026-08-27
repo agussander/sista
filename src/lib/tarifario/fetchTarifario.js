@@ -8,6 +8,7 @@
  * funciones puras y se testean sin red.
  */
 import { pb } from '$lib/pocketbase';
+import { sinAmazon } from './parseTarifario.js';
 
 /** @typedef {import('./parseTarifario.js').TarifasWeb} TarifasWeb */
 /** @typedef {import('./parseTarifario.js').LineaVip} LineaVip */
@@ -56,6 +57,34 @@ export function mensajeDeError(error) {
 }
 
 /**
+ * Da forma al registro crudo de PocketBase. Pura y sin red: se testea sola.
+ *
+ * `sinAmazon` ya corre al importar el Excel, pero un tarifario publicado antes
+ * de esa limpieza —o importado desde un build viejo— sigue trayendo "Amazon" en
+ * la etiqueta del combo. Se vuelve a limpiar acá para que /tarifas nunca lo
+ * muestre, sin depender de re-importar. Es idempotente: si ya está limpia, no
+ * toca nada.
+ *
+ * @param {Record<string, any>} record
+ * @returns {TarifarioPublicado}
+ */
+export function normalizarTarifario(record) {
+	const tarifasWeb = json(record.tarifas_web, { filas: [], alicuota: null });
+
+	return {
+		id: record.id,
+		version: record.version ?? '',
+		vigencia: record.vigencia ?? '',
+		tarifasWeb: {
+			...tarifasWeb,
+			filas: (tarifasWeb.filas ?? []).map((f) => ({ ...f, label: sinAmazon(f.label ?? '') }))
+		},
+		lineaVip: json(record.linea_vip, { vigencia: null, planes: [], aparato: null, notas: [] }),
+		internacional: json(record.internacional, { vigencia: null, unidad: 'U$S', destinos: [] })
+	};
+}
+
+/**
  * Tarifario vigente.
  *
  * @param {{ requestKey?: string | null }} [opciones] `requestKey: null` evita la
@@ -67,12 +96,5 @@ export async function fetchTarifario({ requestKey } = {}) {
 		.collection('tarifario')
 		.getFirstListItem('', requestKey === undefined ? {} : { requestKey });
 
-	return {
-		id: record.id,
-		version: record.version ?? '',
-		vigencia: record.vigencia ?? '',
-		tarifasWeb: json(record.tarifas_web, { filas: [], alicuota: null }),
-		lineaVip: json(record.linea_vip, { vigencia: null, planes: [], aparato: null, notas: [] }),
-		internacional: json(record.internacional, { vigencia: null, unidad: 'U$S', destinos: [] })
-	};
+	return normalizarTarifario(record);
 }
