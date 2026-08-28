@@ -19,8 +19,12 @@ const recaptchaSiteKeyBaja = import.meta.env.VITE_RECAPTCHA_SITE_KEY_BAJA ?? '6L
 </svelte:head>
 
 <MetaTags
-    title= 'Sista - Trabaja con Nosotros'
-    description= 'Llená el formulario y aplicá para alguna de nuestras vacantes de trabajo'
+    title="Trabajá con nosotros · Sista"
+    description="Llená el formulario y aplicá para alguna de nuestras vacantes de trabajo."
+    openGraph={{
+        title: "Trabajá con nosotros · Sista",
+        description: "Llená el formulario y aplicá para alguna de nuestras vacantes de trabajo."
+    }}
 ></MetaTags>
 
 

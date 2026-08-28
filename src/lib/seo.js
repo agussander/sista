@@ -39,3 +39,44 @@ export function canonicalUrl(pathname) {
 
 	return segmentos.length === 0 ? `${SITE_ORIGIN}/` : `${SITE_ORIGIN}/${segmentos.join('/')}/`;
 }
+
+/**
+ * Imagen `og:image` de marca por defecto (2500×1307, ratio 1.91:1, el que piden
+ * Facebook/Instagram/WhatsApp). Vive en `static/images/`.
+ */
+export const OG_IMAGE_DEFAULT = `${SITE_ORIGIN}/images/Og-sista.png`;
+
+/**
+ * Rutas que ya declaran su propia `og:image` en el `<MetaTags>` de la pagina.
+ *
+ * El layout raiz agrega una `og:image` de marca por defecto (`OG_IMAGE_DEFAULT`)
+ * para que CUALQUIER pagina compartida por WhatsApp/Instagram/Facebook muestre
+ * una tarjeta decente — antes, una pagina sin `<MetaTags>` (ej. `/trabajos`, que
+ * es solo un redirect) no tenia ninguna, y el crawler agarraba el logo del nav y
+ * lo recortaba mal.
+ *
+ * Pero si la pagina ya trae su propia imagen, las dos etiquetas conviven en el
+ * `<head>` y los crawlers usan la PRIMERA que ven — que seria la generica del
+ * layout —, asi que en esas rutas el fallback NO se emite.
+ *
+ * Compara con `startsWith`: `/tv/` cubre `/tv/`, `/tv/elegirtv/` y
+ * `/tv/masinformacion/`. Cada nota de novedades (`/novedades/<slug>/`) trae la
+ * imagen de la nota; la portada `/novedades/` no, y si lleva el fallback.
+ */
+const RUTAS_CON_OG_PROPIA = ['/dgo/', '/antinaplay/', '/gigaredplay/', '/tv/', '/elegirplan/'];
+
+/**
+ * ¿La ruta ya define su propia `og:image` y por lo tanto NO lleva el fallback
+ * de marca del layout?
+ *
+ * @param {string} pathname Path de la pagina (ej. `/tv/elegirtv/`)
+ * @returns {boolean}
+ */
+export function tieneOgPropia(pathname) {
+	const path = typeof pathname === 'string' ? pathname : '';
+
+	// Una nota puntual de novedades (no la portada) comparte con su propia imagen.
+	if (path.startsWith('/novedades/') && path !== '/novedades/') return true;
+
+	return RUTAS_CON_OG_PROPIA.some((prefijo) => path.startsWith(prefijo));
+}

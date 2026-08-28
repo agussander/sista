@@ -14,8 +14,9 @@
 	import Footer from '$lib/components/layout/Footer.svelte';
 	import Modal from '$lib/components/layout/Modal.svelte';
 	import Nav from '$lib/components/layout/nav/Navs/Nav.svelte';
+	import { MetaTags } from 'svelte-meta-tags';
 	import { mobile, modal, windowX } from '$lib/stores';
-	import { SITE_ORIGIN, canonicalUrl } from '$lib/seo.js';
+	import { SITE_ORIGIN, canonicalUrl, tieneOgPropia, OG_IMAGE_DEFAULT } from '$lib/seo.js';
 	import { shouldTrack } from '$lib/tracking.js';
 	import { browser } from '$app/environment';
 	import { page } from '$app/stores';
@@ -92,6 +93,12 @@
 	// dos. `canonicalUrl` normaliza a la forma que el sitio realmente sirve
 	// (barra final), que es condicion para que Google no lo ignore.
 	let canonical = $derived(canonicalUrl($page.url?.pathname));
+
+	// `og:image` de marca por defecto: se emite en toda pagina que no traiga la
+	// suya, para que compartir el link por WhatsApp/Instagram/Facebook muestre
+	// una tarjeta con la imagen de Sista y no un recorte cualquiera. Las rutas
+	// que ya declaran su `og:image` quedan afuera (ver `tieneOgPropia`).
+	let ogFallback = $derived(!tieneOgPropia($page.url?.pathname));
 
 	onMount(async () => setMobile());
 
@@ -219,6 +226,24 @@
 		<meta name="robots" content="noindex, nofollow" />
 	{/if}
 </svelte:head>
+
+{#if ogFallback}
+	<!--
+		`robots={false}`: sin esto `svelte-meta-tags` siempre emite un
+		`<meta name="robots" content="index,follow">` que chocaria con el que ya
+		pone cada pagina y con el `noindex` de las rutas internas. Este bloque solo
+		aporta la imagen: `og:image` + `twitter:card`.
+	-->
+	<MetaTags
+		robots={false}
+		openGraph={{
+			type: 'website',
+			siteName: 'Sista',
+			images: [{ url: OG_IMAGE_DEFAULT, width: 2500, height: 1307, alt: 'Sista' }]
+		}}
+		twitter={{ cardType: 'summary_large_image', image: OG_IMAGE_DEFAULT, imageAlt: 'Sista' }}
+	/>
+{/if}
 
 <svelte:window bind:innerWidth={$windowX}></svelte:window>
 

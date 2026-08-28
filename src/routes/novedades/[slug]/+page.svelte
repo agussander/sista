@@ -3,6 +3,7 @@ import { MetaTags } from 'svelte-meta-tags';
 import CuerpoNovedad from '$lib/components/novedades/CuerpoNovedad.svelte';
 import ContactButtons from '$lib/components/ui/ContactButtons.svelte';
 import { formatFecha, resumenDe } from '$lib/novedades.js';
+import { OG_IMAGE_DEFAULT } from '$lib/seo.js';
 
 let { data } = $props();
 
@@ -13,6 +14,9 @@ const novedad = $derived(data.novedad);
 // NINGUNA etiqueta de descripcion. Una novedad sin descripcion se comparte en
 // WhatsApp sin texto, que es justo lo que esta pagina existe para evitar.
 const descripcion = $derived(resumenDe(novedad, 200) || 'Novedades de Sista');
+
+// La nota comparte con su propia imagen; sin ella, la de marca por defecto.
+const imagenOg = $derived(novedad.imagenGrande || OG_IMAGE_DEFAULT);
 </script>
 
 <MetaTags
@@ -24,7 +28,14 @@ const descripcion = $derived(resumenDe(novedad, 200) || 'Novedades de Sista');
         title: novedad.titulo,
         description: descripcion,
         siteName: 'Sista',
-        images: novedad.imagenGrande ? [{ url: novedad.imagenGrande, alt: novedad.titulo }] : []
+        images: novedad.imagenGrande
+            ? [{ url: novedad.imagenGrande, alt: novedad.titulo }]
+            : [{ url: OG_IMAGE_DEFAULT, width: 2500, height: 1307, alt: 'Sista' }]
+    }}
+    twitter={{
+        cardType: 'summary_large_image',
+        image: imagenOg,
+        imageAlt: novedad.titulo
     }}
 ></MetaTags>
 

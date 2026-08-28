@@ -18,8 +18,7 @@
     robots="index, follow"
     openGraph={{
         title: "Sista — Internet por fibra óptica y TV en Ensenada, Punta Lara y Tolosa",
-        description: "Internet por fibra óptica y TV en Ensenada, Punta Lara y Tolosa. Alta velocidad, instalación rápida y soporte local. Consultá cobertura y contratá tu plan.",
-        siteName: "Sista"
+        description: "Internet por fibra óptica y TV en Ensenada, Punta Lara y Tolosa. Alta velocidad, instalación rápida y soporte local. Consultá cobertura y contratá tu plan."
     }}
 ></MetaTags>
 
