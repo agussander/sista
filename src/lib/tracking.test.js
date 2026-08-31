@@ -3,7 +3,13 @@ import { RUTAS_INTERNAS, shouldTrack } from './tracking.js';
 
 describe('RUTAS_INTERNAS', () => {
 	it('lista las rutas de uso interno, sin barra final', () => {
-		expect(RUTAS_INTERNAS).toEqual(['/admin', '/mail-banner', '/tolosano']);
+		expect(RUTAS_INTERNAS).toEqual([
+			'/admin',
+			'/internacional',
+			'/lineavip',
+			'/mail-banner',
+			'/tolosano'
+		]);
 	});
 });
 
@@ -28,6 +34,20 @@ describe('shouldTrack', () => {
 		expect(shouldTrack('/admin')).toBe(false);
 		expect(shouldTrack('/mail-banner')).toBe(false);
 		expect(shouldTrack('/tolosano')).toBe(false);
+	});
+
+	it('no trackea los cuadros tarifarios crudos', () => {
+		// Se pasan por link a quien los pide; no tienen que llegar a Google.
+		expect(shouldTrack('/lineavip')).toBe(false);
+		expect(shouldTrack('/lineavip/')).toBe(false);
+		expect(shouldTrack('/internacional')).toBe(false);
+		expect(shouldTrack('/internacional/')).toBe(false);
+	});
+
+	it('trackea /telefonia/internacional, que si es publica', () => {
+		// La version maquetada del cuadro internacional vive adentro de
+		// /telefonia y no comparte prefijo con la ruta interna.
+		expect(shouldTrack('/telefonia/internacional')).toBe(true);
 	});
 
 	it('no trackea las subrutas de una ruta interna', () => {

@@ -105,9 +105,14 @@
 	const vigencia = formatearFecha(VIGENCIA);
 </script>
 
+<!--
+  `robots={false}`: sin esto `svelte-meta-tags` emite un `index,follow` que
+  chocaria con el `noindex` que el layout pone para las rutas de `RUTAS_INTERNAS`.
+-->
 <MetaTags
 	title="Línea VIP · Cuadro tarifario | Sista"
 	description="Cuadro tarifario vigente de Línea VIP de Sista: cargo inicial, abono mensual, minutos locales incluidos y precio de los minutos excedentes."
+	robots={false}
 />
 
 <div class="hoja">
@@ -158,7 +163,7 @@
 						{#if i === 0}
 							<td rowspan={PLANES.length} class="combinada">{moneda2(LLAMADAS_CELULARES)}</td>
 						{/if}
-						<td class="derecha">{moneda2(plan.excedenteLocal)}</td>
+						<td>{moneda2(plan.excedenteLocal)}</td>
 						{#if i === 0}
 							<td rowspan={PLANES.length} class="combinada">{moneda2(EXCEDENTE_NACIONAL)}</td>
 						{/if}
@@ -170,8 +175,9 @@
 		<p class="version">{pesos2.format(VERSION)}</p>
 		<p class="aparato">{APARATO}</p>
 		<p class="nota">{NOTA_INTERNACIONAL}</p>
+		<!-- G13: el Excel escribe la URL, así que apunta al cuadro crudo. -->
 		<p class="link">
-			<a href="/telefonia/internacional">www.sista.ar/internacional</a>
+			<a href="/internacional">www.sista.ar/internacional</a>
 		</p>
 		{#each NOTAS as nota}
 			<p class="nota-final">{nota}</p>
@@ -262,9 +268,9 @@ th {
 	font-size: 12pt;
 }
 
-/* La columna del excedente local no está centrada en el Excel. */
-.derecha {
-	text-align: right;
+/* La columna del nombre del plan no está centrada en el Excel. */
+tbody td:first-child {
+	text-align: left;
 }
 
 /* J9: el número de versión del tarifario, 8 pt, debajo de la tabla. */

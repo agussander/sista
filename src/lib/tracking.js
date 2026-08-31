@@ -17,8 +17,18 @@
  *
  * `/puntos` NO esta aca: no tiene nav ni footer, pero es una pantalla de cara al
  * publico y se mide.
+ *
+ * `/lineavip` e `/internacional` si estan: son los cuadros tarifarios crudos,
+ * que se pasan por link a quien los pide y no tienen que aparecer en Google. La
+ * denylist les da el `noindex, nofollow` y les saca la URL canonica.
  */
-export const RUTAS_INTERNAS = ['/admin', '/mail-banner', '/tolosano'];
+export const RUTAS_INTERNAS = [
+	'/admin',
+	'/internacional',
+	'/lineavip',
+	'/mail-banner',
+	'/tolosano'
+];
 
 /**
  * Decide si la pagina tiene que cargar los scripts de medicion.
