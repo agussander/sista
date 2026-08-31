@@ -72,8 +72,12 @@
 	// obligan a scrollear para llegar al unico control que importa. `/admin`
 	// es otro caso de pagina de proposito unico: tiene su propio layout
 	// (sidebar + contenido) y el nav/footer publicos no pintan nada ahi.
+	// `/lineavip` es el cuadro tarifario de Linea VIP tal cual sale del Excel:
+	// reemplaza a la hoja suelta que se publicaba desde Word y se sirve igual,
+	// sin nada del sitio alrededor.
 	let hideChrome = $derived(
-		$page.url.pathname.startsWith('/conectarlaciudad') ||
+		$page.url.pathname.startsWith('/lineavip') ||
+			$page.url.pathname.startsWith('/conectarlaciudad') ||
 			$page.url.pathname.startsWith('/tolosano') ||
 			$page.url.pathname.startsWith('/mail-banner') ||
 			$page.url.pathname.startsWith('/experto-wifi') ||
