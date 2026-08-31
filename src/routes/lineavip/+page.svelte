@@ -8,74 +8,25 @@
   formatos de celda, pero servida desde el sitio.
 
   A diferencia de /telefonia (que lee el tarifario importado y lo re-maqueta),
-  acá los valores son una copia fija de la version del Excel indicada en
-  `VERSION`. Al publicar un tarifario nuevo hay que actualizar `VIGENCIA`,
-  `VERSION` y los numeros de `PLANES`.
+  acá los valores son una copia fija, que vive en `$lib/tarifario/hojaLineaVip.js`
+  y se comparte con el endpoint /api/lineavip.
 -->
 <script>
 	import { MetaTags } from 'svelte-meta-tags';
 	import { formatearFecha } from '$lib/tarifario/formato.js';
-
-	// Fuente: docs/Tarifario V26.09  (09-2026).xlsx, pestaña
-	// "Linea VIP - Tarifas Web", rango A1:J18.
-	const VIGENCIA = '2026-09-01'; // J2
-	const VERSION = 26.09; // J9
-
-	// Filas 5 a 8. `cargoInicial` es número en Radio y el texto "--" en Fibra,
-	// igual que en el Excel.
-	const PLANES = [
-		{
-			nombre: 'Linea VIP R11',
-			clientes: 'Radio',
-			numeroLocal: 'AMBA 011',
-			cargoInicial: 800,
-			abonoMensual: 21451.380500642037,
-			minutosLocales: 500,
-			excedenteLocal: 30.04025988144986
-		},
-		{
-			nombre: 'Linea VIP R221',
-			clientes: 'Radio',
-			numeroLocal: 'LP 0221',
-			cargoInicial: 800,
-			abonoMensual: 10181.007070018002,
-			minutosLocales: 500,
-			excedenteLocal: 30.04025988144986
-		},
-		{
-			nombre: 'Linea VIP 11',
-			clientes: 'Fibra',
-			numeroLocal: 'AMBA 011',
-			cargoInicial: '--',
-			abonoMensual: 21451.380500642037,
-			minutosLocales: 500,
-			excedenteLocal: 30.04025988144986
-		},
-		{
-			nombre: 'Linea VIP 221',
-			clientes: 'Fibra',
-			numeroLocal: 'LP 0221',
-			cargoInicial: '--',
-			abonoMensual: 10181.007070018002,
-			minutosLocales: 500,
-			excedenteLocal: 30.04025988144986
-		}
-	];
-
-	// H5:H8 y J5:J8 estan combinadas en el Excel: un solo valor para los cuatro
-	// planes.
-	const LLAMADAS_CELULARES = 239.63344364310535; // H5
-	const EXCEDENTE_NACIONAL = 29.850532772151535; // J5
-
-	const APARATO = 'Aparato telefonico (Opcional): Ver ofertas de vitrina'; // B10
-	const NOTA_INTERNACIONAL =
-		'El precio de las llamadas internacionales se expresa en U$S según el Cuadro Tarifario Internacional vigente'; // B12
-	const NOTAS = [
-		'Valores en Pesos ($)', // B14
-		'Incluye IVA, del 21 %', // B15
-		'Para cada abonado de fibra, se puede incorporar hasta 2 líneas VIP 11 o VIP 221, las dos iguales o una y una', // B17
-		'Para cada abonado de ATA se puede incorporar una línea VIP R11 o VIP R221' // B18
-	];
+	import {
+		TITULO,
+		VIGENCIA,
+		VERSION,
+		ENCABEZADOS,
+		PLANES,
+		LLAMADAS_CELULARES,
+		EXCEDENTE_NACIONAL,
+		APARATO,
+		NOTA_INTERNACIONAL,
+		LINK_INTERNACIONAL,
+		NOTAS
+	} from '$lib/tarifario/hojaLineaVip.js';
 
 	const pesos0 = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 0 });
 	const pesos2 = new Intl.NumberFormat('es-AR', {
@@ -118,7 +69,7 @@
 <div class="hoja">
 	<div class="grilla">
 		<div class="encabezado">
-			<span class="titulo">Sista s.a. - LINEA VIP</span>
+			<span class="titulo">{TITULO}</span>
 			{#if vigencia}<span class="vigencia">{vigencia}</span>{/if}
 		</div>
 
@@ -137,18 +88,18 @@
 			</colgroup>
 			<thead>
 				<tr>
-					<th rowspan="2">Nombre</th>
-					<th rowspan="2">Clientes</th>
-					<th rowspan="2">Número Local</th>
-					<th rowspan="2">Cargo Inicial</th>
-					<th rowspan="2">Abono Mensual</th>
-					<th rowspan="2">Minutos Locales Incluidos</th>
-					<th rowspan="2">Llamadas a Celulares</th>
-					<th colspan="2">Precio de los Minutos Excedentes</th>
+					<th rowspan="2">{ENCABEZADOS.nombre}</th>
+					<th rowspan="2">{ENCABEZADOS.clientes}</th>
+					<th rowspan="2">{ENCABEZADOS.numeroLocal}</th>
+					<th rowspan="2">{ENCABEZADOS.cargoInicial}</th>
+					<th rowspan="2">{ENCABEZADOS.abonoMensual}</th>
+					<th rowspan="2">{ENCABEZADOS.minutosLocales}</th>
+					<th rowspan="2">{ENCABEZADOS.llamadasCelulares}</th>
+					<th colspan="2">{ENCABEZADOS.excedentes}</th>
 				</tr>
 				<tr>
-					<th class="sub">Destino Local</th>
-					<th class="sub">Destino Nacional</th>
+					<th class="sub">{ENCABEZADOS.excedenteLocal}</th>
+					<th class="sub">{ENCABEZADOS.excedenteNacional}</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -177,7 +128,7 @@
 		<p class="nota">{NOTA_INTERNACIONAL}</p>
 		<!-- G13: el Excel escribe la URL, así que apunta al cuadro crudo. -->
 		<p class="link">
-			<a href="/internacional">www.sista.ar/internacional</a>
+			<a href="/internacional">{LINK_INTERNACIONAL}</a>
 		</p>
 		{#each NOTAS as nota}
 			<p class="nota-final">{nota}</p>

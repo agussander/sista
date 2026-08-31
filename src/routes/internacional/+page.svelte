@@ -10,17 +10,20 @@
   La columna G no se copia. Ahí están el instructivo y la nota del margen sobre
   el costo mayorista: son internas y no salen publicadas.
 
-  Los valores viven en `_datos.js`, generado desde el .xlsx. Ni esta página ni
-  /lineavip se indexan (ver `RUTAS_INTERNAS` en `$lib/tracking.js`): se llega
-  sólo por link.
+  Los valores viven en `$lib/tarifario/hojaInternacional.js` y se comparten con
+  el endpoint /api/internacional. Ni esta página ni /lineavip se indexan (ver
+  `RUTAS_INTERNAS` en `$lib/tracking.js`): se llega sólo por link.
 -->
 <script>
 	import { MetaTags } from 'svelte-meta-tags';
 	import { formatearFecha } from '$lib/tarifario/formato.js';
-	import { VIGENCIA, ENCABEZADOS, FILAS } from './_datos.js';
-
-	const TITULO = 'Precio del minuto de llamadas Internacionales'; // B2
-	const ETIQUETA_VIGENCIA = 'Vigencia a partir del:'; // D3
+	import {
+		TITULO,
+		ETIQUETA_VIGENCIA,
+		VIGENCIA,
+		ENCABEZADOS,
+		FILAS
+	} from '$lib/tarifario/hojaInternacional.js';
 
 	const precio = new Intl.NumberFormat('es-AR', {
 		minimumFractionDigits: 1,

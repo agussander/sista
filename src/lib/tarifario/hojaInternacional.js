@@ -1,13 +1,20 @@
 /**
  * Pestaña "Internacional" del tarifario, columnas B a E, filas 5 a 3277.
  *
- * Generado desde `docs/Tarifario V26.09  (09-2026).xlsx`. Es una copia fija: al
- * publicar una version nueva del tarifario hay que regenerar este archivo y
- * actualizar `VIGENCIA`.
+ * Copia fija generada desde `docs/Tarifario V26.09  (09-2026).xlsx`. La consumen
+ * la página /internacional y el endpoint /api/internacional, que tienen que
+ * mostrar exactamente lo mismo. Al publicar una version nueva del tarifario hay
+ * que regenerar este archivo.
  *
  * La columna G de la hoja no se copia: son notas internas (el instructivo de
- * Word y el margen sobre el costo mayorista), no van al sitio.
+ * Word y el margen sobre el costo mayorista), no van al sitio ni a la API.
  */
+
+/** Celda B2: el titulo de la hoja. */
+export const TITULO = 'Precio del minuto de llamadas Internacionales';
+
+/** Celda D3: la etiqueta que acompaña a la vigencia. */
+export const ETIQUETA_VIGENCIA = 'Vigencia a partir del:';
 
 /** Celda E3: fecha desde la que rigen estos precios. */
 export const VIGENCIA = '2026-06-01';
